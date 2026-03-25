@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import axios from "axios";
 import { z } from "zod";
 import { env } from "./config.js";
-import type { ExtractionResult, Supplier } from "./types.js";
+import type { ExtractionResult, EodExtractionResult, Supplier } from "./types.js";
 
 const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
@@ -238,4 +239,96 @@ Analyze the attached image and extract all delivery line items. Return ONLY a va
   }
 
   return parsed.data;
+}
+
+// ── EOD Inventory extraction ──────────────────────────────────────────────────
+
+const eodLineItemSchema = z.object({
+  item_name_raw: z.string().nullable(),
+  item_name_normalized: z.string().nullable(),
+  quantity: z.number().nullable(),
+  quantity_raw: z.string().nullable(),
+  unit: z.enum(["case", "bag", "pallet", "lb", "oz", "ct", "ea", "other"]).nullable(),
+  category: z.enum(["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"]),
+  notes: z.string().nullable(),
+  confidence: z.number().min(0).max(1)
+});
+
+const eodExtractionSchema = z.object({
+  date: z.string().nullable(),
+  line_items: z.array(eodLineItemSchema),
+  source_warnings: z.array(z.string())
+});
+
+const EOD_SYSTEM_PROMPT = `You extract end-of-day inventory counts from free-text or transcribed speech from food bank staff.
+
+Rules:
+1) Extract every item mentioned with its quantity and unit.
+2) Preserve the original phrasing in item_name_raw. Normalize to a clean title-case name in item_name_normalized (e.g. "bags of potatoes" → "Potatoes").
+3) Infer unit from context: "bags" → "bag", "pallets" → "pallet", "cases" → "case". Default to "ea" if unclear.
+4) Assign category based on item type (produce, meat_protein, dairy, shelf_stable, frozen, non_food, unknown).
+5) If the speaker mentions a date, extract as YYYY-MM-DD. Otherwise set date to null.
+6) Set confidence 0.0-1.0 based on how clearly the item and quantity were stated.
+7) Add source_warnings for anything ambiguous (unclear quantity, unknown item, etc.).
+8) Output valid JSON only — no markdown fences, no prose.`;
+
+export async function extractFromText(text: string): Promise<EodExtractionResult> {
+  const userPrompt = `Extract all inventory items from the following end-of-day count. Return ONLY valid JSON matching this schema:
+{
+  "date": "YYYY-MM-DD" | null,
+  "line_items": [
+    {
+      "item_name_raw": string | null,
+      "item_name_normalized": string | null,
+      "quantity": number | null,
+      "quantity_raw": string | null,
+      "unit": "case" | "bag" | "pallet" | "lb" | "oz" | "ct" | "ea" | "other" | null,
+      "category": "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown",
+      "notes": string | null,
+      "confidence": 0.0-1.0
+    }
+  ],
+  "source_warnings": string[]
+}
+
+Text:
+${text}`;
+
+  const response = await client.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 2048,
+    system: EOD_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userPrompt }]
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("No text response returned by Claude.");
+  }
+
+  const parsed = eodExtractionSchema.safeParse(JSON.parse(sanitizeJson(textBlock.text)));
+  if (!parsed.success) {
+    throw new Error(`EOD extraction schema validation failed: ${parsed.error.message}`);
+  }
+
+  return parsed.data;
+}
+
+export async function transcribeAudio(audioBytes: Buffer, mimeType: string, filename: string): Promise<string> {
+  if (!env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not set — voice memo transcription is unavailable.");
+  }
+
+  const form = new FormData();
+  const arrayBuffer = audioBytes.buffer.slice(audioBytes.byteOffset, audioBytes.byteOffset + audioBytes.byteLength) as ArrayBuffer;
+  form.append("file", new Blob([arrayBuffer], { type: mimeType }), filename);
+  form.append("model", "whisper-1");
+
+  const response = await axios.post<{ text: string }>(
+    "https://api.openai.com/v1/audio/transcriptions",
+    form,
+    { headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` } }
+  );
+
+  return response.data.text;
 }

@@ -13,8 +13,10 @@ const EnvSchema = z.object({
   ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-20250514"),
   GOOGLE_SPREADSHEET_ID: z.string().min(1),
   GOOGLE_WORKSHEET_NAME: z.string().default("Delivery Log"),
+  EOD_WORKSHEET_NAME: z.string().default("EOD Inventory"),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
-  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional()
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional()
 });
 
 const parsed = EnvSchema.safeParse(process.env);

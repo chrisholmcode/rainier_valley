@@ -1,5 +1,22 @@
 export type Supplier = "carusos" | "charlies" | "nw_harvest" | "pacific" | "unknown";
 
+export interface EodLineItem {
+  item_name_raw: string | null;
+  item_name_normalized: string | null;
+  quantity: number | null;
+  quantity_raw: string | null;
+  unit: "case" | "bag" | "pallet" | "lb" | "oz" | "ct" | "ea" | "other" | null;
+  category: "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown";
+  notes: string | null;
+  confidence: number;
+}
+
+export interface EodExtractionResult {
+  date: string | null;
+  line_items: EodLineItem[];
+  source_warnings: string[];
+}
+
 export type DocumentType = "invoice" | "manifest" | "warehouse_posted_shipment" | "dock_photo" | "unknown";
 
 export interface LineItem {

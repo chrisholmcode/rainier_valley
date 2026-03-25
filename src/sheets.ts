@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import { google } from "googleapis";
 import { env } from "./config.js";
-import { ExtractionResult } from "./types.js";
+import { ExtractionResult, EodExtractionResult } from "./types.js";
 
 function getGoogleAuth(): GoogleAuth {
   if (env.GOOGLE_SERVICE_ACCOUNT_JSON) {
@@ -174,4 +174,93 @@ export async function appendExtractionRows(params: {
   });
 
   return allRows.length;
+}
+
+// ── EOD Inventory sheet ───────────────────────────────────────────────────────
+
+const EOD_SHEET_HEADERS = [
+  "recorded_at",
+  "date",
+  "item_name_raw",
+  "item_name_normalized",
+  "quantity",
+  "quantity_raw",
+  "unit",
+  "category",
+  "notes",
+  "confidence",
+  "source",
+  "slack_channel",
+  "slack_message_ts",
+  "recorded_by",
+  "warnings_json"
+];
+
+export async function ensureEodSheetHeader(): Promise<void> {
+  const auth = getGoogleAuth();
+  const sheets = google.sheets({ version: "v4", auth });
+
+  const range = `${env.EOD_WORKSHEET_NAME}!1:1`;
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range
+  });
+
+  if (existing.data.values?.[0]?.length) {
+    return;
+  }
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range,
+    valueInputOption: "RAW",
+    requestBody: { values: [EOD_SHEET_HEADERS] }
+  });
+}
+
+export async function appendEodRows(params: {
+  extraction: EodExtractionResult;
+  source: "text" | "voice";
+  slackChannel: string;
+  slackMessageTs: string;
+  recordedBy: string;
+}): Promise<number> {
+  const { extraction, source, slackChannel, slackMessageTs, recordedBy } = params;
+  const now = new Date().toISOString();
+  const date = extraction.date ?? new Date().toISOString().slice(0, 10);
+  const warningsJson = JSON.stringify(extraction.source_warnings);
+
+  const rows = extraction.line_items.map((item) => [
+    now,
+    date,
+    item.item_name_raw,
+    item.item_name_normalized,
+    item.quantity,
+    item.quantity_raw,
+    item.unit,
+    item.category,
+    item.notes,
+    item.confidence,
+    source,
+    slackChannel,
+    slackMessageTs,
+    recordedBy,
+    warningsJson
+  ]);
+
+  if (!rows.length) {
+    rows.push([now, date, null, null, null, null, null, null, "No items extracted", null, source, slackChannel, slackMessageTs, recordedBy, warningsJson]);
+  }
+
+  const auth = getGoogleAuth();
+  const sheets = google.sheets({ version: "v4", auth });
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.EOD_WORKSHEET_NAME}!A:O`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: rows }
+  });
+
+  return rows.length;
 }

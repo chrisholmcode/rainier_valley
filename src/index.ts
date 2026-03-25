@@ -2,9 +2,9 @@ import { createHash } from "crypto";
 import axios from "axios";
 import { App } from "@slack/bolt";
 import { env } from "./config.js";
-import { appendExtractionRows, ensureSheetHeader } from "./sheets.js";
-import { extractFromImage, guessSupplierFromFilename } from "./extraction.js";
-import type { ExtractionResult, Supplier } from "./types.js";
+import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader } from "./sheets.js";
+import { extractFromImage, extractFromText, transcribeAudio, guessSupplierFromFilename } from "./extraction.js";
+import type { ExtractionResult, EodExtractionResult, Supplier } from "./types.js";
 
 interface PendingFileExtraction {
   fileId: string;
@@ -30,6 +30,17 @@ const processedContentHashes = new Set<string>();
 const processedInvoiceKeys = new Set<string>();
 const processedMessageKeys = new Set<string>();
 
+interface PendingEodEntry {
+  key: string;
+  channel: string;
+  messageTs: string;
+  recordedBy: string;
+  extraction: EodExtractionResult;
+  source: "text" | "voice";
+}
+
+const pendingEodEntries = new Map<string, PendingEodEntry>();
+
 function guessSupplierFromText(text: string): Supplier {
   const t = (text || "").toLowerCase();
   if (t.includes("caruso")) return "carusos";
@@ -42,6 +53,40 @@ function guessSupplierFromText(text: string): Supplier {
 function isImageMime(mimeType?: string): boolean {
   if (!mimeType) return false;
   return mimeType.startsWith("image/");
+}
+
+function isAudioMime(mimeType?: string): boolean {
+  if (!mimeType) return false;
+  return mimeType.startsWith("audio/");
+}
+
+function isEodMessage(text?: string): boolean {
+  return (text || "").toLowerCase().trimStart().startsWith("eod:");
+}
+
+function stripEodPrefix(text: string): string {
+  return text.replace(/^eod:\s*/i, "").trim();
+}
+
+function formatEodSummary(extraction: EodExtractionResult): string {
+  const lines = extraction.line_items.map((item) => {
+    const qty = item.quantity_raw ?? item.quantity ?? "?";
+    const unit = item.unit ? ` ${item.unit}(s)` : "";
+    const name = item.item_name_normalized ?? item.item_name_raw ?? "Unknown item";
+    const conf = Math.round(item.confidence * 100);
+    return `• ${qty}${unit} ${name} (${conf}% confidence)`;
+  });
+
+  const warnings = extraction.source_warnings.length
+    ? `\n⚠️ Warnings: ${extraction.source_warnings.join(", ")}`
+    : "";
+
+  return (
+    `📋 *EOD Inventory — ${extraction.date ?? "today"}*\n` +
+    `${lines.join("\n")}\n\n` +
+    `React 👍 to save to Google Sheets\nReact ❌ to discard` +
+    warnings
+  );
 }
 
 function pendingKey(channel: string, ts: string): string {
@@ -315,8 +360,144 @@ app.event("reaction_added", async ({ event, client, logger }) => {
         text: `Discarded by <@${event.user}>. No rows were written.`
       });
     }
+
+    // ── EOD reaction handling ──────────────────────────────────────────────
+    const eodEntry = pendingEodEntries.get(lookupKey);
+    if (eodEntry) {
+      if (reaction === "+1") {
+        pendingEodEntries.delete(lookupKey);
+        try {
+          await ensureEodSheetHeader();
+          const rowsAdded = await appendEodRows({
+            extraction: eodEntry.extraction,
+            source: eodEntry.source,
+            slackChannel: eodEntry.channel,
+            slackMessageTs: eodEntry.messageTs,
+            recordedBy: eodEntry.recordedBy
+          });
+          await client.chat.postMessage({
+            channel: eodEntry.channel,
+            thread_ts: eodEntry.messageTs,
+            text: `✅ EOD inventory saved by <@${event.user}>. Wrote *${rowsAdded}* row(s) to Google Sheets.`
+          });
+        } catch (sheetsError) {
+          await client.chat.postMessage({
+            channel: eodEntry.channel,
+            thread_ts: eodEntry.messageTs,
+            text: `❌ Error writing EOD inventory to Google Sheets: ${(sheetsError as Error).message}`
+          });
+        }
+      } else if (reaction === "x") {
+        pendingEodEntries.delete(lookupKey);
+        await client.chat.postMessage({
+          channel: eodEntry.channel,
+          thread_ts: eodEntry.messageTs,
+          text: `EOD inventory discarded by <@${event.user}>. Nothing was saved.`
+        });
+      }
+    }
   } catch (error) {
     logger.error(error);
+  }
+});
+
+// ── EOD text message handler ─────────────────────────────────────────────────
+
+app.message(async ({ message, client, logger }) => {
+  try {
+    const msg = message as {
+      subtype?: string;
+      text?: string;
+      ts: string;
+      channel: string;
+      user?: string;
+      files?: Array<{ id: string; name: string; mimetype: string; url_private_download?: string }>;
+    };
+
+    if (env.INVENTORY_CHANNEL_ID && msg.channel !== env.INVENTORY_CHANNEL_ID) return;
+
+    const hasAudioFile = (msg.files || []).some((f) => isAudioMime(f.mimetype) && f.url_private_download);
+    const isEod = isEodMessage(msg.text);
+
+    // ── Voice memo (audio file upload) ──
+    if (msg.subtype === "file_share" && hasAudioFile) {
+      if (!env.OPENAI_API_KEY) {
+        await client.chat.postMessage({
+          channel: msg.channel,
+          thread_ts: msg.ts,
+          text: "⚠️ Voice memo received but `OPENAI_API_KEY` is not configured. Please set it to enable voice transcription."
+        });
+        return;
+      }
+
+      const audioFile = (msg.files || []).find((f) => isAudioMime(f.mimetype) && f.url_private_download)!;
+      await client.chat.postMessage({ channel: msg.channel, thread_ts: msg.ts, text: "🎙️ Transcribing voice memo..." });
+
+      const buffer = await downloadSlackFile(audioFile.url_private_download!);
+      const transcript = await transcribeAudio(buffer, audioFile.mimetype, audioFile.name);
+      console.log("Whisper transcript:", transcript);
+
+      const extraction = await extractFromText(transcript);
+      const summaryKey = pendingKey(msg.channel, msg.ts);
+      pendingEodEntries.set(summaryKey, {
+        key: summaryKey,
+        channel: msg.channel,
+        messageTs: msg.ts,
+        recordedBy: msg.user || "unknown",
+        extraction,
+        source: "voice"
+      });
+
+      const summaryMsg = await client.chat.postMessage({
+        channel: msg.channel,
+        thread_ts: msg.ts,
+        text: `🎙️ *Transcript:* _${transcript}_\n\n${formatEodSummary(extraction)}`
+      });
+
+      if (summaryMsg.ts) {
+        pendingEodEntries.set(pendingKey(msg.channel, summaryMsg.ts), pendingEodEntries.get(summaryKey)!);
+      }
+      return;
+    }
+
+    // ── EOD text message ──
+    if (!msg.subtype && isEod) {
+      const text = stripEodPrefix(msg.text || "");
+      if (!text) return;
+
+      await client.chat.postMessage({ channel: msg.channel, thread_ts: msg.ts, text: "🔍 Processing EOD inventory..." });
+
+      const extraction = await extractFromText(text);
+      const summaryKey = pendingKey(msg.channel, msg.ts);
+      pendingEodEntries.set(summaryKey, {
+        key: summaryKey,
+        channel: msg.channel,
+        messageTs: msg.ts,
+        recordedBy: msg.user || "unknown",
+        extraction,
+        source: "text"
+      });
+
+      const summaryMsg = await client.chat.postMessage({
+        channel: msg.channel,
+        thread_ts: msg.ts,
+        text: formatEodSummary(extraction)
+      });
+
+      if (summaryMsg.ts) {
+        pendingEodEntries.set(pendingKey(msg.channel, summaryMsg.ts), pendingEodEntries.get(summaryKey)!);
+      }
+    }
+  } catch (error) {
+    logger.error(error);
+    const msg = message as { channel?: string; ts?: string };
+    if (msg.channel && msg.ts) {
+      await client.chat.postMessage({
+        channel: msg.channel,
+        thread_ts: msg.ts,
+        text: `❌ EOD processing failed: ${(error as Error).message}`
+      }).catch(() => {});
+    }
   }
 });
 
