@@ -16,7 +16,9 @@ const EnvSchema = z.object({
   EOD_WORKSHEET_NAME: z.string().default("EOD Inventory"),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
-  OPENAI_API_KEY: z.string().optional()
+  OPENAI_API_KEY: z.string().optional(),
+  ASSISTANT_CHANNEL_ID: z.string().optional(),
+  ASSISTANT_MAX_TOOL_ITERATIONS: z.coerce.number().default(8)
 });
 
 const parsed = EnvSchema.safeParse(process.env);

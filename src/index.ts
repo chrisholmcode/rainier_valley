@@ -2,9 +2,10 @@ import { createHash } from "crypto";
 import axios from "axios";
 import { App } from "@slack/bolt";
 import { env } from "./config.js";
-import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader } from "./sheets.js";
+import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell } from "./sheets.js";
 import { extractFromImage, extractFromText, transcribeAudio, guessSupplierFromFilename } from "./extraction.js";
-import type { ExtractionResult, EodExtractionResult, Supplier } from "./types.js";
+import { runAssistantLoop } from "./assistant.js";
+import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection } from "./types.js";
 
 interface PendingFileExtraction {
   fileId: string;
@@ -40,12 +41,21 @@ interface PendingEodEntry {
 }
 
 const EOD_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
+const ASSISTANT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const pendingEodEntries = new Map<string, PendingEodEntry>();
+const threadHistories = new Map<string, ThreadHistory>();
+const pendingAssistantCorrections = new Map<string, PendingAssistantCorrection>();
 
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of pendingEodEntries.entries()) {
     if (entry.expiresAt < now) pendingEodEntries.delete(key);
+  }
+  for (const [key, h] of threadHistories.entries()) {
+    if (h.lastActivityAt + ASSISTANT_TTL_MS < now) threadHistories.delete(key);
+  }
+  for (const [key, c] of pendingAssistantCorrections.entries()) {
+    if (c.expiresAt < now) pendingAssistantCorrections.delete(key);
   }
 }, 30 * 60 * 1000);
 
@@ -299,6 +309,41 @@ app.event("reaction_added", async ({ event, client, logger }) => {
     console.log(`LookupKey: ${lookupKey}, RootKey: ${rootKey}`);
     console.log(`Pending deliveries keys:`, Array.from(pendingDeliveries.keys()));
 
+    // ── Assistant correction reaction handling ─────────────────────────────
+    const pendingCorrection = pendingAssistantCorrections.get(lookupKey);
+    if (pendingCorrection) {
+      if (reaction === "+1") {
+        pendingAssistantCorrections.delete(lookupKey);
+        try {
+          await updateSheetCell({
+            worksheetName: pendingCorrection.sheet === "eod" ? env.EOD_WORKSHEET_NAME : env.GOOGLE_WORKSHEET_NAME,
+            rowIndex: pendingCorrection.rowIndex,
+            columnName: pendingCorrection.columnName,
+            newValue: pendingCorrection.newValue
+          });
+          await client.chat.postMessage({
+            channel: pendingCorrection.channel,
+            thread_ts: pendingCorrection.threadTs,
+            text: `✅ Correction applied by <@${event.user}>. Row ${pendingCorrection.rowIndex}, \`${pendingCorrection.columnName}\` updated to \`${pendingCorrection.newValue}\`.`
+          });
+        } catch (sheetsError) {
+          await client.chat.postMessage({
+            channel: pendingCorrection.channel,
+            thread_ts: pendingCorrection.threadTs,
+            text: `❌ Failed to apply correction: ${(sheetsError as Error).message}`
+          });
+        }
+      } else if (reaction === "x") {
+        pendingAssistantCorrections.delete(lookupKey);
+        await client.chat.postMessage({
+          channel: pendingCorrection.channel,
+          thread_ts: pendingCorrection.threadTs,
+          text: `Correction discarded by <@${event.user}>. No changes were made.`
+        });
+      }
+      return;
+    }
+
     // ── EOD reaction handling ──────────────────────────────────────────────
     const eodEntry = pendingEodEntries.get(lookupKey);
     if (eodEntry) {
@@ -419,6 +464,7 @@ app.message(async ({ message, client, logger }) => {
     };
 
     if (env.INVENTORY_CHANNEL_ID && msg.channel !== env.INVENTORY_CHANNEL_ID) return;
+    if ((msg.text || "").trimStart().startsWith("<@")) return; // handled by app_mention
 
     const hasAudioFile = (msg.files || []).some((f) => isMime("audio/", f.mimetype) && f.url_private_download);
     const isEod = isEodMessage(msg.text);
@@ -502,6 +548,59 @@ app.message(async ({ message, client, logger }) => {
         text: `❌ EOD processing failed: ${(error as Error).message}`
       }).catch(() => {});
     }
+  }
+});
+
+// ── Assistant correction reaction handling ────────────────────────────────────
+// (checked first in reaction_added, before EOD and delivery checks)
+
+// ── @mention handler ─────────────────────────────────────────────────────────
+
+app.event("app_mention", async ({ event, client, logger }) => {
+  const channel = event.channel;
+  const threadTs = (event as { thread_ts?: string }).thread_ts ?? event.ts;
+  const userText = event.text.replace(/<@[A-Z0-9]+>/gi, "").trim();
+  const userId = (event as { user?: string }).user ?? "unknown";
+
+  if (env.ASSISTANT_CHANNEL_ID && channel !== env.ASSISTANT_CHANNEL_ID) return;
+
+  try {
+    const historyKey = pendingKey(channel, threadTs);
+    let history = threadHistories.get(historyKey);
+    if (!history) {
+      history = { threadTs, channel, messages: [], lastActivityAt: Date.now() };
+      threadHistories.set(historyKey, history);
+    }
+
+    history.messages.push({ role: "user", content: userText });
+    history.lastActivityAt = Date.now();
+
+    await client.chat.postMessage({ channel, thread_ts: threadTs, text: "_Thinking..._" });
+
+    const { responseText } = await runAssistantLoop({
+      history: history.messages,
+      channel,
+      threadTs,
+      requestedBy: userId,
+      onCorrectionProposed: async (correction, summaryText) => {
+        const msg = await client.chat.postMessage({ channel, thread_ts: threadTs, text: summaryText });
+        const correctionKey = pendingKey(channel, msg.ts!);
+        pendingAssistantCorrections.set(correctionKey, { ...correction, summaryMessageTs: msg.ts! });
+        return { messageTs: msg.ts! };
+      }
+    });
+
+    history.messages.push({ role: "assistant", content: responseText });
+    history.lastActivityAt = Date.now();
+
+    await client.chat.postMessage({ channel, thread_ts: threadTs, text: responseText });
+  } catch (error) {
+    logger.error(error);
+    await client.chat.postMessage({
+      channel,
+      thread_ts: threadTs,
+      text: "Sorry, something went wrong. Please try again."
+    }).catch(() => {});
   }
 });
 
