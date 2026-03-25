@@ -6,6 +6,7 @@ import type { ConversationMessage, ConversationContentBlock, PendingAssistantCor
 const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const ASSISTANT_SYSTEM_PROMPT = `You are a helpful inventory assistant for Rainier Valley Food Bank.
+Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 There are TWO separate Google Sheets tabs you can query:
 
@@ -19,7 +20,7 @@ Guidelines:
 - When proposing a correction, clearly state what you are changing and why.
 - Never modify data without the user's explicit confirmation — corrections require a 👍 reaction.
 - If a read returns no results, try the other sheet before giving up.
-- Dates are always YYYY-MM-DD format.
+- Always convert dates to YYYY-MM-DD before querying. If the user says "2/11" or "Feb 11" with no year, assume the current year unless context suggests otherwise.
 - Be concise. Summarize long results rather than listing every row.`;
 
 const ASSISTANT_TOOLS: Anthropic.Tool[] = [
