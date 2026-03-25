@@ -61,11 +61,11 @@ function isAudioMime(mimeType?: string): boolean {
 }
 
 function isEodMessage(text?: string): boolean {
-  return (text || "").toLowerCase().trimStart().startsWith("eod:");
+  return /^eod:?\s/i.test((text || "").trimStart());
 }
 
 function stripEodPrefix(text: string): string {
-  return text.replace(/^eod:\s*/i, "").trim();
+  return text.replace(/^eod:?\s*/i, "").trim();
 }
 
 function formatEodSummary(extraction: EodExtractionResult): string {
