@@ -297,6 +297,43 @@ app.event("reaction_added", async ({ event, client, logger }) => {
     console.log(`LookupKey: ${lookupKey}, RootKey: ${rootKey}`);
     console.log(`Pending deliveries keys:`, Array.from(pendingDeliveries.keys()));
 
+    // ── EOD reaction handling ──────────────────────────────────────────────
+    const eodEntry = pendingEodEntries.get(lookupKey);
+    if (eodEntry) {
+      if (reaction === "+1") {
+        pendingEodEntries.delete(lookupKey);
+        try {
+          await ensureEodSheetHeader();
+          const rowsAdded = await appendEodRows({
+            extraction: eodEntry.extraction,
+            source: eodEntry.source,
+            slackChannel: eodEntry.channel,
+            slackMessageTs: eodEntry.messageTs,
+            recordedBy: eodEntry.recordedBy
+          });
+          await client.chat.postMessage({
+            channel: eodEntry.channel,
+            thread_ts: eodEntry.messageTs,
+            text: `✅ EOD inventory saved by <@${event.user}>. Wrote *${rowsAdded}* row(s) to Google Sheets.`
+          });
+        } catch (sheetsError) {
+          await client.chat.postMessage({
+            channel: eodEntry.channel,
+            thread_ts: eodEntry.messageTs,
+            text: `❌ Error writing EOD inventory to Google Sheets: ${(sheetsError as Error).message}`
+          });
+        }
+      } else if (reaction === "x") {
+        pendingEodEntries.delete(lookupKey);
+        await client.chat.postMessage({
+          channel: eodEntry.channel,
+          thread_ts: eodEntry.messageTs,
+          text: `EOD inventory discarded by <@${event.user}>. Nothing was saved.`
+        });
+      }
+      return;
+    }
+
     const pending = pendingDeliveries.get(rootKey);
     if (!pending) {
       console.log("No pending delivery found for this reaction");
@@ -361,41 +398,6 @@ app.event("reaction_added", async ({ event, client, logger }) => {
       });
     }
 
-    // ── EOD reaction handling ──────────────────────────────────────────────
-    const eodEntry = pendingEodEntries.get(lookupKey);
-    if (eodEntry) {
-      if (reaction === "+1") {
-        pendingEodEntries.delete(lookupKey);
-        try {
-          await ensureEodSheetHeader();
-          const rowsAdded = await appendEodRows({
-            extraction: eodEntry.extraction,
-            source: eodEntry.source,
-            slackChannel: eodEntry.channel,
-            slackMessageTs: eodEntry.messageTs,
-            recordedBy: eodEntry.recordedBy
-          });
-          await client.chat.postMessage({
-            channel: eodEntry.channel,
-            thread_ts: eodEntry.messageTs,
-            text: `✅ EOD inventory saved by <@${event.user}>. Wrote *${rowsAdded}* row(s) to Google Sheets.`
-          });
-        } catch (sheetsError) {
-          await client.chat.postMessage({
-            channel: eodEntry.channel,
-            thread_ts: eodEntry.messageTs,
-            text: `❌ Error writing EOD inventory to Google Sheets: ${(sheetsError as Error).message}`
-          });
-        }
-      } else if (reaction === "x") {
-        pendingEodEntries.delete(lookupKey);
-        await client.chat.postMessage({
-          channel: eodEntry.channel,
-          thread_ts: eodEntry.messageTs,
-          text: `EOD inventory discarded by <@${event.user}>. Nothing was saved.`
-        });
-      }
-    }
   } catch (error) {
     logger.error(error);
   }
