@@ -3,18 +3,25 @@ import { google } from "googleapis";
 import { env } from "./config.js";
 import { ExtractionResult, EodExtractionResult } from "./types.js";
 
-function getGoogleAuth(): GoogleAuth {
-  if (env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    const credentials = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON);
-    return new GoogleAuth({
-      credentials,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
+  ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
+  : new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
+
+const headersInitialized = new Set<string>();
+
+async function ensureHeader(worksheetName: string, headers: string[]): Promise<void> {
+  if (headersInitialized.has(worksheetName)) return;
+  const sheets = google.sheets({ version: "v4", auth });
+  const existing = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${worksheetName}!1:1` });
+  if (!existing.data.values?.[0]?.length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+      range: `${worksheetName}!1:1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [headers] }
     });
   }
-
-  return new GoogleAuth({
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-  });
+  headersInitialized.add(worksheetName);
 }
 
 const SHEET_HEADERS = [
@@ -45,27 +52,7 @@ const SHEET_HEADERS = [
 ];
 
 export async function ensureSheetHeader(): Promise<void> {
-  const auth = getGoogleAuth();
-  const sheets = google.sheets({ version: "v4", auth });
-
-  const range = `${env.GOOGLE_WORKSHEET_NAME}!1:1`;
-  const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range
-  });
-
-  if (existing.data.values?.[0]?.length) {
-    return;
-  }
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [SHEET_HEADERS]
-    }
-  });
+  await ensureHeader(env.GOOGLE_WORKSHEET_NAME, SHEET_HEADERS);
 }
 
 export async function appendExtractionRows(params: {
@@ -161,7 +148,6 @@ export async function appendExtractionRows(params: {
     ]);
   }
 
-  const auth = getGoogleAuth();
   const sheets = google.sheets({ version: "v4", auth });
 
   await sheets.spreadsheets.values.append({
@@ -197,25 +183,7 @@ const EOD_SHEET_HEADERS = [
 ];
 
 export async function ensureEodSheetHeader(): Promise<void> {
-  const auth = getGoogleAuth();
-  const sheets = google.sheets({ version: "v4", auth });
-
-  const range = `${env.EOD_WORKSHEET_NAME}!1:1`;
-  const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range
-  });
-
-  if (existing.data.values?.[0]?.length) {
-    return;
-  }
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range,
-    valueInputOption: "RAW",
-    requestBody: { values: [EOD_SHEET_HEADERS] }
-  });
+  await ensureHeader(env.EOD_WORKSHEET_NAME, EOD_SHEET_HEADERS);
 }
 
 export async function appendEodRows(params: {
@@ -252,7 +220,6 @@ export async function appendEodRows(params: {
     rows.push([now, date, null, null, null, null, null, null, "No items extracted", null, source, slackChannel, slackMessageTs, recordedBy, warningsJson]);
   }
 
-  const auth = getGoogleAuth();
   const sheets = google.sheets({ version: "v4", auth });
 
   await sheets.spreadsheets.values.append({

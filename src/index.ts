@@ -31,15 +31,23 @@ const processedInvoiceKeys = new Set<string>();
 const processedMessageKeys = new Set<string>();
 
 interface PendingEodEntry {
-  key: string;
   channel: string;
   messageTs: string;
   recordedBy: string;
   extraction: EodExtractionResult;
   source: "text" | "voice";
+  expiresAt: number;
 }
 
+const EOD_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 const pendingEodEntries = new Map<string, PendingEodEntry>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of pendingEodEntries.entries()) {
+    if (entry.expiresAt < now) pendingEodEntries.delete(key);
+  }
+}, 30 * 60 * 1000);
 
 function guessSupplierFromText(text: string): Supplier {
   const t = (text || "").toLowerCase();
@@ -50,14 +58,8 @@ function guessSupplierFromText(text: string): Supplier {
   return "unknown";
 }
 
-function isImageMime(mimeType?: string): boolean {
-  if (!mimeType) return false;
-  return mimeType.startsWith("image/");
-}
-
-function isAudioMime(mimeType?: string): boolean {
-  if (!mimeType) return false;
-  return mimeType.startsWith("audio/");
+function isMime(prefix: string, mimeType?: string): boolean {
+  return (mimeType ?? "").startsWith(prefix);
 }
 
 function isEodMessage(text?: string): boolean {
@@ -167,7 +169,7 @@ app.event("message", async ({ event, client, logger }) => {
       return;
     }
 
-    const allFiles = (message.files || []).filter((f) => isImageMime(f.mimetype) && f.url_private_download);
+    const allFiles = (message.files || []).filter((f) => isMime("image/", f.mimetype) && f.url_private_download);
     if (!allFiles.length) return;
 
     const files = allFiles.filter((f) => !processedFileIds.has(f.id));
@@ -418,7 +420,7 @@ app.message(async ({ message, client, logger }) => {
 
     if (env.INVENTORY_CHANNEL_ID && msg.channel !== env.INVENTORY_CHANNEL_ID) return;
 
-    const hasAudioFile = (msg.files || []).some((f) => isAudioMime(f.mimetype) && f.url_private_download);
+    const hasAudioFile = (msg.files || []).some((f) => isMime("audio/", f.mimetype) && f.url_private_download);
     const isEod = isEodMessage(msg.text);
 
     // ── Voice memo (audio file upload) ──
@@ -432,7 +434,7 @@ app.message(async ({ message, client, logger }) => {
         return;
       }
 
-      const audioFile = (msg.files || []).find((f) => isAudioMime(f.mimetype) && f.url_private_download)!;
+      const audioFile = (msg.files || []).find((f) => isMime("audio/", f.mimetype) && f.url_private_download)!;
       await client.chat.postMessage({ channel: msg.channel, thread_ts: msg.ts, text: "🎙️ Transcribing voice memo..." });
 
       const buffer = await downloadSlackFile(audioFile.url_private_download!);
@@ -442,12 +444,12 @@ app.message(async ({ message, client, logger }) => {
       const extraction = await extractFromText(transcript);
       const summaryKey = pendingKey(msg.channel, msg.ts);
       pendingEodEntries.set(summaryKey, {
-        key: summaryKey,
         channel: msg.channel,
         messageTs: msg.ts,
         recordedBy: msg.user || "unknown",
         extraction,
-        source: "voice"
+        source: "voice",
+        expiresAt: Date.now() + EOD_TTL_MS
       });
 
       const summaryMsg = await client.chat.postMessage({
@@ -472,12 +474,12 @@ app.message(async ({ message, client, logger }) => {
       const extraction = await extractFromText(text);
       const summaryKey = pendingKey(msg.channel, msg.ts);
       pendingEodEntries.set(summaryKey, {
-        key: summaryKey,
         channel: msg.channel,
         messageTs: msg.ts,
         recordedBy: msg.user || "unknown",
         extraction,
-        source: "text"
+        source: "text",
+        expiresAt: Date.now() + EOD_TTL_MS
       });
 
       const summaryMsg = await client.chat.postMessage({

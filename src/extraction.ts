@@ -320,8 +320,7 @@ export async function transcribeAudio(audioBytes: Buffer, mimeType: string, file
   }
 
   const form = new FormData();
-  const arrayBuffer = audioBytes.buffer.slice(audioBytes.byteOffset, audioBytes.byteOffset + audioBytes.byteLength) as ArrayBuffer;
-  form.append("file", new Blob([arrayBuffer], { type: mimeType }), filename);
+  form.append("file", new Blob([new Uint8Array(audioBytes)], { type: mimeType }), filename);
   form.append("model", "whisper-1");
 
   const response = await axios.post<{ text: string }>(
