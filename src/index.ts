@@ -217,6 +217,11 @@ app.event("message", async ({ event, client, logger }) => {
 
       if (processedContentHashes.has(contentHash)) {
         console.log(`Skipping file ${file.name} — content already processed (hash: ${contentHash.slice(0, 12)}…)`);
+        await client.chat.postMessage({
+          channel: message.channel,
+          thread_ts: message.ts,
+          text: `⚠️ *${file.name}* appears to be a duplicate (same file content already processed). Skipping.`
+        });
         continue;
       }
 
@@ -255,6 +260,11 @@ app.event("message", async ({ event, client, logger }) => {
 
     if (!pending.files.length) {
       console.log("All files were duplicates, skipping");
+      await client.chat.postMessage({
+        channel: message.channel,
+        thread_ts: message.ts,
+        text: `⚠️ All files in this upload were already processed. Nothing new to extract.`
+      });
       return;
     }
 
@@ -563,6 +573,14 @@ app.event("app_mention", async ({ event, client, logger }) => {
   const userId = (event as { user?: string }).user ?? "unknown";
 
   if (env.ASSISTANT_CHANNEL_ID && channel !== env.ASSISTANT_CHANNEL_ID) return;
+  if (!userText) {
+    await client.chat.postMessage({
+      channel,
+      thread_ts: threadTs,
+      text: "Hi! Ask me about inventory or deliveries — e.g. _\"what's the EOD count for today?\"_ or _\"show me Caruso's deliveries this week\"_."
+    });
+    return;
+  }
 
   try {
     const historyKey = pendingKey(channel, threadTs);
