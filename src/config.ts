@@ -18,7 +18,9 @@ const EnvSchema = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   ASSISTANT_CHANNEL_ID: z.string().optional(),
-  ASSISTANT_MAX_TOOL_ITERATIONS: z.coerce.number().default(8)
+  ASSISTANT_MAX_TOOL_ITERATIONS: z.coerce.number().default(8),
+  VOICE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  VOICE_PORT: z.coerce.number().default(3001)
 });
 
 const parsed = EnvSchema.safeParse(process.env);

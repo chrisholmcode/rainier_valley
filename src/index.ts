@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { createServer as createHttpServer, IncomingMessage, ServerResponse } from "node:http";
 import axios from "axios";
 import { App } from "@slack/bolt";
 import { env } from "./config.js";
@@ -622,6 +623,109 @@ app.event("app_mention", async ({ event, client, logger }) => {
   }
 });
 
+// ── Alexa voice webhook ───────────────────────────────────────────────────────
+
+async function handleAlexaRequest(body: unknown, res: ServerResponse): Promise<void> {
+  const alexa = body as Record<string, unknown>;
+  const request = alexa.request as Record<string, unknown>;
+  const requestType = request?.type as string;
+
+  function alexaReply(text: string, endSession: boolean): void {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      version: "1.0",
+      response: { outputSpeech: { type: "PlainText", text }, shouldEndSession: endSession }
+    }));
+  }
+
+  if (requestType === "LaunchRequest") {
+    alexaReply("What inventory would you like to log?", false);
+    return;
+  }
+
+  if (requestType === "SessionEndedRequest") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: "1.0", response: {} }));
+    return;
+  }
+
+  if (requestType === "IntentRequest") {
+    const intent = request.intent as Record<string, unknown>;
+    const slots = intent?.slots as Record<string, { value?: string }> | undefined;
+    const text = slots?.Query?.value ?? slots?.query?.value ?? "";
+
+    if (!text) {
+      alexaReply("I didn't catch that. Please try again.", false);
+      return;
+    }
+
+    const extraction = await extractFromText(text);
+    await ensureEodSheetHeader();
+    const rowsAdded = await appendEodRows({
+      extraction,
+      source: "voice",
+      slackChannel: env.INVENTORY_CHANNEL_ID ?? "alexa",
+      slackMessageTs: Date.now().toString(),
+      recordedBy: "alexa"
+    });
+
+    if (env.INVENTORY_CHANNEL_ID) {
+      const lines = extraction.line_items.map((item) => {
+        const qty = item.quantity_raw ?? item.quantity ?? "?";
+        const unit = item.unit ? ` ${item.unit}(s)` : "";
+        const name = item.item_name_normalized ?? item.item_name_raw ?? "Unknown item";
+        return `• ${qty}${unit} ${name}`;
+      });
+      await app.client.chat.postMessage({
+        channel: env.INVENTORY_CHANNEL_ID,
+        text: `🎙️ *Alexa voice log — ${extraction.date ?? new Date().toISOString().slice(0, 10)}*\n${lines.join("\n")}\n_Wrote ${rowsAdded} row(s) to Google Sheets._`
+      });
+    }
+
+    alexaReply(`Got it. Logged ${rowsAdded} item${rowsAdded !== 1 ? "s" : ""}.`, true);
+    return;
+  }
+
+  res.writeHead(400, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "Unknown request type" }));
+}
+
+function startVoiceServer(): void {
+  const server = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (req.method !== "POST" || req.url !== "/voice") {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+
+    // Accept Bearer token (for curl/testing) OR Alexa signature headers (for real device)
+    const authHeader = req.headers["authorization"] ?? "";
+    const hasAlexaSignature = Boolean(req.headers["signaturecertchainurl"]);
+    if (!hasAlexaSignature && authHeader !== `Bearer ${env.VOICE_WEBHOOK_SECRET}`) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk as Buffer);
+      const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
+      await handleAlexaRequest(body, res);
+    } catch (err) {
+      console.error("Voice webhook error:", (err as Error).message);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Internal server error" }));
+      }
+    }
+  });
+
+  server.listen(env.VOICE_PORT, () => {
+    console.log(`Voice webhook listening on port ${env.VOICE_PORT}`);
+  });
+}
+
 async function start(): Promise<void> {
   if (env.SLACK_APP_TOKEN) {
     await app.start();
@@ -629,6 +733,10 @@ async function start(): Promise<void> {
   } else {
     await app.start(env.SLACK_PORT);
     console.log(`Slack app started on port ${env.SLACK_PORT}.`);
+  }
+
+  if (env.VOICE_WEBHOOK_SECRET) {
+    startVoiceServer();
   }
 }
 
