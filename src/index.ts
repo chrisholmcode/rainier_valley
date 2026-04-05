@@ -721,8 +721,9 @@ function startVoiceServer(): void {
     }
   });
 
-  server.listen(env.VOICE_PORT, () => {
-    console.log(`Voice webhook listening on port ${env.VOICE_PORT}`);
+  const port = process.env.PORT ? parseInt(process.env.PORT) : env.VOICE_PORT;
+  server.listen(port, () => {
+    console.log(`Voice webhook listening on port ${port}`);
   });
 }
 
