@@ -1,5 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import axios from "axios";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 import { env } from "./config.js";
 import type { ExtractionResult, EodExtractionResult, Supplier } from "./types.js";
@@ -413,6 +416,47 @@ Rules:
 9) Add source_warnings for any line where you're uncertain about the tally count.
 10) Output JSON only — no markdown fences, no prose.`;
 
+// Lazy-loaded few-shot example: real photo + ground-truth counts.
+let exampleImageBase64: string | null = null;
+function getExampleImageBase64(): string {
+  if (exampleImageBase64 == null) {
+    const here = dirname(fileURLToPath(import.meta.url));
+    // src/extraction.ts → ../examples/whiteboard_001.jpg
+    const path = join(here, "..", "examples", "whiteboard_001.jpg");
+    exampleImageBase64 = readFileSync(path).toString("base64");
+  }
+  return exampleImageBase64;
+}
+
+const EXAMPLE_USER_PROMPT = `Filename: whiteboard_001.jpg
+
+Extract every line from this whiteboard. Apply the gate counting rules from the system prompt. Return ONLY valid JSON.`;
+
+const EXAMPLE_ASSISTANT_RESPONSE = JSON.stringify({
+  date: "2026-04-30",
+  line_items: [
+    { item_name_raw: "Onions - 12cs", item_name_normalized: "Onions", quantity: 12, quantity_raw: "12cs + 0 tallies", unit: "case", category: "produce", notes: "initial=12, gates=0, loose=0, tallies=0, total=12", confidence: 0.95 },
+    { item_name_raw: "Potatoes - 12cs", item_name_normalized: "Potatoes", quantity: 22, quantity_raw: "12cs + 2 gates", unit: "case", category: "produce", notes: "initial=12, gates=2, loose=0, tallies=10, total=22", confidence: 0.85 },
+    { item_name_raw: "Cabbage - 7cs", item_name_normalized: "Cabbage", quantity: 22, quantity_raw: "7cs + 3 gates", unit: "case", category: "produce", notes: "initial=7, gates=3, loose=0, tallies=15, total=22", confidence: 0.85 },
+    { item_name_raw: "Butternut Squash - 8cs", item_name_normalized: "Butternut Squash", quantity: 18, quantity_raw: "8cs + 2 gates", unit: "case", category: "produce", notes: "initial=8, gates=2, loose=0, tallies=10, total=18", confidence: 0.85 },
+    { item_name_raw: "Cucumbers - 10cs", item_name_normalized: "Cucumbers", quantity: 10, quantity_raw: "10cs + 0 tallies", unit: "case", category: "produce", notes: "initial=10, gates=0, loose=0, tallies=0, total=10", confidence: 0.95 },
+    { item_name_raw: "Eggplant - 8cs", item_name_normalized: "Eggplant", quantity: 11, quantity_raw: "8cs + 3 strokes", unit: "case", category: "produce", notes: "initial=8, gates=0, loose=3, tallies=3, total=11", confidence: 0.85 },
+    { item_name_raw: "Yellow Bell Pepper - 10cs", item_name_normalized: "Yellow Bell Pepper", quantity: 20, quantity_raw: "10cs + 2 gates", unit: "case", category: "produce", notes: "initial=10, gates=2, loose=0, tallies=10, total=20", confidence: 0.85 },
+    { item_name_raw: "Broccoli - 4cs", item_name_normalized: "Broccoli", quantity: 14, quantity_raw: "4cs + 2 gates", unit: "case", category: "produce", notes: "initial=4, gates=2, loose=0, tallies=10, total=14", confidence: 0.85 },
+    { item_name_raw: "Kale - 6cs", item_name_normalized: "Kale", quantity: 10, quantity_raw: "6cs + 4 strokes", unit: "case", category: "produce", notes: "initial=6, gates=0, loose=4, tallies=4, total=10", confidence: 0.9 },
+    { item_name_raw: "Bok Choy - 3cs", item_name_normalized: "Bok Choy", quantity: 3, quantity_raw: "3cs + 0 tallies", unit: "case", category: "produce", notes: "initial=3, gates=0, loose=0, tallies=0, total=3", confidence: 0.95 },
+    { item_name_raw: "Cucumber - 6cs", item_name_normalized: "Cucumber", quantity: 6, quantity_raw: "6cs + 0 tallies", unit: "case", category: "produce", notes: "initial=6, gates=0, loose=0, tallies=0, total=6", confidence: 0.95 },
+    { item_name_raw: "Grey Squash - 8cs", item_name_normalized: "Grey Squash", quantity: 8, quantity_raw: "8cs + 0 tallies", unit: "case", category: "produce", notes: "initial=8, gates=0, loose=0, tallies=0, total=8", confidence: 0.95 },
+    { item_name_raw: "Carrots - 4cs", item_name_normalized: "Carrots", quantity: 4, quantity_raw: "4cs + 0 tallies", unit: "case", category: "produce", notes: "initial=4, gates=0, loose=0, tallies=0, total=4", confidence: 0.95 },
+    { item_name_raw: "Cilantro - 4cs", item_name_normalized: "Cilantro", quantity: 4, quantity_raw: "4cs + 0 tallies", unit: "case", category: "produce", notes: "initial=4, gates=0, loose=0, tallies=0, total=4", confidence: 0.95 },
+    { item_name_raw: "Apples - 4cs", item_name_normalized: "Apples", quantity: 6, quantity_raw: "4cs + 2 strokes", unit: "case", category: "produce", notes: "initial=4, gates=0, loose=2, tallies=2, total=6", confidence: 0.9 },
+    { item_name_raw: "Oranges - 6cs", item_name_normalized: "Oranges", quantity: 14, quantity_raw: "6cs + 1 gate + 3 strokes", unit: "case", category: "produce", notes: "initial=6, gates=1, loose=3, tallies=8, total=14", confidence: 0.85 },
+    { item_name_raw: "Bananas - 4cs", item_name_normalized: "Bananas", quantity: 4, quantity_raw: "4cs + 0 tallies", unit: "case", category: "produce", notes: "initial=4, gates=0, loose=0, tallies=0, total=4", confidence: 0.95 },
+    { item_name_raw: "Chicken - 15cs", item_name_normalized: "Chicken", quantity: 27, quantity_raw: "15cs + 2 gates + 2 strokes", unit: "case", category: "meat_protein", notes: "initial=15, gates=2, loose=2, tallies=12, total=27", confidence: 0.85 }
+  ],
+  source_warnings: []
+});
+
 export async function extractFromWhiteboard(params: {
   imageBytes: Buffer;
   mimeType: string;
@@ -420,7 +464,7 @@ export async function extractFromWhiteboard(params: {
 }): Promise<EodExtractionResult> {
   const userPrompt = `Filename: ${params.filename}
 
-Extract every line from the whiteboard. For each item, count the initial number AND every individual tally mark, then sum them. Return ONLY valid JSON matching this schema:
+Extract every line from the whiteboard. Apply the gate counting rules from the system prompt. Return ONLY valid JSON matching this schema:
 
 {
   "date": "YYYY-MM-DD" | null,
@@ -445,6 +489,20 @@ Extract every line from the whiteboard. For each item, count the initial number 
     thinking: { type: "enabled", budget_tokens: 4000 },
     system: WHITEBOARD_SYSTEM_PROMPT,
     messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: "image/jpeg", data: getExampleImageBase64() }
+          },
+          { type: "text", text: EXAMPLE_USER_PROMPT, cache_control: { type: "ephemeral" } }
+        ]
+      },
+      {
+        role: "assistant",
+        content: [{ type: "text", text: EXAMPLE_ASSISTANT_RESPONSE }]
+      },
       {
         role: "user",
         content: [
