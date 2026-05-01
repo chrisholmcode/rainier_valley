@@ -359,23 +359,43 @@ const WHITEBOARD_SYSTEM_PROMPT = `You extract outbound case counts from photos o
 
 Whiteboard format:
 - Header may include a date and event type (e.g., "Home Delivery — 4/30/2026").
-- Each line: <item name> — <initial>cs [tally marks]
-  Example: "Potatoes — 12cs ||||" means 12 initial cases plus 4 tallies = 16 total cases.
-- Tally marks may be single strokes (||||) or grouped in fives with a slash through ||||/.
-- Total cases that left = initial number + count of tally marks.
-- Items may be grouped under sections (a main numbered list, "Fruit", "Protein", etc.).
-- Unit is typically "cs" (case).
+- Each line: <item name> — <initial>[cs] [tally marks]
+- Items may be grouped under sections (numbered list, "Fruit", "Protein", etc.).
+
+CRITICAL — Reading the initial number:
+- The initial is a NUMBER (1, 2, 3, ... 12, etc.) optionally followed by "cs" or "cs." which is the abbreviation for "cases".
+- "cs" is a UNIT SUFFIX, NOT digits. Never read it as part of the number.
+  - "4cs" → initial = 4 (NOT 43, NOT 45, NOT 4cs)
+  - "12cs" → initial = 12 (NOT 12c5, NOT 125)
+  - "8cs." → initial = 8
+- If you can't tell whether a character is "c" or a digit, prefer reading it as "c" (the unit), since handwritten "cs" is the convention here.
+
+CRITICAL — Counting tally marks (5-bar gate convention):
+- Tally marks use the standard "5-bar gate": 4 vertical strokes crossed by 1 diagonal or horizontal slash = 5 cases.
+- A COMPLETE GATE (4 verticals + 1 slash through them) counts as 5, regardless of how many strokes you see.
+- Loose vertical strokes WITHOUT a crossing slash count as 1 each.
+- Process: count complete gates × 5, then add the count of leftover un-slashed verticals.
+- DO NOT count each stroke individually if the strokes form a gate.
+
+Examples:
+- "Apples — 4cs ||"            → initial=4,  tallies=2  (just 2 loose verticals, no gate),       total=6
+- "Cabbage — 7cs ||||/ ||||/ ||||/" → initial=7,  tallies=15 (3 complete gates × 5),                  total=22
+- "Bell Pepper — 10cs ||||/ ||||"   → initial=10, tallies=9  (1 complete gate=5 + 4 loose verticals), total=19
+- "Chicken — 15cs ||||/ ||||/ ||"   → initial=15, tallies=12 (2 complete gates=10 + 2 loose),         total=27
 
 Rules:
-1) For each line, total_quantity = initial number + count of tally marks. Count each individual stroke.
-2) Set quantity = total (the sum). Set unit = "case" unless explicitly something else.
-3) Set quantity_raw to the visible breakdown, e.g. "12cs + 4 tallies".
-4) Set notes to "initial=<n>, tallies=<n>, total=<n>".
+1) total_quantity = initial number + tally count (computed using the gate convention above).
+2) Set quantity = total. Set unit = "case" unless explicitly otherwise.
+3) Set quantity_raw to the visible breakdown, e.g. "7cs + 3 gates" or "4cs + 2 strokes".
+4) Set notes to "initial=<n>, gates=<n>, loose=<n>, tallies=<n>, total=<n>" so the breakdown is auditable.
 5) Preserve item phrasing in item_name_raw. Clean up to title case in item_name_normalized.
 6) Extract the header date as YYYY-MM-DD if visible. If only a partial date, infer the year from context.
 7) Categorize each item: produce, meat_protein, dairy, shelf_stable, frozen, non_food, unknown.
-8) Set confidence 0.0-1.0. Lower confidence when tally marks are unclear, partially obscured, or you're uncertain about the count.
-9) Add source_warnings for ambiguous lines (unreadable item, smudged tallies, etc.).
+8) Set confidence 0.0-1.0. Lower confidence when:
+   - Tally groupings are ambiguous (can't tell where one gate ends and next begins)
+   - The slash through a gate is faint or missing
+   - The initial number is partially obscured
+9) Add source_warnings for any line where you're uncertain about the tally count.
 10) Output JSON only — no markdown fences, no prose.`;
 
 export async function extractFromWhiteboard(params: {
