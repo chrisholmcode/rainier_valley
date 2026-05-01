@@ -126,27 +126,24 @@ function padLeft(s: string, width: number): string {
 }
 
 function formatExtractionTable(files: ProcessedFileExtraction[]): string {
-  const NAME_W = 30;
-  const QTY_W = 6;
-  const UNIT_W = 6;
+  const NAME_W = 32;
+  const QTY_W = 8;
   const CONF_W = 5;
-  const header =
-    `${padRight("Item", NAME_W)} ${padLeft("Qty", QTY_W)} ${padRight("Unit", UNIT_W)} ${padLeft("Conf", CONF_W)}`;
-  const sep = "─".repeat(NAME_W + QTY_W + UNIT_W + CONF_W + 3);
+  const header = `${padRight("Item", NAME_W)} ${padLeft("Qty", QTY_W)} ${padLeft("Conf", CONF_W)}`;
+  const sep = "─".repeat(NAME_W + QTY_W + CONF_W + 2);
 
   const sections: string[] = [];
   for (const f of files) {
     const rows = f.extraction.line_items.map((li) => {
       const name = li.item_name_normalized ?? li.item_name_raw ?? "Unknown";
       const qty = li.quantity_raw ?? (li.quantity != null ? String(li.quantity) : "?");
-      const unit = li.unit ?? "";
       const conf = `${Math.round(li.confidence * 100)}%`;
-      return `${padRight(name, NAME_W)} ${padLeft(qty, QTY_W)} ${padRight(unit, UNIT_W)} ${padLeft(conf, CONF_W)}`;
+      return `${padRight(name, NAME_W)} ${padLeft(qty, QTY_W)} ${padLeft(conf, CONF_W)}`;
     });
     const feeRows = f.extraction.fees.map((fee) => {
       const name = `(fee) ${fee.description}`;
       const amount = `$${fee.amount.toFixed(2)}`;
-      return `${padRight(name, NAME_W)} ${padLeft(amount, QTY_W)} ${padRight("", UNIT_W)} ${padLeft("", CONF_W)}`;
+      return `${padRight(name, NAME_W)} ${padLeft(amount, QTY_W)} ${padLeft("", CONF_W)}`;
     });
     const body = [header, sep, ...rows, ...feeRows].join("\n");
     sections.push(`*${f.fileName}*\n\`\`\`\n${body}\n\`\`\``);
