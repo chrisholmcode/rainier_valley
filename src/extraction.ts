@@ -371,17 +371,32 @@ CRITICAL — Reading the initial number:
 - If you can't tell whether a character is "c" or a digit, prefer reading it as "c" (the unit), since handwritten "cs" is the convention here.
 
 CRITICAL — Counting tally marks (5-bar gate convention):
-- Tally marks use the standard "5-bar gate": 4 vertical strokes crossed by 1 diagonal or horizontal slash = 5 cases.
-- A COMPLETE GATE (4 verticals + 1 slash through them) counts as 5, regardless of how many strokes you see.
-- Loose vertical strokes WITHOUT a crossing slash count as 1 each.
-- Process: count complete gates × 5, then add the count of leftover un-slashed verticals.
-- DO NOT count each stroke individually if the strokes form a gate.
 
-Examples:
-- "Apples — 4cs ||"            → initial=4,  tallies=2  (just 2 loose verticals, no gate),       total=6
-- "Cabbage — 7cs ||||/ ||||/ ||||/" → initial=7,  tallies=15 (3 complete gates × 5),                  total=22
-- "Bell Pepper — 10cs ||||/ ||||"   → initial=10, tallies=9  (1 complete gate=5 + 4 loose verticals), total=19
-- "Chicken — 15cs ||||/ ||||/ ||"   → initial=15, tallies=12 (2 complete gates=10 + 2 loose),         total=27
+Definitions:
+- A GATE = exactly 4 vertical strokes with 1 diagonal or horizontal slash crossing through them. A gate counts as 5.
+- A LOOSE STROKE = a single vertical line with NO slash crossing it. A loose stroke counts as 1.
+- A "stroke" by itself, without a visible crossing slash, is LOOSE — it is not part of a gate.
+
+How to count, line by line:
+1. First, scan the line and identify every visible DIAGONAL OR HORIZONTAL SLASH stroke. Each slash defines exactly one gate.
+2. For every slash you see, that's 1 gate (= 5). The 4 verticals it crosses do NOT also count as 4 loose strokes — they belong to the gate.
+3. Any remaining vertical strokes that are NOT crossed by a slash are loose strokes, each counting as 1.
+4. tallies = (gates × 5) + (loose strokes × 1)
+
+Defensive rule — when the photo is unclear:
+- If you cannot CLEARLY see a slash crossing a group of verticals, do NOT assume a gate. Count those verticals as loose.
+- Undercounting tallies is far better than overcounting. If you suspect a gate but aren't sure, count loose and lower confidence.
+- If the stroke pattern is messy, ambiguous, or smudged: flag it in source_warnings and lower confidence to 0.5 or below.
+
+Worked examples:
+- "Apples — 4cs ||"
+  → 0 slashes visible → 0 gates. 2 vertical strokes loose. tallies = 0×5 + 2 = 2. total = 4 + 2 = 6.
+- "Cabbage — 7cs ||||/ ||||/ ||||/"
+  → 3 slashes visible → 3 gates. 0 leftover verticals. tallies = 3×5 + 0 = 15. total = 7 + 15 = 22.
+- "Bell Pepper — 10cs ||||/ ||||"
+  → 1 slash visible → 1 gate. 4 leftover verticals (no slash). tallies = 1×5 + 4 = 9. total = 10 + 9 = 19.
+- "Chicken — 15cs ||||/ ||||/ ||"
+  → 2 slashes visible → 2 gates. 2 leftover verticals. tallies = 2×5 + 2 = 12. total = 15 + 12 = 27.
 
 Rules:
 1) total_quantity = initial number + tally count (computed using the gate convention above).
@@ -426,7 +441,8 @@ Extract every line from the whiteboard. For each item, count the initial number 
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: 8192,
+    thinking: { type: "enabled", budget_tokens: 4000 },
     system: WHITEBOARD_SYSTEM_PROMPT,
     messages: [
       {
