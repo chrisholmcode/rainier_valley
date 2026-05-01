@@ -101,7 +101,7 @@ function formatEodSummary(extraction: EodExtractionResult): string {
     : "";
 
   return (
-    `📋 *EOD Inventory — ${extraction.date ?? "today"}*\n` +
+    `📋 *Outbound Delivery Log — ${extraction.date ?? "today"}*\n` +
     `${lines.join("\n")}\n\n` +
     `React 👍 to save to Google Sheets\nReact ❌ to discard` +
     warnings
@@ -339,7 +339,7 @@ async function processWhiteboardBatch(params: {
     await client.chat.postMessage({
       channel,
       thread_ts: messageTs,
-      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to EOD Inventory sheet.*`
+      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Outbound Delivery Log sheet.*`
     });
   } catch (sheetsError) {
     console.error("Google Sheets error:", sheetsError);

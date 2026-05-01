@@ -10,11 +10,11 @@ Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 There are TWO separate Google Sheets tabs you can query:
 
-1. **EOD Inventory** (use read_eod_inventory): End-of-day counts recorded by staff walking the floor. Use this when someone asks what's currently on hand, what was logged at end of day, or how much of something is left. Fields include: date, item_name_normalized, quantity, unit, category.
+1. **Outbound Delivery Log** (use read_eod_inventory): What LEFT the food bank — end-of-day floor counts (text/voice from staff), Alexa voice logs, and outbound whiteboard tallies for events like Home Delivery. Use this when someone asks what went out, what was logged at end of day, or how much of something left today. Fields include: date, item_name_normalized, quantity, unit, category, source (text/voice/whiteboard).
 
-2. **Delivery Log** (use read_delivery_log): Incoming deliveries from suppliers (Caruso's, Charlie's, Northwest Harvest, Pacific). Use this when someone asks about a delivery, a supplier invoice, or what was received from a vendor. Fields include: delivery_date, supplier, item_name_normalized, quantity, unit.
+2. **Inbound Delivery Log** (use read_delivery_log): Incoming deliveries from suppliers (Caruso's, Charlie's, Northwest Harvest, Pacific). Use this when someone asks about a delivery, a supplier invoice, or what was received from a vendor. Fields include: delivery_date, supplier, item_name_normalized, quantity, unit.
 
-Always pick the right sheet based on context. If unsure, try EOD Inventory first for general stock questions.
+Always pick the right sheet based on context. If unsure, try Outbound Delivery Log first for general stock questions.
 
 Guidelines:
 - When proposing a correction, clearly state what you are changing and why.
@@ -26,7 +26,7 @@ Guidelines:
 const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   {
     name: "read_eod_inventory",
-    description: "Read EOD Inventory rows from Google Sheets, optionally filtered by date.",
+    description: "Read Outbound Delivery Log rows from Google Sheets, optionally filtered by date.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -38,7 +38,7 @@ const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "read_delivery_log",
-    description: "Read Delivery Log rows from Google Sheets, optionally filtered by date and/or supplier.",
+    description: "Read Inbound Delivery Log rows from Google Sheets, optionally filtered by date and/or supplier.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -51,7 +51,7 @@ const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "propose_eod_correction",
-    description: "Propose a correction to a field in an EOD Inventory row. Does NOT write immediately — posts a confirmation to the user.",
+    description: "Propose a correction to a field in an Outbound Delivery Log row. Does NOT write immediately — posts a confirmation to the user.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -66,7 +66,7 @@ const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "propose_delivery_correction",
-    description: "Propose a correction to a field in a Delivery Log row. Does NOT write immediately — posts a confirmation to the user.",
+    description: "Propose a correction to a field in an Inbound Delivery Log row. Does NOT write immediately — posts a confirmation to the user.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -82,7 +82,7 @@ const ASSISTANT_TOOLS: Anthropic.Tool[] = [
 ];
 
 function buildCorrectionSummary(correction: PendingAssistantCorrection): string {
-  const sheetName = correction.sheet === "eod" ? "EOD Inventory" : "Delivery Log";
+  const sheetName = correction.sheet === "eod" ? "Outbound Delivery Log" : "Inbound Delivery Log";
   return (
     `📝 *Proposed correction*\n` +
     `Sheet: ${sheetName}\n` +
