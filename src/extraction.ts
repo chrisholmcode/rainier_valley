@@ -425,7 +425,7 @@ Extract every line from the whiteboard. For each item, count the initial number 
 }`;
 
   const response = await client.messages.create({
-    model: env.ANTHROPIC_MODEL,
+    model: "claude-sonnet-4-6",
     max_tokens: 4096,
     system: WHITEBOARD_SYSTEM_PROMPT,
     messages: [
