@@ -314,6 +314,131 @@ ${text}`;
   return parsed.data;
 }
 
+// ── Image classification (whiteboard vs invoice) ──────────────────────────────
+
+export async function classifyImage(params: {
+  imageBytes: Buffer;
+  mimeType: string;
+}): Promise<"whiteboard" | "invoice"> {
+  const response = await client.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 16,
+    system: "You classify photos for a food bank inventory bot. Reply with EXACTLY one word.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mimeToMediaType(params.mimeType),
+              data: params.imageBytes.toString("base64")
+            }
+          },
+          {
+            type: "text",
+            text:
+              "Is this a handwritten whiteboard (or paper) listing items with tally marks for outbound tracking, " +
+              "or a printed delivery invoice / manifest / shipment document? " +
+              "Reply with exactly one word: 'whiteboard' or 'invoice'."
+          }
+        ]
+      }
+    ]
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") return "invoice";
+  return textBlock.text.trim().toLowerCase().includes("whiteboard") ? "whiteboard" : "invoice";
+}
+
+// ── Whiteboard outbound extraction ────────────────────────────────────────────
+
+const WHITEBOARD_SYSTEM_PROMPT = `You extract outbound case counts from photos of handwritten whiteboards at a food bank.
+
+Whiteboard format:
+- Header may include a date and event type (e.g., "Home Delivery — 4/30/2026").
+- Each line: <item name> — <initial>cs [tally marks]
+  Example: "Potatoes — 12cs ||||" means 12 initial cases plus 4 tallies = 16 total cases.
+- Tally marks may be single strokes (||||) or grouped in fives with a slash through ||||/.
+- Total cases that left = initial number + count of tally marks.
+- Items may be grouped under sections (a main numbered list, "Fruit", "Protein", etc.).
+- Unit is typically "cs" (case).
+
+Rules:
+1) For each line, total_quantity = initial number + count of tally marks. Count each individual stroke.
+2) Set quantity = total (the sum). Set unit = "case" unless explicitly something else.
+3) Set quantity_raw to the visible breakdown, e.g. "12cs + 4 tallies".
+4) Set notes to "initial=<n>, tallies=<n>, total=<n>".
+5) Preserve item phrasing in item_name_raw. Clean up to title case in item_name_normalized.
+6) Extract the header date as YYYY-MM-DD if visible. If only a partial date, infer the year from context.
+7) Categorize each item: produce, meat_protein, dairy, shelf_stable, frozen, non_food, unknown.
+8) Set confidence 0.0-1.0. Lower confidence when tally marks are unclear, partially obscured, or you're uncertain about the count.
+9) Add source_warnings for ambiguous lines (unreadable item, smudged tallies, etc.).
+10) Output JSON only — no markdown fences, no prose.`;
+
+export async function extractFromWhiteboard(params: {
+  imageBytes: Buffer;
+  mimeType: string;
+  filename: string;
+}): Promise<EodExtractionResult> {
+  const userPrompt = `Filename: ${params.filename}
+
+Extract every line from the whiteboard. For each item, count the initial number AND every individual tally mark, then sum them. Return ONLY valid JSON matching this schema:
+
+{
+  "date": "YYYY-MM-DD" | null,
+  "line_items": [
+    {
+      "item_name_raw": string | null,
+      "item_name_normalized": string | null,
+      "quantity": number | null,
+      "quantity_raw": string | null,
+      "unit": "case" | "bag" | "pallet" | "lb" | "oz" | "ct" | "ea" | "other" | null,
+      "category": "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown",
+      "notes": string | null,
+      "confidence": 0.0-1.0
+    }
+  ],
+  "source_warnings": string[]
+}`;
+
+  const response = await client.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 4096,
+    system: WHITEBOARD_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mimeToMediaType(params.mimeType),
+              data: params.imageBytes.toString("base64")
+            }
+          },
+          { type: "text", text: userPrompt }
+        ]
+      }
+    ]
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("No text response returned by Claude.");
+  }
+
+  const parsed = eodExtractionSchema.safeParse(JSON.parse(sanitizeJson(textBlock.text)));
+  if (!parsed.success) {
+    throw new Error(`Whiteboard extraction schema validation failed: ${parsed.error.message}`);
+  }
+
+  return parsed.data;
+}
+
 export async function transcribeAudio(audioBytes: Buffer, mimeType: string, filename: string): Promise<string> {
   if (!env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not set — voice memo transcription is unavailable.");

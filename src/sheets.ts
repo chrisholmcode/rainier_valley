@@ -188,7 +188,7 @@ export async function ensureEodSheetHeader(): Promise<void> {
 
 export async function appendEodRows(params: {
   extraction: EodExtractionResult;
-  source: "text" | "voice";
+  source: "text" | "voice" | "whiteboard";
   slackChannel: string;
   slackMessageTs: string;
   recordedBy: string;

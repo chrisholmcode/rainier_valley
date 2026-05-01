@@ -2,9 +2,17 @@ import { createHash } from "crypto";
 import { createServer as createHttpServer, IncomingMessage, ServerResponse } from "node:http";
 import axios from "axios";
 import { App } from "@slack/bolt";
+import type { WebClient } from "@slack/web-api";
 import { env } from "./config.js";
 import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell } from "./sheets.js";
-import { extractFromImage, extractFromText, transcribeAudio, guessSupplierFromFilename } from "./extraction.js";
+import {
+  extractFromImage,
+  extractFromText,
+  transcribeAudio,
+  guessSupplierFromFilename,
+  classifyImage,
+  extractFromWhiteboard
+} from "./extraction.js";
 import { runAssistantLoop } from "./assistant.js";
 import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection } from "./types.js";
 
@@ -14,6 +22,14 @@ interface ProcessedFileExtraction {
   fileName: string;
   photoUrl: string;
   extraction: ExtractionResult;
+}
+
+interface ProcessedWhiteboardFile {
+  fileId: string;
+  contentHash: string;
+  fileName: string;
+  photoUrl: string;
+  extraction: EodExtractionResult;
 }
 
 const CONFIDENCE_THRESHOLD = 0.7;
@@ -125,6 +141,44 @@ function padLeft(s: string, width: number): string {
   return " ".repeat(width - s.length) + s;
 }
 
+function summarizeWhiteboardFiles(files: ProcessedWhiteboardFile[]): {
+  lineItems: number;
+  avgConfidence: number;
+} {
+  let lineItems = 0;
+  let totalConfidence = 0;
+  for (const f of files) {
+    lineItems += f.extraction.line_items.length;
+    for (const li of f.extraction.line_items) {
+      totalConfidence += li.confidence;
+    }
+  }
+  const avgConfidence = lineItems > 0 ? totalConfidence / lineItems : 0;
+  return { lineItems, avgConfidence };
+}
+
+function formatWhiteboardTable(files: ProcessedWhiteboardFile[]): string {
+  const NAME_W = 32;
+  const QTY_W = 8;
+  const CONF_W = 5;
+  const header = `${padRight("Item", NAME_W)} ${padLeft("Qty", QTY_W)} ${padLeft("Conf", CONF_W)}`;
+  const sep = "─".repeat(NAME_W + QTY_W + CONF_W + 2);
+
+  const sections: string[] = [];
+  for (const f of files) {
+    const rows = f.extraction.line_items.map((li) => {
+      const name = li.item_name_normalized ?? li.item_name_raw ?? "Unknown";
+      const qty = li.quantity != null ? String(li.quantity) : (li.quantity_raw ?? "?");
+      const conf = `${Math.round(li.confidence * 100)}%`;
+      return `${padRight(name, NAME_W)} ${padLeft(qty, QTY_W)} ${padLeft(conf, CONF_W)}`;
+    });
+    const dateLabel = f.extraction.date ? ` — ${f.extraction.date}` : "";
+    const body = [header, sep, ...rows].join("\n");
+    sections.push(`*${f.fileName}${dateLabel}*\n\`\`\`\n${body}\n\`\`\``);
+  }
+  return sections.join("\n\n");
+}
+
 function formatExtractionTable(files: ProcessedFileExtraction[]): string {
   const NAME_W = 32;
   const QTY_W = 8;
@@ -165,6 +219,137 @@ const app = new App({
   socketMode: Boolean(env.SLACK_APP_TOKEN),
   appToken: env.SLACK_APP_TOKEN
 });
+
+async function processInvoiceBatch(params: {
+  processedFiles: ProcessedFileExtraction[];
+  channel: string;
+  messageTs: string;
+  messageKey: string;
+  uploadedBy: string;
+  client: WebClient;
+}): Promise<void> {
+  const { processedFiles, channel, messageTs, messageKey, uploadedBy, client } = params;
+  const summary = summarizeFiles(processedFiles);
+  const confidencePct = Math.round(summary.avgConfidence * 100);
+  const confidenceEmoji = summary.avgConfidence >= 0.9 ? "🟢" : summary.avgConfidence >= 0.75 ? "🟡" : "🔴";
+  const tableText = formatExtractionTable(processedFiles);
+  const headerLine =
+    `📦 *Inbound Extraction* — Files: *${processedFiles.length}* | Line items: *${summary.lineItems}* | Fees: *${summary.fees}*\n` +
+    `${confidenceEmoji} Avg confidence: *${confidencePct}%*`;
+
+  if (summary.avgConfidence < CONFIDENCE_THRESHOLD) {
+    await client.chat.postMessage({
+      channel,
+      thread_ts: messageTs,
+      text:
+        `${headerLine}\n\n${tableText}\n\n` +
+        `❌ *Confidence too low* (${confidencePct}% < ${Math.round(CONFIDENCE_THRESHOLD * 100)}%). ` +
+        `The photo wasn't clear enough — please retake (good lighting, flat page, full document in frame) and try again. Nothing was logged.`
+    });
+    return;
+  }
+
+  try {
+    await ensureSheetHeader();
+    let totalRows = 0;
+    for (const file of processedFiles) {
+      const rowsAdded = await appendExtractionRows({
+        extraction: file.extraction,
+        photoUrl: file.photoUrl,
+        slackChannel: channel,
+        slackMessageTs: messageTs,
+        uploadedBy
+      });
+      totalRows += rowsAdded;
+    }
+
+    for (const file of processedFiles) {
+      processedFileIds.add(file.fileId);
+      processedContentHashes.add(file.contentHash);
+      if (file.extraction.invoice_or_order_number && file.extraction.supplier !== "unknown") {
+        processedInvoiceKeys.add(`${file.extraction.supplier}:${file.extraction.invoice_or_order_number}`);
+      }
+    }
+    processedMessageKeys.add(messageKey);
+
+    await client.chat.postMessage({
+      channel,
+      thread_ts: messageTs,
+      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Google Sheets.*`
+    });
+  } catch (sheetsError) {
+    console.error("Google Sheets error:", sheetsError);
+    await client.chat.postMessage({
+      channel,
+      thread_ts: messageTs,
+      text: `${headerLine}\n\n${tableText}\n\n❌ Error writing to Google Sheets: ${(sheetsError as Error).message}`
+    });
+  }
+}
+
+async function processWhiteboardBatch(params: {
+  whiteboardFiles: ProcessedWhiteboardFile[];
+  channel: string;
+  messageTs: string;
+  messageKey: string;
+  uploadedBy: string;
+  client: WebClient;
+}): Promise<void> {
+  const { whiteboardFiles, channel, messageTs, messageKey, uploadedBy, client } = params;
+  const summary = summarizeWhiteboardFiles(whiteboardFiles);
+  const confidencePct = Math.round(summary.avgConfidence * 100);
+  const confidenceEmoji = summary.avgConfidence >= 0.9 ? "🟢" : summary.avgConfidence >= 0.75 ? "🟡" : "🔴";
+  const tableText = formatWhiteboardTable(whiteboardFiles);
+  const headerLine =
+    `📋 *Outbound Whiteboard* — Files: *${whiteboardFiles.length}* | Line items: *${summary.lineItems}*\n` +
+    `${confidenceEmoji} Avg confidence: *${confidencePct}%*`;
+
+  if (summary.avgConfidence < CONFIDENCE_THRESHOLD) {
+    await client.chat.postMessage({
+      channel,
+      thread_ts: messageTs,
+      text:
+        `${headerLine}\n\n${tableText}\n\n` +
+        `❌ *Confidence too low* (${confidencePct}% < ${Math.round(CONFIDENCE_THRESHOLD * 100)}%). ` +
+        `The whiteboard photo wasn't clear enough — please retake (good lighting, full board in frame, no glare on tally marks) and try again. Nothing was logged.`
+    });
+    return;
+  }
+
+  try {
+    await ensureEodSheetHeader();
+    let totalRows = 0;
+    for (const file of whiteboardFiles) {
+      const rowsAdded = await appendEodRows({
+        extraction: file.extraction,
+        source: "whiteboard",
+        slackChannel: channel,
+        slackMessageTs: messageTs,
+        recordedBy: uploadedBy
+      });
+      totalRows += rowsAdded;
+    }
+
+    for (const file of whiteboardFiles) {
+      processedFileIds.add(file.fileId);
+      processedContentHashes.add(file.contentHash);
+    }
+    processedMessageKeys.add(messageKey);
+
+    await client.chat.postMessage({
+      channel,
+      thread_ts: messageTs,
+      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to EOD Inventory sheet.*`
+    });
+  } catch (sheetsError) {
+    console.error("Google Sheets error:", sheetsError);
+    await client.chat.postMessage({
+      channel,
+      thread_ts: messageTs,
+      text: `${headerLine}\n\n${tableText}\n\n❌ Error writing to Google Sheets: ${(sheetsError as Error).message}`
+    });
+  }
+}
 
 app.event("message", async ({ event, client, logger }) => {
   try {
@@ -218,6 +403,7 @@ app.event("message", async ({ event, client, logger }) => {
     });
 
     const processedFiles: ProcessedFileExtraction[] = [];
+    const whiteboardFiles: ProcessedWhiteboardFile[] = [];
     const uploadedBy = message.user || "unknown";
 
     for (const file of files) {
@@ -232,6 +418,25 @@ app.event("message", async ({ event, client, logger }) => {
           channel: message.channel,
           thread_ts: message.ts,
           text: `⚠️ *${file.name}* appears to be a duplicate (same file content already processed). Skipping.`
+        });
+        continue;
+      }
+
+      const kind = await classifyImage({ imageBytes: buffer, mimeType: file.mimetype });
+      console.log(`Classified ${file.name} as: ${kind}`);
+
+      if (kind === "whiteboard") {
+        const wbExtraction = await extractFromWhiteboard({
+          imageBytes: buffer,
+          mimeType: file.mimetype,
+          filename: file.name
+        });
+        whiteboardFiles.push({
+          fileId: file.id,
+          contentHash,
+          fileName: file.name,
+          photoUrl: file.url_private_download,
+          extraction: wbExtraction
         });
         continue;
       }
@@ -269,7 +474,7 @@ app.event("message", async ({ event, client, logger }) => {
       });
     }
 
-    if (!processedFiles.length) {
+    if (!processedFiles.length && !whiteboardFiles.length) {
       console.log("All files were duplicates, skipping");
       await client.chat.postMessage({
         channel: message.channel,
@@ -279,60 +484,25 @@ app.event("message", async ({ event, client, logger }) => {
       return;
     }
 
-    const summary = summarizeFiles(processedFiles);
-    const confidencePct = Math.round(summary.avgConfidence * 100);
-    const confidenceEmoji = summary.avgConfidence >= 0.9 ? "🟢" : summary.avgConfidence >= 0.75 ? "🟡" : "🔴";
-    const tableText = formatExtractionTable(processedFiles);
-    const headerLine =
-      `📦 *Extraction* — Files: *${processedFiles.length}* | Line items: *${summary.lineItems}* | Fees: *${summary.fees}*\n` +
-      `${confidenceEmoji} Avg confidence: *${confidencePct}%*`;
-
-    if (summary.avgConfidence < CONFIDENCE_THRESHOLD) {
-      await client.chat.postMessage({
+    if (processedFiles.length) {
+      await processInvoiceBatch({
+        processedFiles,
         channel: message.channel,
-        thread_ts: message.ts,
-        text:
-          `${headerLine}\n\n${tableText}\n\n` +
-          `❌ *Confidence too low* (${confidencePct}% < ${Math.round(CONFIDENCE_THRESHOLD * 100)}%). ` +
-          `The photo wasn't clear enough — please retake (good lighting, flat page, full document in frame) and try again. Nothing was logged.`
+        messageTs: message.ts,
+        messageKey,
+        uploadedBy,
+        client
       });
-      return;
     }
 
-    try {
-      await ensureSheetHeader();
-      let totalRows = 0;
-      for (const file of processedFiles) {
-        const rowsAdded = await appendExtractionRows({
-          extraction: file.extraction,
-          photoUrl: file.photoUrl,
-          slackChannel: message.channel,
-          slackMessageTs: message.ts,
-          uploadedBy
-        });
-        totalRows += rowsAdded;
-      }
-
-      for (const file of processedFiles) {
-        processedFileIds.add(file.fileId);
-        processedContentHashes.add(file.contentHash);
-        if (file.extraction.invoice_or_order_number && file.extraction.supplier !== "unknown") {
-          processedInvoiceKeys.add(`${file.extraction.supplier}:${file.extraction.invoice_or_order_number}`);
-        }
-      }
-      processedMessageKeys.add(messageKey);
-
-      await client.chat.postMessage({
+    if (whiteboardFiles.length) {
+      await processWhiteboardBatch({
+        whiteboardFiles,
         channel: message.channel,
-        thread_ts: message.ts,
-        text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Google Sheets.*`
-      });
-    } catch (sheetsError) {
-      console.error("Google Sheets error:", sheetsError);
-      await client.chat.postMessage({
-        channel: message.channel,
-        thread_ts: message.ts,
-        text: `${headerLine}\n\n${tableText}\n\n❌ Error writing to Google Sheets: ${(sheetsError as Error).message}`
+        messageTs: message.ts,
+        messageKey,
+        uploadedBy,
+        client
       });
     }
   } catch (error) {
