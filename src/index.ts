@@ -8,7 +8,7 @@ import { extractFromImage, extractFromText, transcribeAudio, guessSupplierFromFi
 import { runAssistantLoop } from "./assistant.js";
 import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection } from "./types.js";
 
-interface PendingFileExtraction {
+interface ProcessedFileExtraction {
   fileId: string;
   contentHash: string;
   fileName: string;
@@ -16,17 +16,7 @@ interface PendingFileExtraction {
   extraction: ExtractionResult;
 }
 
-interface PendingDelivery {
-  rootKey: string;
-  channel: string;
-  rootMessageTs: string;
-  uploadedBy: string;
-  files: PendingFileExtraction[];
-  createdAt: string;
-}
-
-const pendingDeliveries = new Map<string, PendingDelivery>();
-const messageKeyToRootKey = new Map<string, string>();
+const CONFIDENCE_THRESHOLD = 0.7;
 const processedFileIds = new Set<string>();
 const processedContentHashes = new Set<string>();
 const processedInvoiceKeys = new Set<string>();
@@ -106,16 +96,7 @@ function pendingKey(channel: string, ts: string): string {
   return `${channel}:${ts}`;
 }
 
-function clearPending(rootKey: string): void {
-  pendingDeliveries.delete(rootKey);
-  for (const [key, value] of messageKeyToRootKey.entries()) {
-    if (value === rootKey) {
-      messageKeyToRootKey.delete(key);
-    }
-  }
-}
-
-function summarizePending(pending: PendingDelivery): {
+function summarizeFiles(files: ProcessedFileExtraction[]): {
   lineItems: number;
   fees: number;
   avgConfidence: number;
@@ -123,15 +104,54 @@ function summarizePending(pending: PendingDelivery): {
   let lineItems = 0;
   let fees = 0;
   let totalConfidence = 0;
-  for (const f of pending.files) {
+  for (const f of files) {
     lineItems += f.extraction.line_items.length;
     fees += f.extraction.fees.length;
     for (const li of f.extraction.line_items) {
       totalConfidence += li.confidence;
     }
   }
-  const avgConfidence = lineItems > 0 ? Math.round((totalConfidence / lineItems) * 100) : 0;
+  const avgConfidence = lineItems > 0 ? totalConfidence / lineItems : 0;
   return { lineItems, fees, avgConfidence };
+}
+
+function padRight(s: string, width: number): string {
+  if (s.length >= width) return s.slice(0, width);
+  return s + " ".repeat(width - s.length);
+}
+
+function padLeft(s: string, width: number): string {
+  if (s.length >= width) return s.slice(0, width);
+  return " ".repeat(width - s.length) + s;
+}
+
+function formatExtractionTable(files: ProcessedFileExtraction[]): string {
+  const NAME_W = 30;
+  const QTY_W = 6;
+  const UNIT_W = 6;
+  const CONF_W = 5;
+  const header =
+    `${padRight("Item", NAME_W)} ${padLeft("Qty", QTY_W)} ${padRight("Unit", UNIT_W)} ${padLeft("Conf", CONF_W)}`;
+  const sep = "─".repeat(NAME_W + QTY_W + UNIT_W + CONF_W + 3);
+
+  const sections: string[] = [];
+  for (const f of files) {
+    const rows = f.extraction.line_items.map((li) => {
+      const name = li.item_name_normalized ?? li.item_name_raw ?? "Unknown";
+      const qty = li.quantity_raw ?? (li.quantity != null ? String(li.quantity) : "?");
+      const unit = li.unit ?? "";
+      const conf = `${Math.round(li.confidence * 100)}%`;
+      return `${padRight(name, NAME_W)} ${padLeft(qty, QTY_W)} ${padRight(unit, UNIT_W)} ${padLeft(conf, CONF_W)}`;
+    });
+    const feeRows = f.extraction.fees.map((fee) => {
+      const name = `(fee) ${fee.description}`;
+      const amount = `$${fee.amount.toFixed(2)}`;
+      return `${padRight(name, NAME_W)} ${padLeft(amount, QTY_W)} ${padRight("", UNIT_W)} ${padLeft("", CONF_W)}`;
+    });
+    const body = [header, sep, ...rows, ...feeRows].join("\n");
+    sections.push(`*${f.fileName}*\n\`\`\`\n${body}\n\`\`\``);
+  }
+  return sections.join("\n\n");
 }
 
 async function downloadSlackFile(url: string): Promise<Buffer> {
@@ -194,21 +214,14 @@ app.event("message", async ({ event, client, logger }) => {
       return;
     }
 
-    const startMsg = await client.chat.postMessage({
+    await client.chat.postMessage({
       channel: message.channel,
       thread_ts: message.ts,
       text: `Received ${files.length} file(s). Starting extraction...`
     });
 
-    const rootKey = pendingKey(message.channel, message.ts);
-    const pending: PendingDelivery = {
-      rootKey,
-      channel: message.channel,
-      rootMessageTs: message.ts,
-      uploadedBy: message.user || "unknown",
-      files: [],
-      createdAt: new Date().toISOString()
-    };
+    const processedFiles: ProcessedFileExtraction[] = [];
+    const uploadedBy = message.user || "unknown";
 
     for (const file of files) {
       if (!file.url_private_download) continue;
@@ -250,7 +263,7 @@ app.event("message", async ({ event, client, logger }) => {
         }
       }
 
-      pending.files.push({
+      processedFiles.push({
         fileId: file.id,
         contentHash,
         fileName: file.name,
@@ -259,7 +272,7 @@ app.event("message", async ({ event, client, logger }) => {
       });
     }
 
-    if (!pending.files.length) {
+    if (!processedFiles.length) {
       console.log("All files were duplicates, skipping");
       await client.chat.postMessage({
         channel: message.channel,
@@ -269,26 +282,61 @@ app.event("message", async ({ event, client, logger }) => {
       return;
     }
 
-    pendingDeliveries.set(rootKey, pending);
-    messageKeyToRootKey.set(rootKey, rootKey);
-    if (startMsg.ts) {
-      messageKeyToRootKey.set(pendingKey(message.channel, startMsg.ts), rootKey);
+    const summary = summarizeFiles(processedFiles);
+    const confidencePct = Math.round(summary.avgConfidence * 100);
+    const confidenceEmoji = summary.avgConfidence >= 0.9 ? "🟢" : summary.avgConfidence >= 0.75 ? "🟡" : "🔴";
+    const tableText = formatExtractionTable(processedFiles);
+    const headerLine =
+      `📦 *Extraction* — Files: *${processedFiles.length}* | Line items: *${summary.lineItems}* | Fees: *${summary.fees}*\n` +
+      `${confidenceEmoji} Avg confidence: *${confidencePct}%*`;
+
+    if (summary.avgConfidence < CONFIDENCE_THRESHOLD) {
+      await client.chat.postMessage({
+        channel: message.channel,
+        thread_ts: message.ts,
+        text:
+          `${headerLine}\n\n${tableText}\n\n` +
+          `❌ *Confidence too low* (${confidencePct}% < ${Math.round(CONFIDENCE_THRESHOLD * 100)}%). ` +
+          `The photo wasn't clear enough — please retake (good lighting, flat page, full document in frame) and try again. Nothing was logged.`
+      });
+      return;
     }
 
-    const summary = summarizePending(pending);
-    const confidenceEmoji = summary.avgConfidence >= 90 ? "🟢" : summary.avgConfidence >= 75 ? "🟡" : "🔴";
-    const summaryMsg = await client.chat.postMessage({
-      channel: message.channel,
-      thread_ts: message.ts,
-      text:
-        `📦 *Extraction ready for review*\n` +
-        `Files: *${pending.files.length}* | Line items: *${summary.lineItems}* | Fees: *${summary.fees}*\n` +
-        `${confidenceEmoji} Confidence: *${summary.avgConfidence}%*\n\n` +
-        `React 👍 to confirm and write to Google Sheets\n` +
-        `React ❌ to discard`
-    });
-    if (summaryMsg.ts) {
-      messageKeyToRootKey.set(pendingKey(message.channel, summaryMsg.ts), rootKey);
+    try {
+      await ensureSheetHeader();
+      let totalRows = 0;
+      for (const file of processedFiles) {
+        const rowsAdded = await appendExtractionRows({
+          extraction: file.extraction,
+          photoUrl: file.photoUrl,
+          slackChannel: message.channel,
+          slackMessageTs: message.ts,
+          uploadedBy
+        });
+        totalRows += rowsAdded;
+      }
+
+      for (const file of processedFiles) {
+        processedFileIds.add(file.fileId);
+        processedContentHashes.add(file.contentHash);
+        if (file.extraction.invoice_or_order_number && file.extraction.supplier !== "unknown") {
+          processedInvoiceKeys.add(`${file.extraction.supplier}:${file.extraction.invoice_or_order_number}`);
+        }
+      }
+      processedMessageKeys.add(messageKey);
+
+      await client.chat.postMessage({
+        channel: message.channel,
+        thread_ts: message.ts,
+        text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Google Sheets.*`
+      });
+    } catch (sheetsError) {
+      console.error("Google Sheets error:", sheetsError);
+      await client.chat.postMessage({
+        channel: message.channel,
+        thread_ts: message.ts,
+        text: `${headerLine}\n\n${tableText}\n\n❌ Error writing to Google Sheets: ${(sheetsError as Error).message}`
+      });
     }
   } catch (error) {
     logger.error(error);
@@ -316,9 +364,6 @@ app.event("reaction_added", async ({ event, client, logger }) => {
 
     console.log(`Reaction: ${reaction}, Channel: ${channel}, TS: ${ts}`);
     const lookupKey = pendingKey(channel, ts);
-    const rootKey = messageKeyToRootKey.get(lookupKey) || lookupKey;
-    console.log(`LookupKey: ${lookupKey}, RootKey: ${rootKey}`);
-    console.log(`Pending deliveries keys:`, Array.from(pendingDeliveries.keys()));
 
     // ── Assistant correction reaction handling ─────────────────────────────
     const pendingCorrection = pendingAssistantCorrections.get(lookupKey);
@@ -390,70 +435,6 @@ app.event("reaction_added", async ({ event, client, logger }) => {
         });
       }
       return;
-    }
-
-    const pending = pendingDeliveries.get(rootKey);
-    if (!pending) {
-      console.log("No pending delivery found for this reaction");
-      return;
-    }
-
-    console.log("Found pending delivery, processing...");
-
-    if (reaction === "+1") {
-      console.log("Processing +1 reaction - writing to Google Sheets...");
-      for (const file of pending.files) {
-        processedFileIds.add(file.fileId);
-        processedContentHashes.add(file.contentHash);
-        if (file.extraction.invoice_or_order_number && file.extraction.supplier !== "unknown") {
-          processedInvoiceKeys.add(`${file.extraction.supplier}:${file.extraction.invoice_or_order_number}`);
-        }
-      }
-      processedMessageKeys.add(pending.rootKey);
-      clearPending(rootKey);
-
-      try {
-        await ensureSheetHeader();
-        console.log("Sheet header ensured");
-
-        let totalRows = 0;
-        for (const file of pending.files) {
-          console.log(`Writing rows for file: ${file.fileName}`);
-          const rowsAdded = await appendExtractionRows({
-            extraction: file.extraction,
-            photoUrl: file.photoUrl,
-            slackChannel: pending.channel,
-            slackMessageTs: pending.rootMessageTs,
-            uploadedBy: pending.uploadedBy
-          });
-          totalRows += rowsAdded;
-          console.log(`Wrote ${rowsAdded} rows`);
-        }
-
-        console.log(`Total rows written: ${totalRows}`);
-        await client.chat.postMessage({
-          channel: pending.channel,
-          thread_ts: pending.rootMessageTs,
-          text: `✅ Confirmed by <@${event.user}>. Wrote *${totalRows}* row(s) to Google Sheets.`
-        });
-      } catch (sheetsError) {
-        console.error("Google Sheets error:", sheetsError);
-        await client.chat.postMessage({
-          channel: pending.channel,
-          thread_ts: pending.rootMessageTs,
-          text: `❌ Error writing to Google Sheets: ${(sheetsError as Error).message}`
-        });
-      }
-      return;
-    }
-
-    if (reaction === "x") {
-      clearPending(rootKey);
-      await client.chat.postMessage({
-        channel: pending.channel,
-        thread_ts: pending.rootMessageTs,
-        text: `Discarded by <@${event.user}>. No rows were written.`
-      });
     }
 
   } catch (error) {
