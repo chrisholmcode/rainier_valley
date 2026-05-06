@@ -88,6 +88,7 @@ Document format: Customer invoice with columns ORDER | SHIP | ITEM# | PACK SIZE 
 - Descriptions use commas: "AVOCADO,HASS GREEN" not spaces.
 - Origin codes may appear: MX (Mexico), UCA, etc. - put in notes.
 - delivery_date: Use the **INVOICE DATE** field (or "INVOICED") in the upper-right header row, typically next to ACCOUNT# and INVOICE#. Format is usually MM/DD/YY — convert to YYYY-MM-DD. Do NOT leave delivery_date null when this field is visible.
+- invoice_or_order_number: Use the **INVOICE#** column value in the upper-right header row (between ACCOUNT# and INVOICE DATE). Typically a 7-digit number like "7172545". Do NOT leave null when visible.
 - Filter out: Energy charge (put in fees[] array)
 - CHECK marks (/) in SHIP column indicate verification.`,
 
@@ -122,6 +123,7 @@ Document format: Bill of Lading / Sales Order with fields like Qty Shipped, Size
 - Columns: ORDER | SHIP | ITEM# | PACK SIZE | DESCRIPTION | APPROX.WT. | PRICE | EXTENSION
 - Descriptions use commas (e.g., "AVOCADO,HASS GREEN"). Use SHIP quantity. Filter out energy charge.
 - delivery_date: Use the **INVOICE DATE** field in the upper-right header (next to ACCOUNT# / INVOICE#). Convert MM/DD/YY to YYYY-MM-DD.
+- invoice_or_order_number: Use the **INVOICE#** value in the upper-right header (between ACCOUNT# and INVOICE DATE), typically a 7-digit number.
 
 **Northwest Harvest / Food Lifeline** (set supplier: "nw_harvest")
 - Header says "Northwest Harvest" or "Warehouse Posted Shipment" or "Food Lifeline"
