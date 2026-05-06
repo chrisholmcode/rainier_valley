@@ -33,6 +33,21 @@ interface ProcessedWhiteboardFile {
 }
 
 const CONFIDENCE_THRESHOLD = 0.7;
+
+function slackTsToLocalDate(ts: string): string {
+  const seconds = Number(ts.split(".")[0]);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(seconds * 1000));
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+  return `${y}-${m}-${d}`;
+}
+
 const processedFileIds = new Set<string>();
 const processedContentHashes = new Set<string>();
 const processedInvoiceKeys = new Set<string>();
@@ -451,6 +466,13 @@ app.event("message", async ({ event, client, logger }) => {
         filename: file.name,
         supplierHint
       });
+
+      if (!extraction.delivery_date) {
+        extraction.delivery_date = slackTsToLocalDate(message.ts);
+        extraction.source_warnings.push(
+          `delivery_date not found on document — defaulted to upload date (${extraction.delivery_date})`
+        );
+      }
 
       if (extraction.invoice_or_order_number && extraction.supplier !== "unknown") {
         const invoiceKey = `${extraction.supplier}:${extraction.invoice_or_order_number}`;

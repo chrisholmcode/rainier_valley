@@ -76,6 +76,7 @@ Document format: Printed invoice with columns ORDERED | SHIPPED | ITEM CODE | DE
 - ITEM CODE => item_code_raw
 - DESCRIPTION => item_name_raw (keep exact, e.g., "BEAN GREEN 28#")
 - Normalize: "BEAN GREEN 28#" => "Green Beans", "BROCCOLI CROWN 20#" => "Broccoli Crowns"
+- delivery_date: Use the **SHIP DATE** field in the upper-right header block (NOT the "DATE" / invoice date field). SHIP DATE is when the goods physically ship and is the correct delivery date for the food bank.
 - Filter out: Fuel surcharge, delivery fees (put in fees[] array)
 - Ignore handwritten time notations at top of page.`,
 
@@ -86,6 +87,7 @@ Document format: Customer invoice with columns ORDER | SHIP | ITEM# | PACK SIZE 
 - PACK SIZE => pack_size_raw (e.g., "1 40CT", "1 25LB")
 - Descriptions use commas: "AVOCADO,HASS GREEN" not spaces.
 - Origin codes may appear: MX (Mexico), UCA, etc. - put in notes.
+- delivery_date: Use the **INVOICE DATE** field (or "INVOICED") in the upper-right header row, typically next to ACCOUNT# and INVOICE#. Format is usually MM/DD/YY — convert to YYYY-MM-DD. Do NOT leave delivery_date null when this field is visible.
 - Filter out: Energy charge (put in fees[] array)
 - CHECK marks (/) in SHIP column indicate verification.`,
 
@@ -112,12 +114,14 @@ Document format: Bill of Lading / Sales Order with fields like Qty Shipped, Size
 - Location: Canby, OR or 2100 SE 4th Avenue
 - Columns: ORDERED | SHIPPED | ITEM CODE | DESCRIPTION | ORIGIN | UNIT PRICE | EXTENDED AMOUNT
 - Use SHIPPED quantity. Filter out fuel surcharge.
+- delivery_date: Use the **SHIP DATE** field in the upper-right header (NOT the "DATE" / invoice date field).
 
 **Charlie's Produce** (set supplier: "charlies")
 - Logo says "Charlie's Produce"
 - Location: Seattle, WA or PO Box 24606 or 4123 2nd Ave S
 - Columns: ORDER | SHIP | ITEM# | PACK SIZE | DESCRIPTION | APPROX.WT. | PRICE | EXTENSION
 - Descriptions use commas (e.g., "AVOCADO,HASS GREEN"). Use SHIP quantity. Filter out energy charge.
+- delivery_date: Use the **INVOICE DATE** field in the upper-right header (next to ACCOUNT# / INVOICE#). Convert MM/DD/YY to YYYY-MM-DD.
 
 **Northwest Harvest / Food Lifeline** (set supplier: "nw_harvest")
 - Header says "Northwest Harvest" or "Warehouse Posted Shipment" or "Food Lifeline"
