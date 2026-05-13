@@ -286,12 +286,6 @@ export function buildCsvExport(params: {
   const startDate = dates[0];
   const endDate = dates[dates.length - 1];
 
-  const dailyBuckets = aggregate(inboundRows, outboundRows, "daily", days);
-  const totalsByDate = new Map<string, { inbound: number; outbound: number }>();
-  for (const b of dailyBuckets) {
-    totalsByDate.set(b.startDate, { inbound: b.inboundCases, outbound: b.outboundCases });
-  }
-
   const rows: Array<{
     date: string;
     direction: "inbound" | "outbound";
@@ -301,15 +295,12 @@ export function buildCsvExport(params: {
     supplier: string;
     reference: string;
     category: string;
-    daily_total_inbound: number;
-    daily_total_outbound: number;
   }> = [];
 
   for (const r of inboundRows) {
     const d = r.delivery_date;
     if (!d || !dateSet.has(d)) continue;
     if (isFee(r.is_fee)) continue;
-    const totals = totalsByDate.get(d) ?? { inbound: 0, outbound: 0 };
     rows.push({
       date: d,
       direction: "inbound",
@@ -318,16 +309,13 @@ export function buildCsvExport(params: {
       unit: (r.unit ?? "").trim(),
       supplier: (r.supplier ?? "").trim(),
       reference: (r.invoice_or_order_number ?? "").trim(),
-      category: (r.category ?? "").trim(),
-      daily_total_inbound: totals.inbound,
-      daily_total_outbound: totals.outbound
+      category: (r.category ?? "").trim()
     });
   }
 
   for (const r of outboundRows) {
     const d = r.date;
     if (!d || !dateSet.has(d)) continue;
-    const totals = totalsByDate.get(d) ?? { inbound: 0, outbound: 0 };
     rows.push({
       date: d,
       direction: "outbound",
@@ -336,9 +324,7 @@ export function buildCsvExport(params: {
       unit: (r.unit ?? "").trim(),
       supplier: "",
       reference: r.slack_message_ts ?? "",
-      category: (r.category ?? "").trim(),
-      daily_total_inbound: totals.inbound,
-      daily_total_outbound: totals.outbound
+      category: (r.category ?? "").trim()
     });
   }
 
@@ -348,18 +334,7 @@ export function buildCsvExport(params: {
     return a.item.localeCompare(b.item);
   });
 
-  const header = [
-    "date",
-    "direction",
-    "item",
-    "quantity",
-    "unit",
-    "supplier",
-    "reference",
-    "category",
-    "daily_total_inbound_cases",
-    "daily_total_outbound_cases"
-  ];
+  const header = ["date", "direction", "item", "quantity", "unit", "supplier", "reference", "category"];
   const lines = [header.join(",")];
   for (const r of rows) {
     lines.push([
@@ -370,9 +345,7 @@ export function buildCsvExport(params: {
       csvField(r.unit),
       csvField(r.supplier),
       csvField(r.reference),
-      csvField(r.category),
-      csvField(formatNum(r.daily_total_inbound)),
-      csvField(formatNum(r.daily_total_outbound))
+      csvField(r.category)
     ].join(","));
   }
 
