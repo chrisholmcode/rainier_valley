@@ -1,7 +1,11 @@
 import type { DeliverySheetRow, EodSheetRow } from "./types.js";
 
-export interface DayBucket {
-  date: string;
+export type View = "daily" | "weekly";
+
+export interface Bucket {
+  key: string;
+  startDate: string;
+  endDate: string;
   inboundCases: number;
   outboundCases: number;
   vendors: string[];
@@ -12,6 +16,13 @@ export interface DayBucket {
 }
 
 const TZ = "America/Los_Angeles";
+
+function ymd(dt: Date): string {
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
 
 function todayInTz(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -26,19 +37,48 @@ function todayInTz(): string {
   return `${y}-${m}-${d}`;
 }
 
-function dateRange(days: number): string[] {
+function parseDate(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function addDays(s: string, n: number): string {
+  return ymd(new Date(parseDate(s).getTime() + n * 86400000));
+}
+
+// Monday of the ISO week containing the given date.
+function mondayOf(dateStr: string): string {
+  const dt = parseDate(dateStr);
+  const dow = dt.getUTCDay(); // 0=Sun..6=Sat
+  const diff = dow === 0 ? -6 : 1 - dow; // shift to Monday
+  return ymd(new Date(dt.getTime() + diff * 86400000));
+}
+
+function dailyRange(days: number): Array<{ key: string; startDate: string; endDate: string }> {
   const end = todayInTz();
-  const [y, m, d] = end.split("-").map(Number);
-  const endUtc = Date.UTC(y, m - 1, d);
-  const out: string[] = [];
+  const out: Array<{ key: string; startDate: string; endDate: string }> = [];
   for (let i = days - 1; i >= 0; i--) {
-    const dt = new Date(endUtc - i * 86400000);
-    const yy = dt.getUTCFullYear();
-    const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(dt.getUTCDate()).padStart(2, "0");
-    out.push(`${yy}-${mm}-${dd}`);
+    const d = addDays(end, -i);
+    out.push({ key: d, startDate: d, endDate: d });
   }
   return out;
+}
+
+function weeklyRange(weeks: number): Array<{ key: string; startDate: string; endDate: string }> {
+  const currentMon = mondayOf(todayInTz());
+  const out: Array<{ key: string; startDate: string; endDate: string }> = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = addDays(currentMon, -i * 7);
+    const end = addDays(start, 6);
+    out.push({ key: start, startDate: start, endDate: end });
+  }
+  return out;
+}
+
+function bucketKeyFor(date: string | null | undefined, view: View): string | null {
+  if (!date) return null;
+  if (view === "daily") return date;
+  return mondayOf(date);
 }
 
 function toNumber(v: string | null | undefined): number {
@@ -64,13 +104,16 @@ function topN(map: Map<string, number>, n: number): Array<{ name: string; qty: n
 export function aggregate(
   inboundRows: DeliverySheetRow[],
   outboundRows: EodSheetRow[],
-  days: number
-): DayBucket[] {
-  const dates = dateRange(days);
-  const buckets = new Map<string, DayBucket>();
-  for (const date of dates) {
-    buckets.set(date, {
-      date,
+  view: View,
+  periods: number
+): Bucket[] {
+  const range = view === "daily" ? dailyRange(periods) : weeklyRange(periods);
+  const buckets = new Map<string, Bucket>();
+  for (const r of range) {
+    buckets.set(r.key, {
+      key: r.key,
+      startDate: r.startDate,
+      endDate: r.endDate,
       inboundCases: 0,
       outboundCases: 0,
       vendors: [],
@@ -88,63 +131,63 @@ export function aggregate(
   const sessionSets = new Map<string, Set<string>>();
 
   for (const r of inboundRows) {
-    const d = r.delivery_date;
-    if (!d || !buckets.has(d)) continue;
+    const key = bucketKeyFor(r.delivery_date, view);
+    if (!key || !buckets.has(key)) continue;
     if (isFee(r.is_fee)) continue;
     const qty = toNumber(r.quantity);
-    const bucket = buckets.get(d)!;
+    const bucket = buckets.get(key)!;
     bucket.inboundCases += qty;
 
     if (r.supplier && r.supplier.trim()) {
-      let vs = vendorSets.get(d);
-      if (!vs) vendorSets.set(d, (vs = new Set()));
+      let vs = vendorSets.get(key);
+      if (!vs) vendorSets.set(key, (vs = new Set()));
       vs.add(r.supplier.trim());
     }
 
     if (r.supplier && r.invoice_or_order_number) {
-      let is = invoiceSets.get(d);
-      if (!is) invoiceSets.set(d, (is = new Set()));
+      let is = invoiceSets.get(key);
+      if (!is) invoiceSets.set(key, (is = new Set()));
       is.add(`${r.supplier}::${r.invoice_or_order_number}`);
     }
 
     const name = (r.item_name_normalized || r.item_name_raw || "").trim();
     if (name && qty > 0) {
-      let im = inboundItems.get(d);
-      if (!im) inboundItems.set(d, (im = new Map()));
+      let im = inboundItems.get(key);
+      if (!im) inboundItems.set(key, (im = new Map()));
       im.set(name, (im.get(name) ?? 0) + qty);
     }
   }
 
   for (const r of outboundRows) {
-    const d = r.date;
-    if (!d || !buckets.has(d)) continue;
+    const key = bucketKeyFor(r.date, view);
+    if (!key || !buckets.has(key)) continue;
     const qty = toNumber(r.quantity);
-    const bucket = buckets.get(d)!;
+    const bucket = buckets.get(key)!;
     bucket.outboundCases += qty;
 
     const sessionKey = r.slack_message_ts || `manual::${r.recorded_at || r.rowIndex}`;
-    let ss = sessionSets.get(d);
-    if (!ss) sessionSets.set(d, (ss = new Set()));
+    let ss = sessionSets.get(key);
+    if (!ss) sessionSets.set(key, (ss = new Set()));
     ss.add(sessionKey);
 
     const name = (r.item_name_normalized || r.item_name_raw || "").trim();
     if (name && qty > 0) {
-      let im = outboundItems.get(d);
-      if (!im) outboundItems.set(d, (im = new Map()));
+      let im = outboundItems.get(key);
+      if (!im) outboundItems.set(key, (im = new Map()));
       im.set(name, (im.get(name) ?? 0) + qty);
     }
   }
 
-  for (const date of dates) {
-    const b = buckets.get(date)!;
-    b.vendors = Array.from(vendorSets.get(date) ?? []).sort();
-    b.invoiceCount = invoiceSets.get(date)?.size ?? 0;
-    b.sessionCount = sessionSets.get(date)?.size ?? 0;
-    b.topInbound = topN(inboundItems.get(date) ?? new Map(), 3);
-    b.topOutbound = topN(outboundItems.get(date) ?? new Map(), 3);
+  for (const r of range) {
+    const b = buckets.get(r.key)!;
+    b.vendors = Array.from(vendorSets.get(r.key) ?? []).sort();
+    b.invoiceCount = invoiceSets.get(r.key)?.size ?? 0;
+    b.sessionCount = sessionSets.get(r.key)?.size ?? 0;
+    b.topInbound = topN(inboundItems.get(r.key) ?? new Map(), 3);
+    b.topOutbound = topN(outboundItems.get(r.key) ?? new Map(), 3);
   }
 
-  return dates.map((d) => buckets.get(d)!);
+  return range.map((r) => buckets.get(r.key)!);
 }
 
 function escapeHtml(s: string): string {
@@ -156,12 +199,32 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function formatColHeader(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
+function dailyColHeader(bucket: Bucket): string {
+  const dt = parseDate(bucket.startDate);
   const weekday = dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
   const monthDay = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   return `<div class="col-weekday">${escapeHtml(weekday)}</div><div class="col-date">${escapeHtml(monthDay)}</div>`;
+}
+
+function weeklyColHeader(bucket: Bucket): string {
+  const start = parseDate(bucket.startDate);
+  const end = parseDate(bucket.endDate);
+  const startMonth = start.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const endMonth = end.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const startDay = start.getUTCDate();
+  const endDay = end.getUTCDate();
+  const label = startMonth === endMonth
+    ? `${startMonth} ${startDay}–${endDay}`
+    : `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
+  return `<div class="col-weekday">Week of</div><div class="col-date">${escapeHtml(label)}</div>`;
+}
+
+function chartLabel(bucket: Bucket, view: View): string {
+  const start = parseDate(bucket.startDate);
+  if (view === "daily") {
+    return start.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  return start.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function vendorsCell(vendors: string[]): string {
@@ -189,15 +252,55 @@ function casesCell(n: number, kind: "in" | "out"): string {
   return `<span class="num-${kind}">${formatNum(n)}</span>`;
 }
 
+interface ViewOption {
+  view: View;
+  periods: number;
+}
+
+function rangeButtons(active: ViewOption, token: string): string {
+  const tokenParam = encodeURIComponent(token);
+  const opts: Array<{ label: string; view: View; periods: number }> =
+    active.view === "daily"
+      ? [
+          { label: "7 days", view: "daily", periods: 7 },
+          { label: "30 days", view: "daily", periods: 30 }
+        ]
+      : [
+          { label: "4 weeks", view: "weekly", periods: 4 },
+          { label: "12 weeks", view: "weekly", periods: 12 }
+        ];
+
+  return opts
+    .map((o) => {
+      const cls = o.periods === active.periods ? "btn active" : "btn";
+      const param = o.view === "daily" ? `days=${o.periods}` : `weeks=${o.periods}`;
+      return `<a class="${cls}" href="?view=${o.view}&amp;${param}&amp;token=${tokenParam}">${o.label}</a>`;
+    })
+    .join("");
+}
+
+function viewButtons(active: ViewOption, token: string): string {
+  const tokenParam = encodeURIComponent(token);
+  const dailyDefault = active.view === "daily" ? active.periods : 7;
+  const weeklyDefault = active.view === "weekly" ? active.periods : 4;
+  const dailyCls = active.view === "daily" ? "btn active" : "btn";
+  const weeklyCls = active.view === "weekly" ? "btn active" : "btn";
+  return `
+    <a class="${dailyCls}" href="?view=daily&amp;days=${dailyDefault}&amp;token=${tokenParam}">Daily</a>
+    <a class="${weeklyCls}" href="?view=weekly&amp;weeks=${weeklyDefault}&amp;token=${tokenParam}">Weekly</a>
+  `;
+}
+
 export function buildDashboardHtml(params: {
-  days: number;
+  view: View;
+  periods: number;
   token: string;
   inboundRows: DeliverySheetRow[];
   outboundRows: EodSheetRow[];
   generatedAt: Date;
 }): string {
-  const { days, token, inboundRows, outboundRows, generatedAt } = params;
-  const buckets = aggregate(inboundRows, outboundRows, days);
+  const { view, periods, token, inboundRows, outboundRows, generatedAt } = params;
+  const buckets = aggregate(inboundRows, outboundRows, view, periods);
   const generatedLabel = generatedAt.toLocaleString("en-US", {
     timeZone: TZ,
     month: "short",
@@ -207,7 +310,8 @@ export function buildDashboardHtml(params: {
     hour12: true
   });
 
-  const headerCells = buckets.map((b) => `<th>${formatColHeader(b.date)}</th>`).join("");
+  const colHeaderFn = view === "daily" ? dailyColHeader : weeklyColHeader;
+  const headerCells = buckets.map((b) => `<th>${colHeaderFn(b)}</th>`).join("");
   const inboundCasesRow = buckets.map((b) => `<td class="num">${casesCell(b.inboundCases, "in")}</td>`).join("");
   const outboundCasesRow = buckets.map((b) => `<td class="num">${casesCell(b.outboundCases, "out")}</td>`).join("");
   const vendorsRow = buckets.map((b) => `<td>${vendorsCell(b.vendors)}</td>`).join("");
@@ -216,26 +320,24 @@ export function buildDashboardHtml(params: {
   const invoicesRow = buckets.map((b) => `<td class="num">${b.invoiceCount || `<span class="muted">0</span>`}</td>`).join("");
   const sessionsRow = buckets.map((b) => `<td class="num">${b.sessionCount || `<span class="muted">0</span>`}</td>`).join("");
 
-  const chartLabels = JSON.stringify(buckets.map((b) => {
-    const [y, m, d] = b.date.split("-").map(Number);
-    const dt = new Date(Date.UTC(y, m - 1, d));
-    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-  }));
+  const chartLabels = JSON.stringify(buckets.map((b) => chartLabel(b, view)));
   const inboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.inboundCases * 10) / 10));
   const outboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.outboundCases * 10) / 10));
 
   const totalInbound = buckets.reduce((s, b) => s + b.inboundCases, 0);
   const totalOutbound = buckets.reduce((s, b) => s + b.outboundCases, 0);
 
-  const tokenParam = encodeURIComponent(token);
-  const btn7 = days === 7 ? "btn active" : "btn";
-  const btn30 = days === 30 ? "btn active" : "btn";
+  const active: ViewOption = { view, periods };
+  const periodWord = view === "daily" ? (periods === 1 ? "day" : "days") : (periods === 1 ? "week" : "weeks");
+  const bucketWord = view === "daily" ? "day" : "week";
+  const inboundCasesLabel = view === "daily" ? "Inbound — cases" : "Inbound — cases (week)";
+  const outboundCasesLabel = view === "daily" ? "Outbound — cases" : "Outbound — cases (week)";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RVFB Daily Dashboard</title>
+<title>RVFB Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -273,7 +375,9 @@ export function buildDashboardHtml(params: {
   }
   header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
   header .meta { color: var(--muted); font-size: 13px; }
-  .toolbar { display: flex; gap: 8px; align-items: center; }
+  .toolbar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .btn-group { display: flex; gap: 6px; }
+  .btn-group .divider { width: 1px; background: var(--line); align-self: stretch; margin: 0 4px; }
   .btn {
     display: inline-block;
     padding: 6px 14px;
@@ -288,7 +392,7 @@ export function buildDashboardHtml(params: {
   }
   .btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
   .btn:hover:not(.active) { background: #f3f4f6; }
-  h2 { font-size: 16px; margin: 24px 0 12px; letter-spacing: -0.01em; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
+  h2 { font-size: 16px; margin: 24px 0 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
   .summary-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
   .summary-pill { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; min-width: 180px; }
   .summary-pill.in { border-left: 4px solid var(--in); }
@@ -326,12 +430,12 @@ export function buildDashboardHtml(params: {
 
 <header>
   <div>
-    <h1>RVFB Daily Dashboard</h1>
-    <div class="meta">Last ${days} days · Generated ${escapeHtml(generatedLabel)} PT</div>
+    <h1>RVFB Dashboard</h1>
+    <div class="meta">Last ${periods} ${periodWord} · Generated ${escapeHtml(generatedLabel)} PT</div>
   </div>
   <div class="toolbar">
-    <a class="${btn7}" href="?days=7&amp;token=${tokenParam}">Last 7 days</a>
-    <a class="${btn30}" href="?days=30&amp;token=${tokenParam}">Last 30 days</a>
+    <div class="btn-group">${viewButtons(active, token)}</div>
+    <div class="btn-group">${rangeButtons(active, token)}</div>
   </div>
 </header>
 
@@ -350,12 +454,12 @@ export function buildDashboardHtml(params: {
   </div>
 </div>
 
-<h2>Cases by day</h2>
+<h2>Cases by ${bucketWord}</h2>
 <div class="card">
   <div class="chart-wrap"><canvas id="casesChart"></canvas></div>
 </div>
 
-<h2>Daily breakdown</h2>
+<h2>${view === "daily" ? "Daily" : "Weekly"} breakdown</h2>
 <div class="card">
   <table>
     <thead>
@@ -365,8 +469,8 @@ export function buildDashboardHtml(params: {
       </tr>
     </thead>
     <tbody>
-      <tr><th>Inbound — cases</th>${inboundCasesRow}</tr>
-      <tr><th>Outbound — cases</th>${outboundCasesRow}</tr>
+      <tr><th>${inboundCasesLabel}</th>${inboundCasesRow}</tr>
+      <tr><th>${outboundCasesLabel}</th>${outboundCasesRow}</tr>
       <tr><th>Vendors</th>${vendorsRow}</tr>
       <tr><th>Top inbound items</th>${topInRow}</tr>
       <tr><th>Top outbound items</th>${topOutRow}</tr>
