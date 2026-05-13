@@ -46,12 +46,11 @@ function addDays(s: string, n: number): string {
   return ymd(new Date(parseDate(s).getTime() + n * 86400000));
 }
 
-// Monday of the ISO week containing the given date.
-function mondayOf(dateStr: string): string {
+// Sunday that starts the week containing the given date (Sun-Sat weeks).
+function weekStartOf(dateStr: string): string {
   const dt = parseDate(dateStr);
   const dow = dt.getUTCDay(); // 0=Sun..6=Sat
-  const diff = dow === 0 ? -6 : 1 - dow; // shift to Monday
-  return ymd(new Date(dt.getTime() + diff * 86400000));
+  return ymd(new Date(dt.getTime() - dow * 86400000));
 }
 
 function dailyRange(days: number): Array<{ key: string; startDate: string; endDate: string }> {
@@ -65,10 +64,10 @@ function dailyRange(days: number): Array<{ key: string; startDate: string; endDa
 }
 
 function weeklyRange(weeks: number): Array<{ key: string; startDate: string; endDate: string }> {
-  const currentMon = mondayOf(todayInTz());
+  const currentSun = weekStartOf(todayInTz());
   const out: Array<{ key: string; startDate: string; endDate: string }> = [];
   for (let i = weeks - 1; i >= 0; i--) {
-    const start = addDays(currentMon, -i * 7);
+    const start = addDays(currentSun, -i * 7);
     const end = addDays(start, 6);
     out.push({ key: start, startDate: start, endDate: end });
   }
@@ -78,7 +77,7 @@ function weeklyRange(weeks: number): Array<{ key: string; startDate: string; end
 function bucketKeyFor(date: string | null | undefined, view: View): string | null {
   if (!date) return null;
   if (view === "daily") return date;
-  return mondayOf(date);
+  return weekStartOf(date);
 }
 
 function toNumber(v: string | null | undefined): number {
