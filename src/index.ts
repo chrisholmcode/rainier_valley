@@ -4,7 +4,8 @@ import axios from "axios";
 import { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import { env } from "./config.js";
-import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell } from "./sheets.js";
+import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell, readDeliveryRows, readEodRows } from "./sheets.js";
+import { buildDashboardHtml } from "./dashboard.js";
 import {
   extractFromImage,
   extractFromText,
@@ -860,40 +861,89 @@ async function handleAlexaRequest(body: unknown, res: ServerResponse): Promise<v
   res.end(JSON.stringify({ error: "Unknown request type" }));
 }
 
-function startVoiceServer(): void {
+async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!env.DASHBOARD_TOKEN) {
+    res.writeHead(404);
+    res.end();
+    return;
+  }
+
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const token = url.searchParams.get("token") ?? "";
+  if (token !== env.DASHBOARD_TOKEN) {
+    res.writeHead(401, { "Content-Type": "text/plain" });
+    res.end("Unauthorized");
+    return;
+  }
+
+  const daysParam = parseInt(url.searchParams.get("days") ?? "7", 10);
+  const days = daysParam === 30 ? 30 : 7;
+
+  try {
+    const [inboundRows, outboundRows] = await Promise.all([
+      readDeliveryRows({ limit: 5000 }),
+      readEodRows({ limit: 5000 })
+    ]);
+    const html = buildDashboardHtml({
+      days,
+      token: env.DASHBOARD_TOKEN,
+      inboundRows,
+      outboundRows,
+      generatedAt: new Date()
+    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Dashboard error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
+function startHttpServer(): void {
   const server = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
-    if (req.method !== "POST" || req.url !== "/voice") {
-      res.writeHead(404);
-      res.end();
+    const path = (req.url ?? "/").split("?")[0];
+
+    if (req.method === "GET" && path === "/dashboard") {
+      await handleDashboardRequest(req, res);
       return;
     }
 
-    // Accept Bearer token (for curl/testing) OR Alexa signature headers (for real device)
-    const authHeader = req.headers["authorization"] ?? "";
-    const hasAlexaSignature = Boolean(req.headers["signaturecertchainurl"]);
-    if (!hasAlexaSignature && authHeader !== `Bearer ${env.VOICE_WEBHOOK_SECRET}`) {
-      res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Unauthorized" }));
-      return;
-    }
-
-    try {
-      const chunks: Buffer[] = [];
-      for await (const chunk of req) chunks.push(chunk as Buffer);
-      const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
-      await handleAlexaRequest(body, res);
-    } catch (err) {
-      console.error("Voice webhook error:", (err as Error).message);
-      if (!res.headersSent) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Internal server error" }));
+    if (req.method === "POST" && path === "/voice") {
+      // Accept Bearer token (for curl/testing) OR Alexa signature headers (for real device)
+      const authHeader = req.headers["authorization"] ?? "";
+      const hasAlexaSignature = Boolean(req.headers["signaturecertchainurl"]);
+      if (!hasAlexaSignature && authHeader !== `Bearer ${env.VOICE_WEBHOOK_SECRET}`) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Unauthorized" }));
+        return;
       }
+
+      try {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(chunk as Buffer);
+        const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
+        await handleAlexaRequest(body, res);
+      } catch (err) {
+        console.error("Voice webhook error:", (err as Error).message);
+        if (!res.headersSent) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
+      }
+      return;
     }
+
+    res.writeHead(404);
+    res.end();
   });
 
   const port = process.env.PORT ? parseInt(process.env.PORT) : env.VOICE_PORT;
   server.listen(port, () => {
-    console.log(`Voice webhook listening on port ${port}`);
+    const routes: string[] = [];
+    if (env.VOICE_WEBHOOK_SECRET) routes.push("/voice");
+    if (env.DASHBOARD_TOKEN) routes.push("/dashboard");
+    console.log(`HTTP server listening on port ${port} (routes: ${routes.join(", ") || "none"})`);
   });
 }
 
@@ -906,8 +956,8 @@ async function start(): Promise<void> {
     console.log(`Slack app started on port ${env.SLACK_PORT}.`);
   }
 
-  if (env.VOICE_WEBHOOK_SECRET) {
-    startVoiceServer();
+  if (env.VOICE_WEBHOOK_SECRET || env.DASHBOARD_TOKEN) {
+    startHttpServer();
   }
 }
 
