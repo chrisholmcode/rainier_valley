@@ -888,6 +888,42 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
       readEodRows({ limit: 5000 })
     ]);
 
+    if (format === "raw") {
+      const dateParam = url.searchParams.get("date");
+      let from = url.searchParams.get("from");
+      let to = url.searchParams.get("to");
+      if (dateParam) {
+        from = dateParam;
+        to = dateParam;
+      }
+      const inFiltered = from || to
+        ? inboundRows.filter((r) => {
+            const d = r.delivery_date;
+            if (!d) return false;
+            if (from && d < from) return false;
+            if (to && d > to) return false;
+            return true;
+          })
+        : inboundRows;
+      const outFiltered = from || to
+        ? outboundRows.filter((r) => {
+            const d = r.date;
+            if (!d) return false;
+            if (from && d < from) return false;
+            if (to && d > to) return false;
+            return true;
+          })
+        : outboundRows;
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({
+        from: from ?? null,
+        to: to ?? null,
+        inbound: inFiltered,
+        outbound: outFiltered
+      }));
+      return;
+    }
+
     if (format === "csv") {
       const { filename, csv } = buildCsvExport({ range, inboundRows, outboundRows });
       res.writeHead(200, {
