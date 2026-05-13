@@ -5,7 +5,7 @@ import { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import { env } from "./config.js";
 import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell, readDeliveryRows, readEodRows } from "./sheets.js";
-import { buildDashboardHtml } from "./dashboard.js";
+import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
 import {
   extractFromImage,
   extractFromText,
@@ -880,12 +880,25 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
   const view: "daily" | "weekly" = viewParam === "weekly" ? "weekly" : "daily";
   const rangeParam = url.searchParams.get("range");
   const range: "1w" | "4w" = rangeParam === "4w" ? "4w" : "1w";
+  const format = url.searchParams.get("format");
 
   try {
     const [inboundRows, outboundRows] = await Promise.all([
       readDeliveryRows({ limit: 5000 }),
       readEodRows({ limit: 5000 })
     ]);
+
+    if (format === "csv") {
+      const { filename, csv } = buildCsvExport({ range, inboundRows, outboundRows });
+      res.writeHead(200, {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "no-store"
+      });
+      res.end(csv);
+      return;
+    }
+
     const html = buildDashboardHtml({
       view,
       range,

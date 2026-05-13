@@ -263,6 +263,125 @@ function periodsFor(view: View, range: Range): number {
   return range === "1w" ? 1 : 4;
 }
 
+function exportWindowDays(range: Range): number {
+  return range === "1w" ? 7 : 28;
+}
+
+function csvField(v: string | number | null | undefined): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+export function buildCsvExport(params: {
+  range: Range;
+  inboundRows: DeliverySheetRow[];
+  outboundRows: EodSheetRow[];
+}): { filename: string; csv: string } {
+  const { range, inboundRows, outboundRows } = params;
+  const days = exportWindowDays(range);
+  const dates = dailyRange(days).map((r) => r.startDate);
+  const dateSet = new Set(dates);
+  const startDate = dates[0];
+  const endDate = dates[dates.length - 1];
+
+  const dailyBuckets = aggregate(inboundRows, outboundRows, "daily", days);
+  const totalsByDate = new Map<string, { inbound: number; outbound: number }>();
+  for (const b of dailyBuckets) {
+    totalsByDate.set(b.startDate, { inbound: b.inboundCases, outbound: b.outboundCases });
+  }
+
+  const rows: Array<{
+    date: string;
+    direction: "inbound" | "outbound";
+    item: string;
+    quantity: number;
+    unit: string;
+    supplier: string;
+    reference: string;
+    category: string;
+    daily_total_inbound: number;
+    daily_total_outbound: number;
+  }> = [];
+
+  for (const r of inboundRows) {
+    const d = r.delivery_date;
+    if (!d || !dateSet.has(d)) continue;
+    if (isFee(r.is_fee)) continue;
+    const totals = totalsByDate.get(d) ?? { inbound: 0, outbound: 0 };
+    rows.push({
+      date: d,
+      direction: "inbound",
+      item: (r.item_name_normalized || r.item_name_raw || "").trim(),
+      quantity: toNumber(r.quantity),
+      unit: (r.unit ?? "").trim(),
+      supplier: (r.supplier ?? "").trim(),
+      reference: (r.invoice_or_order_number ?? "").trim(),
+      category: (r.category ?? "").trim(),
+      daily_total_inbound: totals.inbound,
+      daily_total_outbound: totals.outbound
+    });
+  }
+
+  for (const r of outboundRows) {
+    const d = r.date;
+    if (!d || !dateSet.has(d)) continue;
+    const totals = totalsByDate.get(d) ?? { inbound: 0, outbound: 0 };
+    rows.push({
+      date: d,
+      direction: "outbound",
+      item: (r.item_name_normalized || r.item_name_raw || "").trim(),
+      quantity: toNumber(r.quantity),
+      unit: (r.unit ?? "").trim(),
+      supplier: "",
+      reference: r.slack_message_ts ?? "",
+      category: (r.category ?? "").trim(),
+      daily_total_inbound: totals.inbound,
+      daily_total_outbound: totals.outbound
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (a.direction !== b.direction) return a.direction === "inbound" ? -1 : 1;
+    return a.item.localeCompare(b.item);
+  });
+
+  const header = [
+    "date",
+    "direction",
+    "item",
+    "quantity",
+    "unit",
+    "supplier",
+    "reference",
+    "category",
+    "daily_total_inbound_cases",
+    "daily_total_outbound_cases"
+  ];
+  const lines = [header.join(",")];
+  for (const r of rows) {
+    lines.push([
+      csvField(r.date),
+      csvField(r.direction),
+      csvField(r.item),
+      csvField(formatNum(r.quantity)),
+      csvField(r.unit),
+      csvField(r.supplier),
+      csvField(r.reference),
+      csvField(r.category),
+      csvField(formatNum(r.daily_total_inbound)),
+      csvField(formatNum(r.daily_total_outbound))
+    ].join(","));
+  }
+
+  return {
+    filename: `rvfb-export-${startDate}_to_${endDate}.csv`,
+    csv: lines.join("\n") + "\n"
+  };
+}
+
 function rangeButtons(active: ViewOption, token: string): string {
   const tokenParam = encodeURIComponent(token);
   const opts: Array<{ label: string; range: Range }> = [
@@ -389,6 +508,8 @@ export function buildDashboardHtml(params: {
   }
   .btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
   .btn:hover:not(.active) { background: #f3f4f6; }
+  .btn-export { border-color: var(--in); color: var(--in); }
+  .btn-export:hover { background: var(--in-bg); }
   h2 { font-size: 16px; margin: 24px 0 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
   .summary-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
   .summary-pill { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; min-width: 180px; }
@@ -433,6 +554,7 @@ export function buildDashboardHtml(params: {
   <div class="toolbar">
     <div class="btn-group">${viewButtons(active, token)}</div>
     <div class="btn-group">${rangeButtons(active, token)}</div>
+    <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv&amp;token=${encodeURIComponent(token)}" download>↓ Export CSV</a>
   </div>
 </header>
 
