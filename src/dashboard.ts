@@ -251,54 +251,52 @@ function casesCell(n: number, kind: "in" | "out"): string {
   return `<span class="num-${kind}">${formatNum(n)}</span>`;
 }
 
+export type Range = "1w" | "4w";
+
 interface ViewOption {
   view: View;
-  periods: number;
+  range: Range;
+}
+
+function periodsFor(view: View, range: Range): number {
+  if (view === "daily") return range === "1w" ? 7 : 28;
+  return range === "1w" ? 1 : 4;
 }
 
 function rangeButtons(active: ViewOption, token: string): string {
   const tokenParam = encodeURIComponent(token);
-  const opts: Array<{ label: string; view: View; periods: number }> =
-    active.view === "daily"
-      ? [
-          { label: "7 days", view: "daily", periods: 7 },
-          { label: "30 days", view: "daily", periods: 30 }
-        ]
-      : [
-          { label: "4 weeks", view: "weekly", periods: 4 },
-          { label: "12 weeks", view: "weekly", periods: 12 }
-        ];
-
+  const opts: Array<{ label: string; range: Range }> = [
+    { label: "1 week", range: "1w" },
+    { label: "4 weeks", range: "4w" }
+  ];
   return opts
     .map((o) => {
-      const cls = o.periods === active.periods ? "btn active" : "btn";
-      const param = o.view === "daily" ? `days=${o.periods}` : `weeks=${o.periods}`;
-      return `<a class="${cls}" href="?view=${o.view}&amp;${param}&amp;token=${tokenParam}">${o.label}</a>`;
+      const cls = o.range === active.range ? "btn active" : "btn";
+      return `<a class="${cls}" href="?view=${active.view}&amp;range=${o.range}&amp;token=${tokenParam}">${o.label}</a>`;
     })
     .join("");
 }
 
 function viewButtons(active: ViewOption, token: string): string {
   const tokenParam = encodeURIComponent(token);
-  const dailyDefault = active.view === "daily" ? active.periods : 7;
-  const weeklyDefault = active.view === "weekly" ? active.periods : 4;
   const dailyCls = active.view === "daily" ? "btn active" : "btn";
   const weeklyCls = active.view === "weekly" ? "btn active" : "btn";
   return `
-    <a class="${dailyCls}" href="?view=daily&amp;days=${dailyDefault}&amp;token=${tokenParam}">Daily</a>
-    <a class="${weeklyCls}" href="?view=weekly&amp;weeks=${weeklyDefault}&amp;token=${tokenParam}">Weekly</a>
+    <a class="${dailyCls}" href="?view=daily&amp;range=${active.range}&amp;token=${tokenParam}">Daily</a>
+    <a class="${weeklyCls}" href="?view=weekly&amp;range=${active.range}&amp;token=${tokenParam}">Weekly</a>
   `;
 }
 
 export function buildDashboardHtml(params: {
   view: View;
-  periods: number;
+  range: Range;
   token: string;
   inboundRows: DeliverySheetRow[];
   outboundRows: EodSheetRow[];
   generatedAt: Date;
 }): string {
-  const { view, periods, token, inboundRows, outboundRows, generatedAt } = params;
+  const { view, range, token, inboundRows, outboundRows, generatedAt } = params;
+  const periods = periodsFor(view, range);
   const buckets = aggregate(inboundRows, outboundRows, view, periods);
   const generatedLabel = generatedAt.toLocaleString("en-US", {
     timeZone: TZ,
@@ -326,7 +324,7 @@ export function buildDashboardHtml(params: {
   const totalInbound = buckets.reduce((s, b) => s + b.inboundCases, 0);
   const totalOutbound = buckets.reduce((s, b) => s + b.outboundCases, 0);
 
-  const active: ViewOption = { view, periods };
+  const active: ViewOption = { view, range };
   const periodWord = view === "daily" ? (periods === 1 ? "day" : "days") : (periods === 1 ? "week" : "weeks");
   const bucketWord = view === "daily" ? "day" : "week";
   const inboundCasesLabel = view === "daily" ? "Inbound — cases" : "Inbound — cases (week)";

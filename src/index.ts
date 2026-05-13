@@ -878,14 +878,8 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
 
   const viewParam = url.searchParams.get("view");
   const view: "daily" | "weekly" = viewParam === "weekly" ? "weekly" : "daily";
-  let periods: number;
-  if (view === "weekly") {
-    const weeksParam = parseInt(url.searchParams.get("weeks") ?? "4", 10);
-    periods = weeksParam === 12 ? 12 : 4;
-  } else {
-    const daysParam = parseInt(url.searchParams.get("days") ?? "7", 10);
-    periods = daysParam === 30 ? 30 : 7;
-  }
+  const rangeParam = url.searchParams.get("range");
+  const range: "1w" | "4w" = rangeParam === "4w" ? "4w" : "1w";
 
   try {
     const [inboundRows, outboundRows] = await Promise.all([
@@ -894,7 +888,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
     ]);
     const html = buildDashboardHtml({
       view,
-      periods,
+      range,
       token: env.DASHBOARD_TOKEN,
       inboundRows,
       outboundRows,
