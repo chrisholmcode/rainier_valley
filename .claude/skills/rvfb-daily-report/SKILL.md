@@ -23,26 +23,31 @@ Run `date '+%Y-%m-%d'` with `TZ=America/Los_Angeles`. That is the report date un
 
 ### 2. Pull source data
 
-Prefer fresh CSVs the user has already exported into `~/Downloads` (they sync faster than the MCP read), then fall back to the Sheet via MCP.
-
-**Step A — check for fresh CSV exports.** Look for:
-
-```
-~/Downloads/RVFB Inventory - Inbound Delivery Log*.csv
-~/Downloads/RVFB Inventory - Outbound Delivery Log*.csv
-```
-
-If the newest match for each tab was modified today, use those (read with `Grep` filtered to today's date). If either is missing or stale, continue.
-
-**Step B — fall back to MCP Drive.** Call `mcp__claude_ai_Google_Drive__read_file_content` on `15OyaSLwbPjSQ5lGhx5dH_PutW_BAR0uEku59jN61b5Y`. The result is saved to a tool-results file (the response will name it). Extract content with:
+**Primary source: the RVFB dashboard's raw JSON endpoint.** Deployed at `https://rainiervalley-production.up.railway.app/dashboard?format=raw`. This pulls live from the Sheets API via the bot's service account — no truncation, full row schema.
 
 ```bash
-jq -r '.fileContent' "<saved-tool-result-path>" > /tmp/rvfb_sheet.txt
+TOKEN=$(cat ~/.config/rvfb/dashboard_token)
+DATE=2026-05-13   # target date
+curl -fsS "https://rainiervalley-production.up.railway.app/dashboard?format=raw&date=${DATE}&token=${TOKEN}" \
+  > /tmp/rvfb_raw.json
+jq '{inbound: (.inbound|length), outbound: (.outbound|length)}' /tmp/rvfb_raw.json
 ```
 
-Then use `Grep` with the target date (e.g. `2026-05-07`) on `/tmp/rvfb_sheet.txt`. The file is one long markdown-table dump — Inbound rows come first (24 columns including `supplier`, `delivery_date`, etc.), then a blank line, then Outbound rows (15 columns). The tab boundary is the only blank line.
+The JSON shape is `{ from, to, inbound: [...], outbound: [...] }`. Each row is the full sheet schema (see [references/data-format.md](references/data-format.md)) — all columns present as strings.
 
-**If MCP returns a truncation warning**, ask the user to export both tabs as CSV from Sheets (`File → Download → Comma Separated Values`) into `~/Downloads`, then retry from Step A. Do not silently proceed on partial data.
+Use `jq` to walk the arrays. Examples:
+
+```bash
+# All inbound rows grouped by (supplier, invoice_or_order_number)
+jq '.inbound | group_by(.supplier + "::" + (.invoice_or_order_number // ""))' /tmp/rvfb_raw.json
+
+# Outbound rows sorted by quantity desc
+jq '.outbound | sort_by(-(.quantity | tonumber? // 0))' /tmp/rvfb_raw.json
+```
+
+**Fallback if the endpoint is down:** ask the user to export both tabs as CSV (`File → Download → Comma Separated Values` from Google Sheets) into `~/Downloads`, then read those with `Grep` filtered to the target date. Do NOT use `mcp__claude_ai_Google_Drive__read_file_content` — it silently truncates the sheet and produces wrong reports.
+
+**Token storage:** the dashboard token lives at `~/.config/rvfb/dashboard_token` (mode 0600). If missing, ask the user to retrieve it from Railway's env vars (`DASHBOARD_TOKEN` on the `rainier_valley` service) and save it there.
 
 ### 3. Aggregate data
 
