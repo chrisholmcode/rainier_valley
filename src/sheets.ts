@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import { google } from "googleapis";
 import { env } from "./config.js";
-import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow } from "./types.js";
+import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType } from "./types.js";
 
 const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
@@ -13,7 +13,9 @@ async function ensureHeader(worksheetName: string, headers: string[]): Promise<v
   if (headersInitialized.has(worksheetName)) return;
   const sheets = google.sheets({ version: "v4", auth });
   const existing = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${worksheetName}!1:1` });
-  if (!existing.data.values?.[0]?.length) {
+  const existingRow = existing.data.values?.[0] ?? [];
+  const missingColumns = headers.some((h) => !existingRow.includes(h));
+  if (!existingRow.length || missingColumns) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
       range: `${worksheetName}!1:1`,
@@ -179,7 +181,8 @@ export const EOD_SHEET_HEADERS = [
   "slack_channel",
   "slack_message_ts",
   "recorded_by",
-  "warnings_json"
+  "warnings_json",
+  "program_type"
 ];
 
 export async function ensureEodSheetHeader(): Promise<void> {
@@ -213,18 +216,19 @@ export async function appendEodRows(params: {
     slackChannel,
     slackMessageTs,
     recordedBy,
-    warningsJson
+    warningsJson,
+    item.program_type ?? ""
   ]);
 
   if (!rows.length) {
-    rows.push([now, date, null, null, null, null, null, null, "No items extracted", null, source, slackChannel, slackMessageTs, recordedBy, warningsJson]);
+    rows.push([now, date, null, null, null, null, null, null, "No items extracted", null, source, slackChannel, slackMessageTs, recordedBy, warningsJson, ""]);
   }
 
   const sheets = google.sheets({ version: "v4", auth });
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.EOD_WORKSHEET_NAME}!A:O`,
+    range: `${env.EOD_WORKSHEET_NAME}!A:P`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values: rows }
   });
@@ -244,10 +248,19 @@ function indexToColumn(index: number): string {
   return col;
 }
 
+function normalizeProgramType(v: unknown): ProgramType | null {
+  if (v == null || v === "") return null;
+  const s = String(v).trim().toLowerCase();
+  if (s === "home_delivery" || s === "in_person_shopping" || s === "pre_made_bags" || s === "unknown") {
+    return s as ProgramType;
+  }
+  return null;
+}
+
 export async function readEodRows(params: { date?: string; limit?: number }): Promise<EodSheetRow[]> {
   const { date, limit = 50 } = params;
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.EOD_WORKSHEET_NAME}!A:O` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.EOD_WORKSHEET_NAME}!A:P` });
   const rows = (res.data.values ?? []).slice(1);
   const mapped: EodSheetRow[] = rows.map((r, i) => ({
     rowIndex: i + 2,
@@ -265,7 +278,8 @@ export async function readEodRows(params: { date?: string; limit?: number }): Pr
     slack_channel: r[11] ?? null,
     slack_message_ts: r[12] ?? null,
     recorded_by: r[13] ?? null,
-    warnings_json: r[14] ?? null
+    warnings_json: r[14] ?? null,
+    program_type: normalizeProgramType(r[15])
   }));
   const filtered = date ? mapped.filter((r) => r.date === date) : mapped;
   return filtered.slice(-limit);

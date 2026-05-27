@@ -1,5 +1,7 @@
 export type Supplier = "carusos" | "charlies" | "nw_harvest" | "pacific" | "unknown";
 
+export type ProgramType = "home_delivery" | "in_person_shopping" | "pre_made_bags" | "unknown";
+
 // ── Assistant / conversation types ────────────────────────────────────────────
 
 export type CorrectionSheet = "eod" | "delivery";
@@ -53,6 +55,7 @@ export interface EodSheetRow {
   slack_message_ts: string | null;
   recorded_by: string | null;
   warnings_json: string | null;
+  program_type: ProgramType | null;
 }
 
 export interface DeliverySheetRow {
@@ -92,6 +95,7 @@ export interface EodLineItem {
   category: "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown";
   notes: string | null;
   confidence: number;
+  program_type: ProgramType | null;
 }
 
 export interface EodExtractionResult {

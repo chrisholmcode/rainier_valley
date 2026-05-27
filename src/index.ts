@@ -15,7 +15,7 @@ import {
   extractFromWhiteboard
 } from "./extraction.js";
 import { runAssistantLoop } from "./assistant.js";
-import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection } from "./types.js";
+import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection, ProgramType } from "./types.js";
 
 interface ProcessedFileExtraction {
   fileId: string;
@@ -173,6 +173,32 @@ function summarizeWhiteboardFiles(files: ProcessedWhiteboardFile[]): {
   return { lineItems, avgConfidence };
 }
 
+const PROGRAM_LABEL: Record<string, string> = {
+  home_delivery: "Home Delivery",
+  in_person_shopping: "In Person Shopping",
+  pre_made_bags: "Pre Made Bags",
+  unknown: "Unknown"
+};
+
+function summarizeProgramCounts(files: ProcessedWhiteboardFile[]): string {
+  const counts = new Map<string, number>();
+  for (const f of files) {
+    for (const li of f.extraction.line_items) {
+      const key = li.program_type ?? "unknown";
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  if (counts.size === 0) return "";
+  const order = ["home_delivery", "in_person_shopping", "pre_made_bags", "unknown"];
+  const parts: string[] = [];
+  for (const key of order) {
+    const n = counts.get(key);
+    if (!n) continue;
+    parts.push(`${PROGRAM_LABEL[key]}: ${n}`);
+  }
+  return parts.join(" · ");
+}
+
 function formatWhiteboardTable(files: ProcessedWhiteboardFile[]): string {
   const NAME_W = 32;
   const QTY_W = 8;
@@ -316,8 +342,10 @@ async function processWhiteboardBatch(params: {
   const confidencePct = Math.round(summary.avgConfidence * 100);
   const confidenceEmoji = summary.avgConfidence >= 0.9 ? "🟢" : summary.avgConfidence >= 0.75 ? "🟡" : "🔴";
   const tableText = formatWhiteboardTable(whiteboardFiles);
+  const programSummary = summarizeProgramCounts(whiteboardFiles);
   const headerLine =
     `📋 *Outbound Whiteboard* — Files: *${whiteboardFiles.length}* | Line items: *${summary.lineItems}*\n` +
+    (programSummary ? `📦 ${programSummary}\n` : "") +
     `${confidenceEmoji} Avg confidence: *${confidencePct}%*`;
 
   if (summary.avgConfidence < CONFIDENCE_THRESHOLD) {
@@ -881,12 +909,18 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
   const rangeParam = url.searchParams.get("range");
   const range: "1w" | "4w" = rangeParam === "4w" ? "4w" : "1w";
   const format = url.searchParams.get("format");
+  const programParam = url.searchParams.get("program");
+  const program: ProgramType | null =
+    programParam === "home_delivery" || programParam === "in_person_shopping" || programParam === "pre_made_bags"
+      ? programParam
+      : null;
 
   try {
-    const [inboundRows, outboundRows] = await Promise.all([
+    const [inboundRows, outboundRowsAll] = await Promise.all([
       readDeliveryRows({ limit: 5000 }),
       readEodRows({ limit: 5000 })
     ]);
+    const outboundRows = program ? outboundRowsAll.filter((r) => r.program_type === program) : outboundRowsAll;
 
     if (format === "raw") {
       const dateParam = url.searchParams.get("date");
@@ -918,6 +952,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
       res.end(JSON.stringify({
         from: from ?? null,
         to: to ?? null,
+        program: program,
         inbound: inFiltered,
         outbound: outFiltered
       }));
@@ -925,7 +960,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
     }
 
     if (format === "csv") {
-      const { filename, csv } = buildCsvExport({ range, inboundRows, outboundRows });
+      const { filename, csv } = buildCsvExport({ range, inboundRows, outboundRows, program });
       res.writeHead(200, {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -938,6 +973,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
     const html = buildDashboardHtml({
       view,
       range,
+      program,
       token: env.DASHBOARD_TOKEN,
       inboundRows,
       outboundRows,

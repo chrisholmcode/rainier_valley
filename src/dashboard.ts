@@ -1,4 +1,11 @@
-import type { DeliverySheetRow, EodSheetRow } from "./types.js";
+import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
+
+const PROGRAM_LABEL: Record<ProgramType, string> = {
+  home_delivery: "Home Delivery",
+  in_person_shopping: "In Person Shopping",
+  pre_made_bags: "Pre Made Bags",
+  unknown: "Unknown"
+};
 
 export type View = "daily" | "weekly";
 
@@ -278,8 +285,9 @@ export function buildCsvExport(params: {
   range: Range;
   inboundRows: DeliverySheetRow[];
   outboundRows: EodSheetRow[];
+  program: ProgramType | null;
 }): { filename: string; csv: string } {
-  const { range, inboundRows, outboundRows } = params;
+  const { range, inboundRows, outboundRows, program } = params;
   const days = exportWindowDays(range);
   const dates = dailyRange(days).map((r) => r.startDate);
   const dateSet = new Set(dates);
@@ -295,6 +303,7 @@ export function buildCsvExport(params: {
     supplier: string;
     reference: string;
     category: string;
+    program_type: string;
   }> = [];
 
   for (const r of inboundRows) {
@@ -309,7 +318,8 @@ export function buildCsvExport(params: {
       unit: (r.unit ?? "").trim(),
       supplier: (r.supplier ?? "").trim(),
       reference: (r.invoice_or_order_number ?? "").trim(),
-      category: (r.category ?? "").trim()
+      category: (r.category ?? "").trim(),
+      program_type: ""
     });
   }
 
@@ -324,7 +334,8 @@ export function buildCsvExport(params: {
       unit: (r.unit ?? "").trim(),
       supplier: "",
       reference: r.slack_message_ts ?? "",
-      category: (r.category ?? "").trim()
+      category: (r.category ?? "").trim(),
+      program_type: r.program_type ?? ""
     });
   }
 
@@ -334,7 +345,7 @@ export function buildCsvExport(params: {
     return a.item.localeCompare(b.item);
   });
 
-  const header = ["date", "direction", "item", "quantity", "unit", "supplier", "reference", "category"];
+  const header = ["date", "direction", "item", "quantity", "unit", "supplier", "reference", "category", "program_type"];
   const lines = [header.join(",")];
   for (const r of rows) {
     lines.push([
@@ -345,18 +356,25 @@ export function buildCsvExport(params: {
       csvField(r.unit),
       csvField(r.supplier),
       csvField(r.reference),
-      csvField(r.category)
+      csvField(r.category),
+      csvField(r.program_type)
     ].join(","));
   }
 
+  const programSlug = program ? `-${program}` : "";
   return {
-    filename: `rvfb-export-${startDate}_to_${endDate}.csv`,
+    filename: `rvfb-export${programSlug}-${startDate}_to_${endDate}.csv`,
     csv: lines.join("\n") + "\n"
   };
 }
 
-function rangeButtons(active: ViewOption, token: string): string {
+function programSuffix(program: ProgramType | null): string {
+  return program ? `&amp;program=${program}` : "";
+}
+
+function rangeButtons(active: ViewOption, token: string, program: ProgramType | null): string {
   const tokenParam = encodeURIComponent(token);
+  const progParam = programSuffix(program);
   const opts: Array<{ label: string; range: Range }> = [
     { label: "1 week", range: "1w" },
     { label: "4 weeks", range: "4w" }
@@ -364,30 +382,50 @@ function rangeButtons(active: ViewOption, token: string): string {
   return opts
     .map((o) => {
       const cls = o.range === active.range ? "btn active" : "btn";
-      return `<a class="${cls}" href="?view=${active.view}&amp;range=${o.range}&amp;token=${tokenParam}">${o.label}</a>`;
+      return `<a class="${cls}" href="?view=${active.view}&amp;range=${o.range}&amp;token=${tokenParam}${progParam}">${o.label}</a>`;
     })
     .join("");
 }
 
-function viewButtons(active: ViewOption, token: string): string {
+function viewButtons(active: ViewOption, token: string, program: ProgramType | null): string {
   const tokenParam = encodeURIComponent(token);
+  const progParam = programSuffix(program);
   const dailyCls = active.view === "daily" ? "btn active" : "btn";
   const weeklyCls = active.view === "weekly" ? "btn active" : "btn";
   return `
-    <a class="${dailyCls}" href="?view=daily&amp;range=${active.range}&amp;token=${tokenParam}">Daily</a>
-    <a class="${weeklyCls}" href="?view=weekly&amp;range=${active.range}&amp;token=${tokenParam}">Weekly</a>
+    <a class="${dailyCls}" href="?view=daily&amp;range=${active.range}&amp;token=${tokenParam}${progParam}">Daily</a>
+    <a class="${weeklyCls}" href="?view=weekly&amp;range=${active.range}&amp;token=${tokenParam}${progParam}">Weekly</a>
   `;
+}
+
+function programButtons(active: ViewOption, token: string, activeProgram: ProgramType | null): string {
+  const tokenParam = encodeURIComponent(token);
+  const opts: Array<{ label: string; value: ProgramType | null }> = [
+    { label: "All", value: null },
+    { label: "Home Delivery", value: "home_delivery" },
+    { label: "In Person Shopping", value: "in_person_shopping" },
+    { label: "Pre Made Bags", value: "pre_made_bags" }
+  ];
+  return opts
+    .map((o) => {
+      const isActive = (o.value ?? null) === (activeProgram ?? null);
+      const cls = isActive ? "btn active" : "btn";
+      const progParam = o.value ? `&amp;program=${o.value}` : "";
+      return `<a class="${cls}" href="?view=${active.view}&amp;range=${active.range}&amp;token=${tokenParam}${progParam}">${o.label}</a>`;
+    })
+    .join("");
 }
 
 export function buildDashboardHtml(params: {
   view: View;
   range: Range;
+  program: ProgramType | null;
   token: string;
   inboundRows: DeliverySheetRow[];
   outboundRows: EodSheetRow[];
   generatedAt: Date;
 }): string {
-  const { view, range, token, inboundRows, outboundRows, generatedAt } = params;
+  const { view, range, program, token, inboundRows, outboundRows, generatedAt } = params;
   const periods = periodsFor(view, range);
   const buckets = aggregate(inboundRows, outboundRows, view, periods);
   const generatedLabel = generatedAt.toLocaleString("en-US", {
@@ -525,9 +563,10 @@ export function buildDashboardHtml(params: {
     <div class="meta">Last ${periods} ${periodWord} · Generated ${escapeHtml(generatedLabel)} PT</div>
   </div>
   <div class="toolbar">
-    <div class="btn-group">${viewButtons(active, token)}</div>
-    <div class="btn-group">${rangeButtons(active, token)}</div>
-    <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv&amp;token=${encodeURIComponent(token)}" download>↓ Export CSV</a>
+    <div class="btn-group">${viewButtons(active, token, program)}</div>
+    <div class="btn-group">${rangeButtons(active, token, program)}</div>
+    <div class="btn-group">${programButtons(active, token, program)}</div>
+    <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv&amp;token=${encodeURIComponent(token)}${programSuffix(program)}" download>↓ Export CSV</a>
   </div>
 </header>
 
@@ -537,13 +576,12 @@ export function buildDashboardHtml(params: {
     <div class="value">${formatNum(totalInbound)}</div>
   </div>
   <div class="summary-pill out">
-    <div class="label">Outbound · total cases</div>
+    <div class="label">${program ? `Outbound · ${escapeHtml(PROGRAM_LABEL[program])} cases` : "Outbound · total cases"}</div>
     <div class="value">${formatNum(totalOutbound)}</div>
   </div>
-  <div class="summary-pill">
-    <div class="label">Net (in − out)</div>
-    <div class="value">${formatNum(totalInbound - totalOutbound)}</div>
-  </div>
+  ${program
+    ? `<div class="summary-pill"><div class="label">Showing</div><div class="value" style="font-size: 14px; line-height: 1.4;">Outbound for ${escapeHtml(PROGRAM_LABEL[program])}<br><span class="muted" style="font-size: 12px; font-weight: 400;">inbound is org-wide</span></div></div>`
+    : `<div class="summary-pill"><div class="label">Net (in − out)</div><div class="value">${formatNum(totalInbound - totalOutbound)}</div></div>`}
 </div>
 
 <h2>Cases by ${bucketWord}</h2>
