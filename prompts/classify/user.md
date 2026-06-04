@@ -1,0 +1,1 @@
+Is this a handwritten whiteboard (or paper) listing items with tally marks for outbound tracking, or a printed delivery invoice / manifest / shipment document? Reply with exactly one word: 'whiteboard' or 'invoice'.
