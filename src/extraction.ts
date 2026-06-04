@@ -139,6 +139,120 @@ Document format: Bill of Lading / Sales Order with fields like Qty Shipped, Size
 If you cannot identify the supplier, set supplier to "unknown" and extract conservatively.`
 };
 
+// ── Tool schemas (force Claude to return structured JSON via tool_use) ────────
+
+const EXTRACTION_TOOL_NAME = "submit_delivery_extraction";
+const EOD_TOOL_NAME = "submit_eod_extraction";
+
+const EXTRACTION_INPUT_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "nw_harvest", "pacific", "unknown"] },
+    delivery_date: { type: ["string", "null"] },
+    invoice_or_order_number: { type: ["string", "null"] },
+    destination_org: { type: ["string", "null"] },
+    line_items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          item_code_raw: { type: ["string", "null"] },
+          item_name_raw: { type: ["string", "null"] },
+          item_name_normalized: { type: ["string", "null"] },
+          quantity: { type: ["number", "null"] },
+          quantity_raw: { type: ["string", "null"] },
+          unit: { type: ["string", "null"], enum: ["case", "ct", "lb", "oz", "ea", "bushel", "other", null] },
+          pack_size_raw: { type: ["string", "null"] },
+          category: { type: "string", enum: ["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"] },
+          unit_cost: { type: ["number", "null"] },
+          line_total: { type: ["number", "null"] },
+          is_fee: { type: "boolean" },
+          notes: { type: ["string", "null"] },
+          confidence: { type: "number", minimum: 0, maximum: 1 }
+        },
+        required: ["item_code_raw", "item_name_raw", "item_name_normalized", "quantity", "quantity_raw", "unit", "pack_size_raw", "category", "unit_cost", "line_total", "is_fee", "notes", "confidence"]
+      }
+    },
+    fees: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          description: { type: "string" },
+          amount: { type: ["number", "null"] }
+        },
+        required: ["description", "amount"]
+      }
+    },
+    totals: {
+      type: "object",
+      properties: {
+        subtotal: { type: ["number", "null"] },
+        tax: { type: ["number", "null"] },
+        grand_total: { type: ["number", "null"] }
+      },
+      required: ["subtotal", "tax", "grand_total"]
+    },
+    source_warnings: { type: "array", items: { type: "string" } }
+  },
+  required: ["document_type", "supplier", "delivery_date", "invoice_or_order_number", "destination_org", "line_items", "fees", "totals", "source_warnings"]
+};
+
+const EOD_INPUT_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    date: { type: ["string", "null"] },
+    line_items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          item_name_raw: { type: ["string", "null"] },
+          item_name_normalized: { type: ["string", "null"] },
+          quantity: { type: ["number", "null"] },
+          quantity_raw: { type: ["string", "null"] },
+          unit: { type: ["string", "null"], enum: ["case", "bag", "pallet", "lb", "oz", "ct", "ea", "other", null] },
+          category: { type: "string", enum: ["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"] },
+          notes: { type: ["string", "null"] },
+          confidence: { type: "number", minimum: 0, maximum: 1 }
+        },
+        required: ["item_name_raw", "item_name_normalized", "quantity", "quantity_raw", "unit", "category", "notes", "confidence"]
+      }
+    },
+    source_warnings: { type: "array", items: { type: "string" } }
+  },
+  required: ["date", "line_items", "source_warnings"]
+};
+
+// ── Error logging helpers ─────────────────────────────────────────────────────
+
+function previewRaw(raw: string, max = 800): string {
+  return raw.length > max ? `${raw.slice(0, max)}…[truncated, total ${raw.length} chars]` : raw;
+}
+
+function getToolInputOrThrow(label: string, content: readonly unknown[], toolName: string): unknown {
+  for (const block of content) {
+    if (
+      typeof block === "object" &&
+      block !== null &&
+      (block as { type?: unknown }).type === "tool_use" &&
+      (block as { name?: unknown }).name === toolName
+    ) {
+      return (block as { input: unknown }).input;
+    }
+  }
+  const textFallback = content
+    .filter(
+      (b): b is { type: "text"; text: string } =>
+        typeof b === "object" && b !== null && (b as { type?: unknown }).type === "text" && typeof (b as { text?: unknown }).text === "string"
+    )
+    .map((b) => b.text)
+    .join("\n");
+  console.error(`[${label}] Expected tool_use "${toolName}" missing. Text content:\n${previewRaw(textFallback)}`);
+  throw new Error(`${label}: model did not call tool ${toolName}`);
+}
+
 function sanitizeJson(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed.startsWith("```") && trimmed.startsWith("{")) {
@@ -183,39 +297,20 @@ export async function extractFromImage(params: {
 
 Filename: ${filename}
 
-Analyze the attached image and extract all delivery line items. Return ONLY a valid JSON object matching this schema:
-{
-  "document_type": "invoice" | "manifest" | "warehouse_posted_shipment" | "dock_photo" | "unknown",
-  "supplier": "carusos" | "charlies" | "nw_harvest" | "pacific" | "unknown",
-  "delivery_date": "YYYY-MM-DD" | null,
-  "invoice_or_order_number": string | null,
-  "destination_org": string | null,
-  "line_items": [
-    {
-      "item_code_raw": string | null,
-      "item_name_raw": string | null,
-      "item_name_normalized": string | null,
-      "quantity": number | null,
-      "quantity_raw": string | null,
-      "unit": "case" | "ct" | "lb" | "oz" | "ea" | "bushel" | "other" | null,
-      "pack_size_raw": string | null,
-      "category": "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown",
-      "unit_cost": number | null,
-      "line_total": number | null,
-      "is_fee": false,
-      "notes": string | null,
-      "confidence": 0.0-1.0
-    }
-  ],
-  "fees": [{ "description": string, "amount": number | null }],
-  "totals": { "subtotal": number | null, "tax": number | null, "grand_total": number | null },
-  "source_warnings": string[]
-}`;
+Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the extracted delivery line items.`;
 
   const response = await client.messages.create({
     model: env.ANTHROPIC_MODEL,
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
+    tools: [
+      {
+        name: EXTRACTION_TOOL_NAME,
+        description: "Submit the extracted delivery data from a food-bank invoice, manifest, or dock photo.",
+        input_schema: EXTRACTION_INPUT_SCHEMA as never
+      }
+    ],
+    tool_choice: { type: "tool", name: EXTRACTION_TOOL_NAME },
     messages: [
       {
         role: "user",
@@ -237,13 +332,11 @@ Analyze the attached image and extract all delivery line items. Return ONLY a va
     ]
   });
 
-  const textBlock = response.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response returned by Claude.");
-  }
+  const toolInput = getToolInputOrThrow("extractFromImage", response.content, EXTRACTION_TOOL_NAME);
 
-  const parsed = extractionSchema.safeParse(JSON.parse(sanitizeJson(textBlock.text)));
+  const parsed = extractionSchema.safeParse(toolInput);
   if (!parsed.success) {
+    console.error(`[extractFromImage] Schema validation failed. Tool input:\n${previewRaw(JSON.stringify(toolInput))}`);
     throw new Error(`Extraction schema validation failed: ${parsed.error.message}`);
   }
 
@@ -283,23 +376,7 @@ Rules:
 8) Output valid JSON only — no markdown fences, no prose.`;
 
 export async function extractFromText(text: string): Promise<EodExtractionResult> {
-  const userPrompt = `Extract all inventory items from the following end-of-day count. Return ONLY valid JSON matching this schema:
-{
-  "date": "YYYY-MM-DD" | null,
-  "line_items": [
-    {
-      "item_name_raw": string | null,
-      "item_name_normalized": string | null,
-      "quantity": number | null,
-      "quantity_raw": string | null,
-      "unit": "case" | "bag" | "pallet" | "lb" | "oz" | "ct" | "ea" | "other" | null,
-      "category": "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown",
-      "notes": string | null,
-      "confidence": 0.0-1.0
-    }
-  ],
-  "source_warnings": string[]
-}
+  const userPrompt = `Extract all inventory items from the following end-of-day count, then call the ${EOD_TOOL_NAME} tool with the result.
 
 Text:
 ${text}`;
@@ -308,16 +385,22 @@ ${text}`;
     model: env.ANTHROPIC_MODEL,
     max_tokens: 2048,
     system: EOD_SYSTEM_PROMPT,
+    tools: [
+      {
+        name: EOD_TOOL_NAME,
+        description: "Submit the extracted end-of-day inventory counts.",
+        input_schema: EOD_INPUT_SCHEMA as never
+      }
+    ],
+    tool_choice: { type: "tool", name: EOD_TOOL_NAME },
     messages: [{ role: "user", content: userPrompt }]
   });
 
-  const textBlock = response.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response returned by Claude.");
-  }
+  const toolInput = getToolInputOrThrow("extractFromText", response.content, EOD_TOOL_NAME);
 
-  const parsed = eodExtractionSchema.safeParse(JSON.parse(sanitizeJson(textBlock.text)));
+  const parsed = eodExtractionSchema.safeParse(toolInput);
   if (!parsed.success) {
+    console.error(`[extractFromText] Schema validation failed. Tool input:\n${previewRaw(JSON.stringify(toolInput))}`);
     throw new Error(`EOD extraction schema validation failed: ${parsed.error.message}`);
   }
 
@@ -610,8 +693,18 @@ Extract every line from this photo. First, identify the layout (Home Delivery / 
     throw new Error("No text response returned by Claude.");
   }
 
-  const parsed = eodExtractionSchema.safeParse(JSON.parse(sanitizeJson(textBlock.text)));
+  const sanitized = sanitizeJson(textBlock.text);
+  let json: unknown;
+  try {
+    json = JSON.parse(sanitized);
+  } catch (error) {
+    console.error(`[extractWhiteboard] JSON.parse failed. Raw model output:\n${previewRaw(sanitized)}`);
+    throw error;
+  }
+
+  const parsed = eodExtractionSchema.safeParse(json);
   if (!parsed.success) {
+    console.error(`[extractWhiteboard] Schema validation failed. Parsed JSON:\n${previewRaw(JSON.stringify(json))}`);
     throw new Error(`Whiteboard extraction schema validation failed: ${parsed.error.message}`);
   }
 
