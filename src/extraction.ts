@@ -35,7 +35,7 @@ const extractionSchema = z.object({
   fees: z.array(
     z.object({
       description: z.string(),
-      amount: z.number()
+      amount: z.number().nullable()
     })
   ),
   totals: z.object({
@@ -207,7 +207,7 @@ Analyze the attached image and extract all delivery line items. Return ONLY a va
       "confidence": 0.0-1.0
     }
   ],
-  "fees": [{ "description": string, "amount": number }],
+  "fees": [{ "description": string, "amount": number | null }],
   "totals": { "subtotal": number | null, "tax": number | null, "grand_total": number | null },
   "source_warnings": string[]
 }`;

@@ -132,19 +132,26 @@ function summarizeFiles(files: ProcessedFileExtraction[]): {
   lineItems: number;
   fees: number;
   avgConfidence: number;
+  unreadableFees: string[];
 } {
   let lineItems = 0;
   let fees = 0;
   let totalConfidence = 0;
+  const unreadableFees: string[] = [];
   for (const f of files) {
     lineItems += f.extraction.line_items.length;
     fees += f.extraction.fees.length;
     for (const li of f.extraction.line_items) {
       totalConfidence += li.confidence;
     }
+    for (const fee of f.extraction.fees) {
+      if (fee.amount === null) {
+        unreadableFees.push(fee.description);
+      }
+    }
   }
   const avgConfidence = lineItems > 0 ? totalConfidence / lineItems : 0;
-  return { lineItems, fees, avgConfidence };
+  return { lineItems, fees, avgConfidence, unreadableFees };
 }
 
 function padRight(s: string, width: number): string {
@@ -238,7 +245,7 @@ function formatExtractionTable(files: ProcessedFileExtraction[]): string {
     });
     const feeRows = f.extraction.fees.map((fee) => {
       const name = `(fee) ${fee.description}`;
-      const amount = `$${fee.amount.toFixed(2)}`;
+      const amount = fee.amount === null ? "?" : `$${fee.amount.toFixed(2)}`;
       return `${padRight(name, NAME_W)} ${padLeft(amount, QTY_W)} ${padLeft("", CONF_W)}`;
     });
     const body = [header, sep, ...rows, ...feeRows].join("\n");
@@ -314,10 +321,13 @@ async function processInvoiceBatch(params: {
     }
     processedMessageKeys.add(messageKey);
 
+    const unreadableFeesLine = summary.unreadableFees.length
+      ? `\n⚠️ *Unreadable fee amount${summary.unreadableFees.length > 1 ? "s" : ""}* — fill in manually in the sheet: ${summary.unreadableFees.map((d) => `_${d}_`).join(", ")}`
+      : "";
     await client.chat.postMessage({
       channel,
       thread_ts: messageTs,
-      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Google Sheets.*`
+      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Google Sheets.*${unreadableFeesLine}`
     });
   } catch (sheetsError) {
     console.error("Google Sheets error:", sheetsError);

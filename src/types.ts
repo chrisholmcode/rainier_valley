@@ -124,7 +124,7 @@ export interface LineItem {
 
 export interface FeeItem {
   description: string;
-  amount: number;
+  amount: number | null;
 }
 
 export interface ExtractionResult {

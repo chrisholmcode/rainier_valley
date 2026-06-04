@@ -73,7 +73,8 @@ async function main() {
     if (result.fees.length > 0) {
       console.log(`\n💰 Fees (${result.fees.length}):`);
       for (const fee of result.fees) {
-        console.log(`  • ${fee.description}: $${fee.amount.toFixed(2)}`);
+        const amountStr = fee.amount === null ? "—" : `$${fee.amount.toFixed(2)}`;
+        console.log(`  • ${fee.description}: ${amountStr}`);
       }
     }
 
