@@ -708,7 +708,18 @@ Extract every line from this photo. First, identify the layout (Home Delivery / 
     throw new Error(`Whiteboard extraction schema validation failed: ${parsed.error.message}`);
   }
 
-  return parsed.data;
+  // Pre-made bags are tracked by bag count, not by contents. Override the item
+  // name so both raw and normalized columns read "pre_made_bags" / "Pre Made Bags".
+  const normalized = {
+    ...parsed.data,
+    line_items: parsed.data.line_items.map((li) =>
+      li.program_type === "pre_made_bags"
+        ? { ...li, item_name_raw: "pre_made_bags", item_name_normalized: "Pre Made Bags" }
+        : li
+    )
+  };
+
+  return normalized;
 }
 
 export async function transcribeAudio(audioBytes: Buffer, mimeType: string, filename: string): Promise<string> {
