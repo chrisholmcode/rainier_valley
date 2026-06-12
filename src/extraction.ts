@@ -258,7 +258,66 @@ Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the 
     throw new Error(`Extraction schema validation failed: ${parsed.error.message}`);
   }
 
-  return parsed.data;
+  return validateInvoiceArithmetic(parsed.data);
+}
+
+// ── Post-extraction arithmetic validation ─────────────────────────────────────
+// Catches the "grabbed the weight column instead of SHIP" failure mode:
+// if quantity × unit_cost ≠ line_total, but line_total ÷ unit_cost is a clean
+// small integer, the implied quantity is almost certainly the real case count.
+// We auto-correct, drop confidence, and surface a warning so the Slack
+// confirmation thread flags it for human review before any sheet write.
+
+const QTY_CORRECTION_MAX = 500; // implied quantities above this are not case counts
+const ARITHMETIC_TOLERANCE = 0.02; // dollars
+
+function approxEqual(a: number, b: number, tol = ARITHMETIC_TOLERANCE): boolean {
+  return Math.abs(a - b) <= tol;
+}
+
+export function validateInvoiceArithmetic(extraction: ExtractionResult): ExtractionResult {
+  const warnings: string[] = [];
+
+  const lineItems = extraction.line_items.map((item) => {
+    if (item.is_fee) return item;
+    const { quantity, unit_cost, line_total } = item;
+    if (quantity == null || unit_cost == null || line_total == null) return item;
+    if (unit_cost <= 0) return item;
+    if (approxEqual(quantity * unit_cost, line_total)) return item;
+
+    const implied = line_total / unit_cost;
+    const impliedRounded = Math.round(implied);
+    const isCleanInteger = Math.abs(implied - impliedRounded) < 0.02;
+
+    if (isCleanInteger && impliedRounded > 0 && impliedRounded <= QTY_CORRECTION_MAX) {
+      const name = item.item_name_normalized || item.item_name_raw || "unknown item";
+      warnings.push(
+        `Quantity corrected for "${name}": extracted ${quantity}, but ${line_total} ÷ ${unit_cost} = ${impliedRounded}. ` +
+          `Extracted value may have been the APPROX.WT. column.`
+      );
+      return {
+        ...item,
+        quantity: impliedRounded,
+        confidence: Math.min(item.confidence, 0.7),
+        notes: [item.notes, `auto-corrected qty from ${quantity} (qty×price≠total)`]
+          .filter(Boolean)
+          .join("; ")
+      };
+    }
+
+    const name = item.item_name_normalized || item.item_name_raw || "unknown item";
+    warnings.push(
+      `Arithmetic mismatch for "${name}": ${quantity} × ${unit_cost} ≠ ${line_total}. Verify quantity manually.`
+    );
+    return { ...item, confidence: Math.min(item.confidence, 0.7) };
+  });
+
+  if (warnings.length === 0) return extraction;
+  return {
+    ...extraction,
+    line_items: lineItems,
+    source_warnings: [...extraction.source_warnings, ...warnings]
+  };
 }
 
 // ── EOD Inventory extraction ──────────────────────────────────────────────────
