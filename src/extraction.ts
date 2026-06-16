@@ -234,7 +234,7 @@ Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the 
         input_schema: EXTRACTION_INPUT_SCHEMA as never
       }
     ],
-    tool_choice: { type: "tool", name: EXTRACTION_TOOL_NAME },
+    tool_choice: { type: "auto" },
     messages: [
       {
         role: "user",
