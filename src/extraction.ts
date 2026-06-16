@@ -225,7 +225,7 @@ Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the 
     model: "claude-opus-4-8",
     max_tokens: 32768,
     output_config: { effort: "xhigh" },
-    thinking: { type: "adaptive" },
+    thinking: { type: "adaptive", display: "summarized" },
     system: SYSTEM_PROMPT,
     tools: [
       {
