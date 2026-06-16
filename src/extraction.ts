@@ -256,6 +256,13 @@ Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the 
   });
 
   const response = await stream.finalMessage();
+
+  for (const block of response.content) {
+    if (block.type === "thinking") {
+      console.log(`[extractFromImage:thinking ${filename}]\n${block.thinking}`);
+    }
+  }
+
   const toolInput = getToolInputOrThrow("extractFromImage", response.content, EXTRACTION_TOOL_NAME);
 
   const parsed = extractionSchema.safeParse(toolInput);
