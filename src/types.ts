@@ -69,10 +69,12 @@ export interface DeliverySheetRow {
   item_code_raw: string | null;
   item_name_raw: string | null;
   item_name_normalized: string | null;
+  quantity_ordered: string | null;
   quantity: string | null;
   quantity_raw: string | null;
   unit: string | null;
   pack_size_raw: string | null;
+  approx_weight: string | null;
   category: string | null;
   unit_cost: string | null;
   line_total: string | null;
@@ -110,10 +112,12 @@ export interface LineItem {
   item_code_raw: string | null;
   item_name_raw: string | null;
   item_name_normalized: string | null;
+  quantity_ordered: number | null;
   quantity: number | null;
   quantity_raw: string | null;
   unit: "case" | "ct" | "lb" | "oz" | "ea" | "bushel" | "other" | null;
   pack_size_raw: string | null;
+  approx_weight: number | null;
   category: "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food" | "unknown";
   unit_cost: number | null;
   line_total: number | null;

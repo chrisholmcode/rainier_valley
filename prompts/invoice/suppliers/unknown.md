@@ -4,14 +4,14 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Logo says "CARUSO" or "Caruso Produce"
 - Location: Canby, OR or 2100 SE 4th Avenue
 - Columns: ORDERED | SHIPPED | ITEM CODE | DESCRIPTION | ORIGIN | UNIT PRICE | EXTENDED AMOUNT
-- Use SHIPPED quantity. Filter out fuel surcharge.
+- ORDERED => quantity_ordered. SHIPPED => quantity. Capture both. Filter out fuel surcharge.
 - delivery_date: Use the **SHIP DATE** field in the upper-right header (NOT the "DATE" / invoice date field).
 
 **Charlie's Produce** (set supplier: "charlies")
 - Logo says "Charlie's Produce"
 - Location: Seattle, WA or PO Box 24606 or 4123 2nd Ave S
 - Columns: ORDER | SHIP | ITEM# | PACK SIZE | DESCRIPTION | APPROX.WT. | PRICE | EXTENSION
-- Descriptions use commas (e.g., "AVOCADO,HASS GREEN"). Use SHIP quantity. Filter out energy charge.
+- Descriptions use commas (e.g., "AVOCADO,HASS GREEN"). ORDER => quantity_ordered. SHIP => quantity. APPROX.WT. => approx_weight (pounds). Capture all three. Filter out energy charge.
 - delivery_date: Use the **INVOICE DATE** field in the upper-right header (next to ACCOUNT# / INVOICE#). Convert MM/DD/YY to YYYY-MM-DD.
 - invoice_or_order_number: Use the **INVOICE#** value in the upper-right header (between ACCOUNT# and INVOICE DATE), typically a 7-digit number.
 

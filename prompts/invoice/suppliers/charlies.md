@@ -1,6 +1,7 @@
 Supplier: Charlie's Produce (Seattle, WA).
 Document format: Customer invoice with columns ORDER | SHIP | ITEM# | PACK SIZE | DESCRIPTION | APPROX.WT. | PRICE | EXTENSION.
-- Use SHIP quantity for inventory count.
+- ORDER column => quantity_ordered. SHIP column => quantity (authoritative inventory count). Capture both — when SHIP < ORDER the supplier shorted the order and we need that visible.
+- APPROX.WT. column => approx_weight (total pounds for the line; numeric, no units).
 - ITEM# => item_code_raw
 - PACK SIZE => pack_size_raw (e.g., "1 40CT", "1 25LB")
 - Descriptions use commas: "AVOCADO,HASS GREEN" not spaces.

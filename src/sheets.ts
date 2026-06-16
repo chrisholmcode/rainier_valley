@@ -36,10 +36,12 @@ export const SHEET_HEADERS = [
   "item_code_raw",
   "item_name_raw",
   "item_name_normalized",
+  "quantity_ordered",
   "quantity",
   "quantity_raw",
   "unit",
   "pack_size_raw",
+  "approx_weight",
   "category",
   "unit_cost",
   "line_total",
@@ -76,10 +78,12 @@ export async function appendExtractionRows(params: {
     item.item_code_raw,
     item.item_name_raw,
     item.item_name_normalized,
+    item.quantity_ordered,
     item.quantity,
     item.quantity_raw,
     item.unit,
     item.pack_size_raw,
+    item.approx_weight,
     item.category,
     item.unit_cost,
     item.line_total,
@@ -105,7 +109,9 @@ export async function appendExtractionRows(params: {
     fee.description,
     null,
     null,
+    null,
     "ea",
+    null,
     null,
     "unknown",
     null,
@@ -129,6 +135,8 @@ export async function appendExtractionRows(params: {
       extraction.delivery_date,
       extraction.invoice_or_order_number,
       extraction.destination_org,
+      null,
+      null,
       null,
       null,
       null,
@@ -288,7 +296,7 @@ export async function readEodRows(params: { date?: string; limit?: number }): Pr
 export async function readDeliveryRows(params: { date?: string; supplier?: string; limit?: number }): Promise<DeliverySheetRow[]> {
   const { date, supplier, limit = 50 } = params;
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.GOOGLE_WORKSHEET_NAME}!A:X` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.GOOGLE_WORKSHEET_NAME}!A:Z` });
   const rows = (res.data.values ?? []).slice(1);
   const mapped: DeliverySheetRow[] = rows.map((r, i) => ({
     rowIndex: i + 2,
@@ -301,21 +309,23 @@ export async function readDeliveryRows(params: { date?: string; supplier?: strin
     item_code_raw: r[6] ?? null,
     item_name_raw: r[7] ?? null,
     item_name_normalized: r[8] ?? null,
-    quantity: r[9] ?? null,
-    quantity_raw: r[10] ?? null,
-    unit: r[11] ?? null,
-    pack_size_raw: r[12] ?? null,
-    category: r[13] ?? null,
-    unit_cost: r[14] ?? null,
-    line_total: r[15] ?? null,
-    confidence: r[16] ?? null,
-    is_fee: r[17] ?? null,
-    notes: r[18] ?? null,
-    photo_url: r[19] ?? null,
-    slack_channel: r[20] ?? null,
-    slack_message_ts: r[21] ?? null,
-    uploaded_by: r[22] ?? null,
-    warnings_json: r[23] ?? null
+    quantity_ordered: r[9] ?? null,
+    quantity: r[10] ?? null,
+    quantity_raw: r[11] ?? null,
+    unit: r[12] ?? null,
+    pack_size_raw: r[13] ?? null,
+    approx_weight: r[14] ?? null,
+    category: r[15] ?? null,
+    unit_cost: r[16] ?? null,
+    line_total: r[17] ?? null,
+    confidence: r[18] ?? null,
+    is_fee: r[19] ?? null,
+    notes: r[20] ?? null,
+    photo_url: r[21] ?? null,
+    slack_channel: r[22] ?? null,
+    slack_message_ts: r[23] ?? null,
+    uploaded_by: r[24] ?? null,
+    warnings_json: r[25] ?? null
   }));
   const filtered = mapped.filter((r) => {
     if (date && r.delivery_date !== date) return false;

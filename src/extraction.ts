@@ -21,10 +21,12 @@ const extractionSchema = z.object({
       item_code_raw: z.string().nullable(),
       item_name_raw: z.string().nullable(),
       item_name_normalized: z.string().nullable(),
+      quantity_ordered: z.number().nullable(),
       quantity: z.number().nullable(),
       quantity_raw: z.string().nullable(),
       unit: z.enum(["case", "ct", "lb", "oz", "ea", "bushel", "other"]).nullable(),
       pack_size_raw: z.string().nullable(),
+      approx_weight: z.number().nullable(),
       category: z.enum(["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"]),
       unit_cost: z.number().nullable(),
       line_total: z.number().nullable(),
@@ -78,10 +80,12 @@ const EXTRACTION_INPUT_SCHEMA = {
           item_code_raw: { type: ["string", "null"] },
           item_name_raw: { type: ["string", "null"] },
           item_name_normalized: { type: ["string", "null"] },
-          quantity: { type: ["number", "null"] },
+          quantity_ordered: { type: ["number", "null"], description: "Cases the food bank ORDERED (from the ORDER/ORDERED column). Null if the document only shows one quantity." },
+          quantity: { type: ["number", "null"], description: "Cases actually SHIPPED/RECEIVED (from the SHIP/SHIPPED/Qty column). Authoritative inventory count." },
           quantity_raw: { type: ["string", "null"] },
           unit: { type: ["string", "null"], enum: ["case", "ct", "lb", "oz", "ea", "bushel", "other", null] },
           pack_size_raw: { type: ["string", "null"] },
+          approx_weight: { type: ["number", "null"], description: "Approximate total weight in pounds from the APPROX.WT. / Weight column, if present." },
           category: { type: "string", enum: ["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"] },
           unit_cost: { type: ["number", "null"] },
           line_total: { type: ["number", "null"] },
@@ -89,7 +93,7 @@ const EXTRACTION_INPUT_SCHEMA = {
           notes: { type: ["string", "null"] },
           confidence: { type: "number", minimum: 0, maximum: 1 }
         },
-        required: ["item_code_raw", "item_name_raw", "item_name_normalized", "quantity", "quantity_raw", "unit", "pack_size_raw", "category", "unit_cost", "line_total", "is_fee", "notes", "confidence"]
+        required: ["item_code_raw", "item_name_raw", "item_name_normalized", "quantity_ordered", "quantity", "quantity_raw", "unit", "pack_size_raw", "approx_weight", "category", "unit_cost", "line_total", "is_fee", "notes", "confidence"]
       }
     },
     fees: {
