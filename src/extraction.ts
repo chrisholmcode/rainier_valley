@@ -221,9 +221,10 @@ Filename: ${filename}
 
 Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the extracted delivery line items.`;
 
-  const response = await client.messages.create({
-    model: env.ANTHROPIC_MODEL,
-    max_tokens: 4096,
+  const stream = client.messages.stream({
+    model: "claude-opus-4-8",
+    max_tokens: 32768,
+    output_config: { effort: "xhigh" },
     system: SYSTEM_PROMPT,
     tools: [
       {
@@ -254,6 +255,7 @@ Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the 
     ]
   });
 
+  const response = await stream.finalMessage();
   const toolInput = getToolInputOrThrow("extractFromImage", response.content, EXTRACTION_TOOL_NAME);
 
   const parsed = extractionSchema.safeParse(toolInput);

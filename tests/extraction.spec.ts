@@ -39,6 +39,10 @@ interface FixtureCase {
   expect: FixtureExpectations;
 }
 
+// IMG_2712 (NW Harvest pallet label) and IMG_2720 (stacked papers) are
+// intentionally not yet covered — both are edge cases where the model's
+// classification isn't structurally pinnable from the photo alone. Add
+// them after running once and observing the actual output.
 const FIXTURES: FixtureCase[] = [
   {
     file: "tests/fixtures/IMG_2718.jpg",
@@ -51,6 +55,30 @@ const FIXTURES: FixtureCase[] = [
       feeDescriptionContains: ["FUEL SURCHARGE"],
       itemNameRawContainsAny: ["BERRIES BLACK", "TOMATO ROMA", "NECTARINE"],
       requireTotalsPresent: ["subtotal", "grand_total"]
+    }
+  },
+  {
+    file: "tests/fixtures/IMG_2719.jpg",
+    supplierHint: "nw_harvest",
+    expect: {
+      supplier: "nw_harvest",
+      document_type: "warehouse_posted_shipment",
+      minLineItems: 8,
+      feesCount: 0,
+      itemNameRawContainsAny: ["Rice", "Potatoes", "Onions", "Bread"]
+    }
+  },
+  {
+    file: "tests/fixtures/IMG_2721.jpg",
+    supplierHint: "charlies",
+    expect: {
+      supplier: "charlies",
+      document_type: "invoice",
+      minLineItems: 5,
+      feesCount: 1,
+      feeDescriptionContains: ["ENERGY"],
+      itemNameRawContainsAny: ["AVOCADO", "CUCUMBER", "LETTUCE", "PEPPER"],
+      requireTotalsPresent: ["grand_total"]
     }
   }
 ];

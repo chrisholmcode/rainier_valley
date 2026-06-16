@@ -10,7 +10,7 @@ const EnvSchema = z.object({
   SLACK_PORT: z.coerce.number().default(3000),
   INVENTORY_CHANNEL_ID: z.string().min(1).optional(),
   ANTHROPIC_API_KEY: z.string().min(1),
-  ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-20250514"),
+  ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
   GOOGLE_SPREADSHEET_ID: z.string().min(1),
   GOOGLE_WORKSHEET_NAME: z.string().default("Inbound Delivery Log"),
   EOD_WORKSHEET_NAME: z.string().default("Outbound Delivery Log"),
