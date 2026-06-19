@@ -12,7 +12,7 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
-  supplier: z.enum(["carusos", "charlies", "nw_harvest", "pacific", "unknown"]),
+  supplier: z.enum(["carusos", "charlies", "nw_harvest", "pacific", "weigelt", "unknown"]),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
   destination_org: z.string().nullable(),
@@ -56,6 +56,7 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   charlies: loadPrompt("invoice/suppliers/charlies.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
+  weigelt: loadPrompt("invoice/suppliers/weigelt.md"),
   unknown: loadPrompt("invoice/suppliers/unknown.md")
 };
 
@@ -68,7 +69,7 @@ const EXTRACTION_INPUT_SCHEMA = {
   type: "object" as const,
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
-    supplier: { type: "string", enum: ["carusos", "charlies", "nw_harvest", "pacific", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "nw_harvest", "pacific", "weigelt", "unknown"] },
     delivery_date: { type: ["string", "null"] },
     invoice_or_order_number: { type: ["string", "null"] },
     destination_org: { type: ["string", "null"] },
@@ -196,6 +197,7 @@ export function guessSupplierFromFilename(filename: string): Supplier {
   if (f.includes("charlie")) return "charlies";
   if (f.includes("harvest") || f.includes("nw") || f.includes("food lifeline")) return "nw_harvest";
   if (f.includes("pacific") || f.includes("pfd")) return "pacific";
+  if (f.includes("weigelt")) return "weigelt";
   return "unknown";
 }
 
@@ -207,6 +209,10 @@ function mimeToMediaType(mimeType: string): "image/jpeg" | "image/png" | "image/
   return "image/jpeg";
 }
 
+function isPdfMime(mimeType: string): boolean {
+  return mimeType.toLowerCase().includes("pdf");
+}
+
 export async function extractFromImage(params: {
   imageBytes: Buffer;
   mimeType: string;
@@ -215,11 +221,32 @@ export async function extractFromImage(params: {
 }): Promise<ExtractionResult> {
   const { imageBytes, mimeType, filename, supplierHint } = params;
 
+  const isPdf = isPdfMime(mimeType);
+  const sourceKind = isPdf ? "PDF" : "image";
+
   const userPrompt = `${SUPPLIER_PROMPTS[supplierHint]}
 
 Filename: ${filename}
 
-Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the extracted delivery line items.`;
+Analyze the attached ${sourceKind}, then call the ${EXTRACTION_TOOL_NAME} tool with the extracted delivery line items.`;
+
+  const documentBlock = isPdf
+    ? {
+        type: "document" as const,
+        source: {
+          type: "base64" as const,
+          media_type: "application/pdf" as const,
+          data: imageBytes.toString("base64")
+        }
+      }
+    : {
+        type: "image" as const,
+        source: {
+          type: "base64" as const,
+          media_type: mimeToMediaType(mimeType),
+          data: imageBytes.toString("base64")
+        }
+      };
 
   const stream = client.messages.stream({
     model: "claude-opus-4-8",
@@ -239,14 +266,7 @@ Analyze the attached image, then call the ${EXTRACTION_TOOL_NAME} tool with the 
       {
         role: "user",
         content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mimeToMediaType(mimeType),
-              data: imageBytes.toString("base64")
-            }
-          },
+          documentBlock,
           {
             type: "text",
             text: userPrompt
@@ -335,6 +355,9 @@ export async function classifyImage(params: {
   imageBytes: Buffer;
   mimeType: string;
 }): Promise<"whiteboard" | "invoice"> {
+  // PDFs are always printed invoices/manifests; whiteboards are only photographed.
+  if (isPdfMime(params.mimeType)) return "invoice";
+
   const response = await client.messages.create({
     model: env.ANTHROPIC_MODEL,
     max_tokens: 16,

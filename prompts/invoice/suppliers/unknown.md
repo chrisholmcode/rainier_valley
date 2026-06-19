@@ -24,6 +24,18 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 
 **Pacific Food Distributors** (set supplier: "pacific")
 - Header says "Pacific Food Distributors"
-- Bill of Lading format. May mention intermediary like "The Weigel Company LLC".
+- Bill of Lading format.
+
+**The Weigelt Company** (set supplier: "weigelt")
+- Header / logo says "THE WEIGELT COMPANY" (stylized "W"). NOTE: spelled "Weigelt" with a trailing **t** — distinct from any "Weigel" reference.
+- Location: North Bend, WA (10511 428th Ave SE) or contact `Valerie@WeigeltCo.com`.
+- Columns: # | Date | Product or service (SKU) | Description | Qty | Rate | Amount.
+- Halal meat / poultry focus (ground beef, chicken thighs, drumsticks). Category should be "meat_protein" for all items unless clearly non-meat.
+- Single Qty column => quantity (no separate ORDER column; leave quantity_ordered null). Qty may be fractional (e.g., 1480.5) — keep as-is.
+- The bold number in the "Product or service" column (e.g., "012248", "111724345") => item_code_raw.
+- Pack notation lives inside the Description (e.g., "12/1#-10cs", "12 pkgs/cs-10cs", "#8 Frozen-42cs"). Capture into pack_size_raw and keep in item_name_raw.
+- delivery_date: Use the **Ship date** field in the "Shipping info" block (NOT "Invoice date" / "Due date").
+- invoice_or_order_number: Use the **Invoice no.** value (e.g., "065315").
+- No fuel surcharge / energy charge — leave fees[] empty unless one is explicitly visible.
 
 If you cannot identify the supplier, set supplier to "unknown" and extract conservatively.

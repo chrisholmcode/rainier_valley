@@ -14,6 +14,7 @@ const EnvSchema = z.object({
   GOOGLE_SPREADSHEET_ID: z.string().min(1),
   GOOGLE_WORKSHEET_NAME: z.string().default("Inbound Delivery Log"),
   EOD_WORKSHEET_NAME: z.string().default("Outbound Delivery Log"),
+  SUMMARY_WORKSHEET_NAME: z.string().default("Inventory Summary"),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),

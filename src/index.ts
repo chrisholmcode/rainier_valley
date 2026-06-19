@@ -4,7 +4,7 @@ import axios from "axios";
 import { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import { env } from "./config.js";
-import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell, readDeliveryRows, readEodRows } from "./sheets.js";
+import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell, readDeliveryRows, readEodRows, appendSummaryRow, ensureSummarySheetHeader } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
 import {
   extractFromImage,
@@ -88,6 +88,7 @@ function guessSupplierFromText(text: string): Supplier {
   if (t.includes("charlie")) return "charlies";
   if (t.includes("northwest harvest") || t.includes("nw harvest") || t.includes("food lifeline")) return "nw_harvest";
   if (t.includes("pacific") || t.includes("pfd")) return "pacific";
+  if (t.includes("weigelt")) return "weigelt";
   return "unknown";
 }
 
@@ -300,6 +301,7 @@ async function processInvoiceBatch(params: {
 
   try {
     await ensureSheetHeader();
+    await ensureSummarySheetHeader();
     let totalRows = 0;
     for (const file of processedFiles) {
       const rowsAdded = await appendExtractionRows({
@@ -310,6 +312,7 @@ async function processInvoiceBatch(params: {
         uploadedBy
       });
       totalRows += rowsAdded;
+      await appendSummaryRow({ extraction: file.extraction, photoUrl: file.photoUrl });
     }
 
     for (const file of processedFiles) {
@@ -436,7 +439,9 @@ app.event("message", async ({ event, client, logger }) => {
       return;
     }
 
-    const allFiles = (message.files || []).filter((f) => isMime("image/", f.mimetype) && f.url_private_download);
+    const allFiles = (message.files || []).filter(
+      (f) => (isMime("image/", f.mimetype) || f.mimetype === "application/pdf") && f.url_private_download
+    );
     if (!allFiles.length) return;
 
     const files = allFiles.filter((f) => !processedFileIds.has(f.id));
