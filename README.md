@@ -1,16 +1,15 @@
 # Rainier Valley Food Bank Intake Bot
 
-Slack-first intake bot for RVFB. Staff send photos, PDFs, voice memos, or short text in Slack; the bot uses Claude vision + thinking to extract structured rows, posts a summary in-thread, and writes to Google Sheets after a 👍. An HTTP dashboard exposes daily/weekly rollups (HTML, CSV, or raw JSON), and an `@mention` assistant can answer questions and propose corrections against the sheets.
+Slack-first intake bot for RVFB. Staff send photos, PDFs, voice memos, or short text in Slack; the bot uses Claude vision + thinking to extract structured rows, posts a summary in-thread, and writes to Google Sheets. Photo intake (inbound + whiteboard) auto-logs once extraction clears a confidence threshold; text/voice EOD entries and assistant-proposed corrections are staged and require a 👍 to commit. An HTTP dashboard exposes daily/weekly rollups (HTML, CSV, or raw JSON), and an `@mention` assistant can answer questions and propose corrections against the sheets.
 
 ## What it does
 
-Three intake flows, all gated by a 👍 reaction before any write:
+Four intake flows:
 
-- **Inbound deliveries** — staff upload an invoice/manifest (image or PDF). Bot extracts line items + fees, posts a summary, writes to the *Inbound Delivery Log* sheet on 👍.
-- **Outbound / whiteboard** — staff upload a photo of the daily whiteboard. Bot extracts items and tags each row by program (`home_delivery`, `in_person_shopping`, `pre_made_bags`). Writes to the *Outbound Delivery Log* sheet on 👍.
-- **End-of-day inventory** — staff send a Slack text message prefixed with `eod:` *or* upload a voice memo (transcribed via Whisper). Also reachable as a webhook at `POST /voice` for Alexa-style devices.
-
-The bot also responds to `@mentions`: it can read recent deliveries and inventory, summarize them, and propose corrections back to the sheets (corrections also require 👍 to apply).
+- **Inbound deliveries** — staff upload an invoice/manifest (image or PDF). Bot extracts line items + fees, posts a summary, and **auto-writes** to the *Inbound Delivery Log* sheet (if confidence ≥ 75%; below that, nothing is logged and the user is asked to retake the photo).
+- **Outbound / whiteboard** — staff upload a photo of the daily whiteboard. Bot extracts items, tags each row by program (`home_delivery`, `in_person_shopping`, `pre_made_bags`), and **auto-writes** to the *Outbound Delivery Log* sheet (same 75% confidence gate).
+- **End-of-day inventory** — staff send a Slack text message prefixed with `eod:` *or* upload a voice memo (transcribed via Whisper). Bot stages the extraction in-thread and waits for 👍 to commit (or ❌ to discard). Also reachable as a webhook at `POST /voice` for Alexa-style devices.
+- **Assistant `@mentions`** — bot can read recent deliveries and inventory, summarize them, and propose corrections back to the sheets. Corrections are staged and require 👍 to apply.
 
 ## Stack
 
@@ -160,12 +159,11 @@ Used for both whiteboard outbound and EOD inventory entries:
 
 - Inbound intake accepts image MIME types and `application/pdf`.
 - Supplier hint is inferred from message text first, then filename.
-- Low-confidence item count (`< 0.75`) is surfaced in the Slack thread.
-- Staged extractions live in memory until a `reaction_added` event:
-  - `+1` (👍) commits rows to the sheet.
-  - `x` (❌) discards the staged extraction.
-- Duplicate-delivery protection: dedupes on (supplier + invoice/order number), Slack file ID, and a content hash of the staged extraction.
-- Assistant corrections (`@bot fix yesterday's romaine to 10`) are also staged and require 👍 before they're written.
+- **Confidence gate:** if average extraction confidence is `< 0.75`, photo intake (inbound + whiteboard) is rejected — nothing is logged and the user is asked to retake. Above the threshold, rows are written immediately.
+- **What requires 👍:** only EOD inventory (text/voice) and assistant-proposed corrections. Both stage in memory and wait for `reaction_added`:
+  - `+1` (👍) commits the staged change.
+  - `x` (❌) discards it.
+- Duplicate-delivery protection (photo intake): dedupes on (supplier + invoice/order number), Slack file ID, and a content hash of the extraction.
 
 ## Reports
 
