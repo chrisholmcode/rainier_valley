@@ -80,6 +80,18 @@ const FIXTURES: FixtureCase[] = [
       itemNameRawContainsAny: ["AVOCADO", "CUCUMBER", "LETTUCE", "PEPPER"],
       requireTotalsPresent: ["grand_total"]
     }
+  },
+  {
+    file: "tests/fixtures/Costco_Invoice_1292264544.pdf",
+    supplierHint: "costco",
+    expect: {
+      supplier: "costco",
+      document_type: "invoice",
+      minLineItems: 4,
+      feesCount: 0,
+      itemNameRawContainsAny: ["GRANOLA", "RAMEN", "GOGO SQUEEZ", "OATMEAL"],
+      requireTotalsPresent: ["subtotal", "grand_total"]
+    }
   }
 ];
 
@@ -99,7 +111,12 @@ function containsAny(haystack: string[], needles: string[]): string | null {
 async function runFixture(f: FixtureCase): Promise<CheckResult[]> {
   const fullPath = join(REPO_ROOT, f.file);
   const bytes = readFileSync(fullPath);
-  const mimeType = f.file.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+  const lower = f.file.toLowerCase();
+  const mimeType = lower.endsWith(".pdf")
+    ? "application/pdf"
+    : lower.endsWith(".png")
+    ? "image/png"
+    : "image/jpeg";
   const filename = f.file.split("/").pop() ?? f.file;
 
   console.log(`\n▶ ${f.file}`);
