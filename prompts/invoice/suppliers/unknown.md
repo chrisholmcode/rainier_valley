@@ -56,6 +56,13 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Header says "Pacific Food Distributors"
 - Bill of Lading format.
 
+**Terrebonne Truck Patch** (set supplier: "terrebonne")
+- Letterhead says "Terrebonne Truck Patch", North Bend WA. Hand-written carbon-copy invoice book with a printed "No. <NNN>" in the upper-right.
+- Columns: Quantity | Description | Price | Amount. Single Quantity column => quantity. unit = "ea". approx_weight = null (count-only).
+- delivery_date: Use the handwritten **Date** field (M-D-YY); convert to YYYY-MM-DD.
+- invoice_or_order_number: Use the printed **No.** value (e.g., "137").
+- Category = "produce" for all items. is_donation = false.
+
 **The Weigelt Company** (set supplier: "weigelt")
 - Header / logo says "THE WEIGELT COMPANY" (stylized "W"). NOTE: spelled "Weigelt" with a trailing **t** — distinct from any "Weigel" reference.
 - Location: North Bend, WA (10511 428th Ave SE) or contact `Valerie@WeigeltCo.com`.

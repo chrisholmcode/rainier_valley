@@ -12,7 +12,7 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
-  supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "weigelt", "unknown"]),
+  supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"]),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
   destination_org: z.string().nullable(),
@@ -60,6 +60,7 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   grand_central: loadPrompt("invoice/suppliers/grand_central.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
+  terrebonne: loadPrompt("invoice/suppliers/terrebonne.md"),
   weigelt: loadPrompt("invoice/suppliers/weigelt.md"),
   unknown: loadPrompt("invoice/suppliers/unknown.md")
 };
@@ -73,7 +74,7 @@ const EXTRACTION_INPUT_SCHEMA = {
   type: "object" as const,
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
-    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "weigelt", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"] },
     delivery_date: { type: ["string", "null"] },
     invoice_or_order_number: { type: ["string", "null"] },
     destination_org: { type: ["string", "null"] },
@@ -205,6 +206,7 @@ export function guessSupplierFromFilename(filename: string): Supplier {
   if (f.includes("food lifeline") || f.includes("food_lifeline") || f.includes("foodlifeline") || f.includes("lifeline")) return "food_lifeline";
   if (f.includes("harvest") || f.includes("nw")) return "nw_harvest";
   if (f.includes("pacific") || f.includes("pfd")) return "pacific";
+  if (f.includes("terrebonne") || f.includes("truck_patch") || f.includes("truck-patch") || f.includes("truckpatch") || f.includes("ttp")) return "terrebonne";
   if (f.includes("weigelt")) return "weigelt";
   return "unknown";
 }

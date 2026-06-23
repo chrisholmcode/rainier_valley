@@ -130,6 +130,19 @@ const FIXTURES: FixtureCase[] = [
       itemNameRawContainsAny: ["Bok Choy", "Chicken Drumsticks", "Peanut Butter", "Pears", "Grapefruit"],
       isDonation: true
     }
+  },
+  {
+    file: "tests/fixtures/terrebonne_IMG_4045.jpg",
+    supplierHint: "terrebonne",
+    expect: {
+      supplier: "terrebonne",
+      document_type: "invoice",
+      minLineItems: 2,
+      feesCount: 0,
+      itemNameRawContainsAny: ["green leaf", "Radish", "Heads", "bunch"],
+      requireTotalsPresent: ["grand_total"],
+      isDonation: false
+    }
   }
 ];
 
