@@ -137,6 +137,7 @@ export interface ExtractionResult {
   delivery_date: string | null;
   invoice_or_order_number: string | null;
   destination_org: string | null;
+  donor_org: string | null;
   is_donation: boolean | null;
   line_items: LineItem[];
   fees: FeeItem[];

@@ -32,6 +32,7 @@ interface FixtureExpectations {
   itemNameRawContainsAll?: string[];
   requireTotalsPresent?: Array<"subtotal" | "tax" | "grand_total">;
   isDonation?: boolean;
+  donorOrgContains?: string;
 }
 
 interface FixtureCase {
@@ -143,6 +144,32 @@ const FIXTURES: FixtureCase[] = [
       requireTotalsPresent: ["grand_total"],
       isDonation: false
     }
+  },
+  {
+    file: "tests/fixtures/food_lifeline_rescue_qfc_IMG_4047.jpg",
+    supplierHint: "food_lifeline",
+    expect: {
+      supplier: "food_lifeline",
+      document_type: "manifest",
+      minLineItems: 4,
+      feesCount: 0,
+      itemNameRawContainsAny: ["Bakery", "Meat", "Dairy", "Prepared"],
+      isDonation: true,
+      donorOrgContains: "QFC"
+    }
+  },
+  {
+    file: "tests/fixtures/food_lifeline_rescue_safeway_IMG_4046.jpg",
+    supplierHint: "food_lifeline",
+    expect: {
+      supplier: "food_lifeline",
+      document_type: "manifest",
+      minLineItems: 4,
+      feesCount: 0,
+      itemNameRawContainsAny: ["Bakery", "Meat", "Dairy", "Produce"],
+      isDonation: true,
+      donorOrgContains: "Safeway"
+    }
   }
 ];
 
@@ -224,6 +251,15 @@ async function runFixture(f: FixtureCase): Promise<CheckResult[]> {
       `is_donation === ${f.expect.isDonation}`,
       result.is_donation === f.expect.isDonation,
       `got ${result.is_donation}`
+    ));
+  }
+
+  if (f.expect.donorOrgContains) {
+    const donor = result.donor_org ?? "";
+    checks.push(check(
+      `donor_org contains "${f.expect.donorOrgContains}"`,
+      donor.toUpperCase().includes(f.expect.donorOrgContains.toUpperCase()),
+      `got "${donor}"`
     ));
   }
 

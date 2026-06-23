@@ -16,6 +16,7 @@ const extractionSchema = z.object({
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
   destination_org: z.string().nullable(),
+  donor_org: z.string().nullable(),
   is_donation: z.boolean().nullable(),
   line_items: z.array(
     z.object({
@@ -78,6 +79,7 @@ const EXTRACTION_INPUT_SCHEMA = {
     delivery_date: { type: ["string", "null"] },
     invoice_or_order_number: { type: ["string", "null"] },
     destination_org: { type: ["string", "null"] },
+    donor_org: { type: ["string", "null"], description: "The party that contributed the goods, when distinct from the supplier (e.g., the grocery store on a Food Lifeline grocery rescue form: 'QFC-MI', 'Safeway-RB'). Null when the supplier is itself the donor." },
     is_donation: { type: ["boolean", "null"], description: "True if the document indicates the goods are a donation; false if explicitly purchased; null if the document doesn't say." },
     line_items: {
       type: "array",
@@ -125,7 +127,7 @@ const EXTRACTION_INPUT_SCHEMA = {
     },
     source_warnings: { type: "array", items: { type: "string" } }
   },
-  required: ["document_type", "supplier", "delivery_date", "invoice_or_order_number", "destination_org", "is_donation", "line_items", "fees", "totals", "source_warnings"]
+  required: ["document_type", "supplier", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation", "line_items", "fees", "totals", "source_warnings"]
 };
 
 const EOD_INPUT_SCHEMA = {
