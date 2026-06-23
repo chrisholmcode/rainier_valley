@@ -15,6 +15,16 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - delivery_date: Use the **INVOICE DATE** field in the upper-right header (next to ACCOUNT# / INVOICE#). Convert MM/DD/YY to YYYY-MM-DD.
 - invoice_or_order_number: Use the **INVOICE#** value in the upper-right header (between ACCOUNT# and INVOICE DATE), typically a 7-digit number.
 
+**Grand Central Bakery** (set supplier: "grand_central")
+- Header says "Grand Central Bakery"
+- Location: 21 S Nevada St, Seattle WA 98123
+- Columns: Code | Description | Quantity | Unit Price | Ext. Price
+- Single quantity column (no ORDER/SHIP split) => quantity. unit = "ea". Bread items => category "shelf_stable". approx_weight = null.
+- delivery_date: Use the **Date** field in the upper-right header (convert to YYYY-MM-DD).
+- invoice_or_order_number: Use the **Invoice** value in the upper-right header.
+- destination_org: Use the **Customer** field verbatim including any "- Donation" / "- Purchased" suffix.
+- is_donation: read the Customer suffix — "- Donation" => true, "- Purchased" => false, otherwise null.
+
 **Northwest Harvest / Food Lifeline** (set supplier: "nw_harvest")
 - Header says "Northwest Harvest" or "Warehouse Posted Shipment" or "Food Lifeline"
 - Location: Auburn warehouse

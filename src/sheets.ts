@@ -261,7 +261,7 @@ function rollupExtraction(extraction: ExtractionResult): SummaryRollup {
     food_type: foodType,
     is_food: isFood,
     cost,
-    donation: DONATION_SUPPLIERS.has(extraction.supplier)
+    donation: extraction.is_donation ?? DONATION_SUPPLIERS.has(extraction.supplier)
   };
 }
 

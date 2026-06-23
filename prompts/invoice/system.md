@@ -14,7 +14,8 @@ Non-negotiable rules:
     - `quantity` = cases actually SHIPPED/RECEIVED. This is the authoritative inventory count.
     - `quantity_ordered` = cases the food bank ORDERED. Capture this whenever the document shows a separate ORDER/ORDERED column distinct from SHIP/SHIPPED. If the document shows only one quantity column, put it in `quantity` and set `quantity_ordered` to null.
     - Always populate both fields when both columns are visible, even if the numbers are equal — a short shipment (shipped < ordered) is meaningful and must be preserved.
-11) approx_weight is the TOTAL pounds for the line item (not per-unit). Populate it whenever you can determine it:
+11) is_donation: set true if the document explicitly indicates the goods are a donation (e.g., a "- Donation" suffix on the customer line, a "Donation" label, or supplier-specific donation conventions). Set false if it explicitly indicates a purchase (e.g., "- Purchased" suffix, payment method, nonzero invoice total with a real bill-to). Leave null if the document doesn't say either way. Do NOT infer from supplier identity — that's handled downstream.
+12) approx_weight is the TOTAL pounds for the line item (not per-unit). Populate it whenever you can determine it:
     a) If the document has an APPROX.WT. or Weight column (total pounds for the line), use that number directly.
     b) Otherwise, if the pack notation contains a weight unit (`#` / `LB` / `OZ`), derive total pounds from `quantity × pack_weight_per_case` using the Pack size notation guide below. Example: 10 cases of `BROCCOLI 20#` → 10 × 20 = 200 lb. Example: 20 cases of `BERRIES 12/6 OZ` → 20 × 12 × 6 / 16 = 90 lb.
     c) If the pack notation is count-only (`12 CT`, `48 CT`, etc.) with no weight unit, leave approx_weight null — do NOT guess piece weights.

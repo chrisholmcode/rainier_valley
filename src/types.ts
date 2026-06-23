@@ -1,4 +1,4 @@
-export type Supplier = "carusos" | "charlies" | "costco" | "nw_harvest" | "pacific" | "weigelt" | "unknown";
+export type Supplier = "carusos" | "charlies" | "costco" | "grand_central" | "nw_harvest" | "pacific" | "weigelt" | "unknown";
 
 export type ProgramType = "home_delivery" | "in_person_shopping" | "pre_made_bags" | "unknown";
 
@@ -137,6 +137,7 @@ export interface ExtractionResult {
   delivery_date: string | null;
   invoice_or_order_number: string | null;
   destination_org: string | null;
+  is_donation: boolean | null;
   line_items: LineItem[];
   fees: FeeItem[];
   totals: {

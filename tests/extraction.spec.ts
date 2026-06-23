@@ -31,6 +31,7 @@ interface FixtureExpectations {
   itemNameRawContainsAny?: string[];
   itemNameRawContainsAll?: string[];
   requireTotalsPresent?: Array<"subtotal" | "tax" | "grand_total">;
+  isDonation?: boolean;
 }
 
 interface FixtureCase {
@@ -90,7 +91,21 @@ const FIXTURES: FixtureCase[] = [
       minLineItems: 4,
       feesCount: 0,
       itemNameRawContainsAny: ["GRANOLA", "RAMEN", "GOGO SQUEEZ", "OATMEAL"],
-      requireTotalsPresent: ["subtotal", "grand_total"]
+      requireTotalsPresent: ["subtotal", "grand_total"],
+      isDonation: false
+    }
+  },
+  {
+    file: "tests/fixtures/grand_central_IMG_4042.jpg",
+    supplierHint: "grand_central",
+    expect: {
+      supplier: "grand_central",
+      document_type: "invoice",
+      minLineItems: 1,
+      feesCount: 0,
+      itemNameRawContainsAny: ["COMMUNITY LOAF", "LOAF"],
+      requireTotalsPresent: ["grand_total"],
+      isDonation: true
     }
   }
 ];
@@ -166,6 +181,14 @@ async function runFixture(f: FixtureCase): Promise<CheckResult[]> {
       const v = result.totals[key];
       checks.push(check(`totals.${key} is non-null`, v !== null, `got ${v}`));
     }
+  }
+
+  if (typeof f.expect.isDonation === "boolean") {
+    checks.push(check(
+      `is_donation === ${f.expect.isDonation}`,
+      result.is_donation === f.expect.isDonation,
+      `got ${result.is_donation}`
+    ));
   }
 
   return checks;

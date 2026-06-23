@@ -1,0 +1,24 @@
+Supplier: Grand Central Bakery (Seattle, WA).
+Document format: Printed invoice with the "Grand Central Bakery" header.
+- Address: 21 S Nevada St, Seattle WA 98123 (or similar Grand Central location).
+- Columns: Code | Description | Quantity | Unit Price | Ext. Price.
+- Code => item_code_raw (e.g., "COMMUNI").
+- Description => item_name_raw, kept verbatim (e.g., "COMMUNITY LOAF Goldendale WW").
+- Quantity => quantity (single column — no separate ORDER/SHIP split, leave quantity_ordered null).
+- Unit Price => unit_cost. Ext. Price => line_total.
+- Unit is single loaves / units, not cases. Set unit = "ea".
+- approx_weight: count-only inventory (no weight unit in the description). Leave approx_weight null — do not guess loaf weights.
+- All items are bread products. Set category = "shelf_stable".
+- delivery_date: Use the **Date** field in the upper-right header block (convert MM/DD/YY to YYYY-MM-DD).
+- invoice_or_order_number: Use the **Invoice** value in the upper-right header (e.g., "1159427").
+- destination_org: Use the **Customer** field value (e.g., "Rainier Valley Food Bank - Donation"), kept verbatim including the suffix.
+- **is_donation**: The Customer field has a trailing suffix that names the acquisition type:
+  - `Rainier Valley Food Bank - Donation` → is_donation = true
+  - `Rainier Valley Food Bank - Purchased` → is_donation = false
+  - If no recognizable suffix is present, leave is_donation = null.
+- Totals:
+  - Subtotal => subtotal
+  - Taxes => tax
+  - Total => grand_total
+- Ignore the "Vol Discount" line unless nonzero. Ignore Customer Comments, Announcement, Packing Comments, Delivery Window — context only, not line items or fees.
+- No fuel surcharge / delivery fee — leave fees[] empty unless one is explicitly visible.

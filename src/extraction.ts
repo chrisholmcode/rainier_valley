@@ -12,10 +12,11 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
-  supplier: z.enum(["carusos", "charlies", "costco", "nw_harvest", "pacific", "weigelt", "unknown"]),
+  supplier: z.enum(["carusos", "charlies", "costco", "grand_central", "nw_harvest", "pacific", "weigelt", "unknown"]),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
   destination_org: z.string().nullable(),
+  is_donation: z.boolean().nullable(),
   line_items: z.array(
     z.object({
       item_code_raw: z.string().nullable(),
@@ -55,6 +56,7 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   carusos: loadPrompt("invoice/suppliers/carusos.md"),
   charlies: loadPrompt("invoice/suppliers/charlies.md"),
   costco: loadPrompt("invoice/suppliers/costco.md"),
+  grand_central: loadPrompt("invoice/suppliers/grand_central.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
   weigelt: loadPrompt("invoice/suppliers/weigelt.md"),
@@ -70,10 +72,11 @@ const EXTRACTION_INPUT_SCHEMA = {
   type: "object" as const,
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
-    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "nw_harvest", "pacific", "weigelt", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "grand_central", "nw_harvest", "pacific", "weigelt", "unknown"] },
     delivery_date: { type: ["string", "null"] },
     invoice_or_order_number: { type: ["string", "null"] },
     destination_org: { type: ["string", "null"] },
+    is_donation: { type: ["boolean", "null"], description: "True if the document indicates the goods are a donation; false if explicitly purchased; null if the document doesn't say." },
     line_items: {
       type: "array",
       items: {
@@ -120,7 +123,7 @@ const EXTRACTION_INPUT_SCHEMA = {
     },
     source_warnings: { type: "array", items: { type: "string" } }
   },
-  required: ["document_type", "supplier", "delivery_date", "invoice_or_order_number", "destination_org", "line_items", "fees", "totals", "source_warnings"]
+  required: ["document_type", "supplier", "delivery_date", "invoice_or_order_number", "destination_org", "is_donation", "line_items", "fees", "totals", "source_warnings"]
 };
 
 const EOD_INPUT_SCHEMA = {
@@ -197,6 +200,7 @@ export function guessSupplierFromFilename(filename: string): Supplier {
   if (f.includes("caruso")) return "carusos";
   if (f.includes("charlie")) return "charlies";
   if (f.includes("costco")) return "costco";
+  if (f.includes("grand_central") || f.includes("grand-central") || f.includes("grandcentral") || f.includes("gcb")) return "grand_central";
   if (f.includes("harvest") || f.includes("nw") || f.includes("food lifeline")) return "nw_harvest";
   if (f.includes("pacific") || f.includes("pfd")) return "pacific";
   if (f.includes("weigelt")) return "weigelt";

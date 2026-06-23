@@ -224,6 +224,7 @@ async function main(): Promise<void> {
       delivery_date: deliveryDate,
       invoice_or_order_number: invoice,
       destination_org: destinationOrg,
+      is_donation: null,
       line_items: lineItems,
       fees,
       totals: { subtotal: null, tax: null, grand_total: null },
