@@ -118,6 +118,18 @@ const FIXTURES: FixtureCase[] = [
       requireTotalsPresent: ["grand_total"],
       isDonation: true
     }
+  },
+  {
+    file: "tests/fixtures/food_lifeline_IMG_4041.jpg",
+    supplierHint: "food_lifeline",
+    expect: {
+      supplier: "food_lifeline",
+      document_type: "manifest",
+      minLineItems: 7,
+      feesCount: 0,
+      itemNameRawContainsAny: ["Bok Choy", "Chicken Drumsticks", "Peanut Butter", "Pears", "Grapefruit"],
+      isDonation: true
+    }
   }
 ];
 

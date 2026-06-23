@@ -188,7 +188,7 @@ export const SUMMARY_SHEET_HEADERS = [
   "photo_url"
 ];
 
-const DONATION_SUPPLIERS = new Set<string>(["nw_harvest"]);
+const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline"]);
 
 interface SummaryRollup {
   weight_lb: number | null;

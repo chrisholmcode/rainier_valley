@@ -25,12 +25,21 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - destination_org: Use the **Customer** field verbatim including any "- Donation" / "- Purchased" suffix.
 - is_donation: read the Customer suffix — "- Donation" => true, "- Purchased" => false, otherwise null.
 
-**Northwest Harvest / Food Lifeline** (set supplier: "nw_harvest")
-- Header says "Northwest Harvest" or "Warehouse Posted Shipment" or "Food Lifeline"
+**Northwest Harvest** (set supplier: "nw_harvest")
+- Header says "northwest HARVEST" with "Warehouse Posted Shipment" subtitle
 - Location: Auburn warehouse
 - Columns: Item No. | Quantity | Description | Unit of Measure Code | Class Code | Weight
 - Weight column is TOTAL weight. Class Code = storage (AMBIENT/CHILL). Filter out Grand Totals row.
 - If only a pallet label (no line items), add warning to source_warnings.
+
+**Food Lifeline** (set supplier: "food_lifeline")
+- "FOOD LIFELINE" logo upper-left, "AGENCY ORDER" header upper-right.
+- Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight.
+- This is a donation manifest. Set document_type = "manifest" and is_donation = true.
+- Quantity => quantity (no ORDER/SHIP split). Gross Weight => approx_weight (TOTAL pounds).
+- Item No. suffix `-TEFA` => TEFAP federal commodity, `-CITY` => City Fund. Capture in notes ("funding: TEFAP" / "funding: CITY").
+- delivery_date: Use the **Ship Date** field. invoice_or_order_number: Use the **Agency Order No** (e.g., "ACR-XXXXXX").
+- Totals (Subtotal/Tax/Total) are all $0 on agency orders — preserve them as 0, not null.
 
 **Costco Business Delivery** (set supplier: "costco")
 - Header has the Costco / Costco Business Center logo and title "Invoice"
