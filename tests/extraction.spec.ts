@@ -70,6 +70,17 @@ const FIXTURES: FixtureCase[] = [
     }
   },
   {
+    file: "tests/fixtures/nw_harvest_IMG_4043.jpg",
+    supplierHint: "nw_harvest",
+    expect: {
+      supplier: "nw_harvest",
+      document_type: "warehouse_posted_shipment",
+      minLineItems: 6,
+      feesCount: 0,
+      itemNameRawContainsAny: ["Rice", "Squash", "Chicken", "Cookies"]
+    }
+  },
+  {
     file: "tests/fixtures/IMG_2721.jpg",
     supplierHint: "charlies",
     expect: {
