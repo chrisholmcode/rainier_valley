@@ -1,0 +1,31 @@
+Supplier: Costco Business Delivery (Whse 767, Fife WA).
+Document format: PDF invoice titled "Invoice" with the Costco Business Center logo.
+- Columns: Ordered | Shipped | Item | Description | Unit Price | Tax | Resale/Exempt | Instant Savings | Amount.
+- Ordered => quantity_ordered. Shipped => quantity (authoritative inventory count). Capture both even when equal — a short ship matters.
+- Item column (numeric SKU, e.g., "1212860") => item_code_raw.
+- Description => item_name_raw, kept verbatim including the trailing pack notation (e.g., "KIRKLAND SIGNATURE SOFT & CHEWY CHOCOLATE CHIP GRANOLA BARS, 0.85 OZ, 64 CT").
+- Unit Price => unit_cost. Amount => line_total.
+- delivery_date: Use the **Scheduled Delivery Date** field in the header (NOT Order Date).
+- invoice_or_order_number: Use the **Order Number** value (e.g., "1292264544").
+- Section headers in the body (e.g., "Dry Items", "Refrigerated", "Frozen", "Produce") tag the lines beneath them. Map to category:
+  - "Dry Items" / "Pantry" => shelf_stable
+  - "Refrigerated" => dairy if dairy product, otherwise produce or shelf_stable based on the item
+  - "Frozen" => frozen
+  - "Produce" / "Fresh" => produce
+  - "Meat" / "Poultry" / "Seafood" => meat_protein
+  - Cleaning supplies, paper goods, etc. => non_food
+- **approx_weight derivation from pack notation** (Costco invoices have no weight column):
+  - Pack ends with `<X> OZ, <N> CT` (e.g., `0.85 OZ, 64 CT`) => per-case pounds = `N × X / 16`. approx_weight = quantity × N × X / 16.
+    - Example: 6 cases of `..., 0.85 OZ, 64 CT` → 6 × 64 × 0.85 / 16 = 20.4 lb.
+  - Pack ends with `<X> LB, <N> CT` => per-case pounds = `N × X`. approx_weight = quantity × N × X.
+  - Pack ends with `<X> LB` (single weight, no count) => approx_weight = quantity × X.
+  - Pack is count-only (e.g., `48 CT` with no preceding weight) => approx_weight = null. Do not guess piece weights.
+- Fees (put in fees[] array, not line_items):
+  - Delivery Surcharge (only when nonzero)
+  - Order Adjustment / Order Adjustment Tax (only when nonzero)
+- Totals:
+  - Total Merch. Sales => subtotal
+  - Sales Tax => tax
+  - Total Due => grand_total
+- Ignore: "Instant Savings" column unless nonzero (it's a discount, not a fee). Ignore the "Approximate rebate / cash back for this invoice" lines — those are marketing, not money owed.
+- Costco purchases are NOT donations — leave donation handling to the summary logic (do not set anything special here).

@@ -12,7 +12,7 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
-  supplier: z.enum(["carusos", "charlies", "nw_harvest", "pacific", "weigelt", "unknown"]),
+  supplier: z.enum(["carusos", "charlies", "costco", "nw_harvest", "pacific", "weigelt", "unknown"]),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
   destination_org: z.string().nullable(),
@@ -54,6 +54,7 @@ const SYSTEM_PROMPT = loadPrompt("invoice/system.md");
 const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   carusos: loadPrompt("invoice/suppliers/carusos.md"),
   charlies: loadPrompt("invoice/suppliers/charlies.md"),
+  costco: loadPrompt("invoice/suppliers/costco.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
   weigelt: loadPrompt("invoice/suppliers/weigelt.md"),
@@ -69,7 +70,7 @@ const EXTRACTION_INPUT_SCHEMA = {
   type: "object" as const,
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
-    supplier: { type: "string", enum: ["carusos", "charlies", "nw_harvest", "pacific", "weigelt", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "nw_harvest", "pacific", "weigelt", "unknown"] },
     delivery_date: { type: ["string", "null"] },
     invoice_or_order_number: { type: ["string", "null"] },
     destination_org: { type: ["string", "null"] },
@@ -195,6 +196,7 @@ export function guessSupplierFromFilename(filename: string): Supplier {
   const f = filename.toLowerCase();
   if (f.includes("caruso")) return "carusos";
   if (f.includes("charlie")) return "charlies";
+  if (f.includes("costco")) return "costco";
   if (f.includes("harvest") || f.includes("nw") || f.includes("food lifeline")) return "nw_harvest";
   if (f.includes("pacific") || f.includes("pfd")) return "pacific";
   if (f.includes("weigelt")) return "weigelt";

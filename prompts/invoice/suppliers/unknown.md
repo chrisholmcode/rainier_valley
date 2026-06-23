@@ -22,6 +22,17 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Weight column is TOTAL weight. Class Code = storage (AMBIENT/CHILL). Filter out Grand Totals row.
 - If only a pallet label (no line items), add warning to source_warnings.
 
+**Costco Business Delivery** (set supplier: "costco")
+- Header has the Costco / Costco Business Center logo and title "Invoice"
+- Location: Whse 767, 3900 20th St E, Fife, WA (or similar Costco Business Center warehouse)
+- Columns: Ordered | Shipped | Item | Description | Unit Price | Tax | Resale/Exempt | Instant Savings | Amount
+- Ordered => quantity_ordered. Shipped => quantity. Capture both. Item column is the SKU => item_code_raw.
+- delivery_date: Use the **Scheduled Delivery Date** field (NOT Order Date).
+- invoice_or_order_number: Use the **Order Number** value.
+- Pack notation lives at the end of the Description (e.g., `0.85 OZ, 64 CT`); derive approx_weight from `quantity × N × X / 16` when the pack has a weight unit.
+- Section headers (Dry Items / Refrigerated / Frozen / Produce) tag the lines beneath them for category.
+- Fees: Delivery Surcharge and Order Adjustment go in fees[] only when nonzero. Ignore "Instant Savings" and the rebate/cash back lines.
+
 **Pacific Food Distributors** (set supplier: "pacific")
 - Header says "Pacific Food Distributors"
 - Bill of Lading format.
