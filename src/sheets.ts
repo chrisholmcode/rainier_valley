@@ -8,9 +8,25 @@ const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   : new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
 
 const headersInitialized = new Set<string>();
+const tabsKnownToExist = new Set<string>();
+
+async function ensureTabExists(worksheetName: string): Promise<void> {
+  if (tabsKnownToExist.has(worksheetName)) return;
+  const sheets = google.sheets({ version: "v4", auth });
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID });
+  const tabs = (meta.data.sheets ?? []).map((s) => s.properties?.title).filter((t): t is string => Boolean(t));
+  for (const t of tabs) tabsKnownToExist.add(t);
+  if (tabsKnownToExist.has(worksheetName)) return;
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: { requests: [{ addSheet: { properties: { title: worksheetName } } }] }
+  });
+  tabsKnownToExist.add(worksheetName);
+}
 
 async function ensureHeader(worksheetName: string, headers: string[]): Promise<void> {
   if (headersInitialized.has(worksheetName)) return;
+  await ensureTabExists(worksheetName);
   const sheets = google.sheets({ version: "v4", auth });
   const existing = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${worksheetName}!1:1` });
   const existingRow = existing.data.values?.[0] ?? [];
@@ -510,6 +526,7 @@ export async function appendCorrectionRow(params: {
   newValue: string | number | boolean | null;
   reason: string | null;
 }): Promise<void> {
+  await ensureCorrectionsLogHeader();
   const sheets = google.sheets({ version: "v4", auth });
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
