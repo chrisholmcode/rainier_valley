@@ -4,8 +4,27 @@ import axios from "axios";
 import { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import { env } from "./config.js";
-import { appendExtractionRows, ensureSheetHeader, appendEodRows, ensureEodSheetHeader, updateSheetCell, readDeliveryRows, readEodRows, appendSummaryRow, ensureSummarySheetHeader } from "./sheets.js";
+import {
+  appendExtractionRows,
+  ensureSheetHeader,
+  appendEodRows,
+  ensureEodSheetHeader,
+  updateSheetCell,
+  readDeliveryRows,
+  readEodRows,
+  appendSummaryRow,
+  ensureSummarySheetHeader,
+  ensureCorrectionsLogHeader,
+  appendCorrectionRow,
+  groupSlips,
+  slipNeedsReview,
+  stampSlipApproval,
+  clearSlipApproval,
+  recomputeSummaryForSlip,
+  SHEET_HEADERS
+} from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
+import { buildReviewListHtml, buildSlipDetailHtml, decodeSlipKey } from "./review.js";
 import {
   extractFromImage,
   extractFromText,
@@ -302,6 +321,7 @@ async function processInvoiceBatch(params: {
   try {
     await ensureSheetHeader();
     await ensureSummarySheetHeader();
+    await ensureCorrectionsLogHeader();
     let totalRows = 0;
     for (const file of processedFiles) {
       const rowsAdded = await appendExtractionRows({
@@ -1003,12 +1023,240 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
   }
 }
 
+// ── Review UI handlers ──────────────────────────────────────────────────────
+
+function reviewAuth(req: IncomingMessage, res: ServerResponse): URL | null {
+  if (!env.DASHBOARD_TOKEN) {
+    res.writeHead(404);
+    res.end();
+    return null;
+  }
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const token = url.searchParams.get("token") ?? "";
+  if (token !== env.DASHBOARD_TOKEN) {
+    res.writeHead(401, { "Content-Type": "text/plain" });
+    res.end("Unauthorized");
+    return null;
+  }
+  return url;
+}
+
+async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = reviewAuth(req, res);
+  if (!url) return;
+  const tab = url.searchParams.get("tab") ?? "queue";
+  const pendingOnly = tab !== "history";
+
+  try {
+    const rows = await readDeliveryRows({ limit: 5000 });
+    const slips = groupSlips(rows);
+    const threshold = env.REVIEW_CONFIDENCE_THRESHOLD;
+    const filtered = pendingOnly ? slips.filter((s) => slipNeedsReview(s, threshold)) : slips;
+    const html = buildReviewListHtml({
+      slips: filtered,
+      pendingOnly,
+      threshold,
+      token: env.DASHBOARD_TOKEN!,
+      generatedAt: new Date()
+    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Review list error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
+async function handleSlipDetailRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = reviewAuth(req, res);
+  if (!url) return;
+  const slipParam = url.searchParams.get("slip") ?? "";
+  let slipKey = "";
+  try {
+    slipKey = decodeSlipKey(slipParam);
+  } catch {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Invalid slip key");
+    return;
+  }
+  if (!slipKey) {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Missing slip key");
+    return;
+  }
+
+  try {
+    const rows = await readDeliveryRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.photo_url === slipKey);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+    const [slip] = groupSlips(slipRows);
+    const html = buildSlipDetailHtml({ slip, rows: slipRows, token: env.DASHBOARD_TOKEN! });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Slip detail error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  const raw = Buffer.concat(chunks).toString();
+  if (!raw) return {};
+  return JSON.parse(raw);
+}
+
+const SLIP_LEVEL_FIELDS = new Set(["supplier", "delivery_date", "invoice_or_order_number", "donor_org", "is_donation"]);
+const ROW_LEVEL_FIELDS = new Set(["item_name_normalized", "quantity", "unit", "category", "approx_weight", "is_fee"]);
+
+async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = reviewAuth(req, res);
+  if (!url) return;
+
+  try {
+    const body = (await readJsonBody(req)) as { slip?: string; row_index?: number; field?: string; new_value?: string; reason?: string };
+    const slipEnc = body.slip ?? "";
+    const rowIndex = Number(body.row_index);
+    const field = body.field ?? "";
+    const newValue = body.new_value ?? "";
+    const reason = body.reason ?? null;
+
+    if (!slipEnc || !Number.isInteger(rowIndex) || !field) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Missing slip/row_index/field");
+      return;
+    }
+    if (!SHEET_HEADERS.includes(field)) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end(`Unknown field: ${field}`);
+      return;
+    }
+    const isSlipLevel = SLIP_LEVEL_FIELDS.has(field);
+    if (!isSlipLevel && !ROW_LEVEL_FIELDS.has(field)) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end(`Field not editable: ${field}`);
+      return;
+    }
+
+    const slipKey = decodeSlipKey(slipEnc);
+    const rows = await readDeliveryRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.photo_url === slipKey);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+
+    const targets = isSlipLevel ? slipRows : slipRows.filter((r) => r.rowIndex === rowIndex);
+    if (targets.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Row not found in slip");
+      return;
+    }
+
+    const user = (req.headers["x-review-user"] as string) || "review-ui";
+    for (const target of targets) {
+      const oldValue = (target as unknown as Record<string, string | null>)[field];
+      if (oldValue === newValue) continue;
+      await updateSheetCell({
+        worksheetName: env.GOOGLE_WORKSHEET_NAME,
+        rowIndex: target.rowIndex,
+        columnName: field,
+        newValue: newValue === "" ? null : newValue
+      });
+      await appendCorrectionRow({
+        user,
+        slipKey,
+        sheet: env.GOOGLE_WORKSHEET_NAME,
+        rowIndex: target.rowIndex,
+        field,
+        oldValue,
+        newValue,
+        reason
+      });
+    }
+
+    await clearSlipApproval(slipRows.map((r) => r.rowIndex));
+    const fresh = await readDeliveryRows({ limit: 5000 });
+    const freshSlipRows = fresh.filter((r) => r.photo_url === slipKey);
+    await recomputeSummaryForSlip(freshSlipRows);
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Review edit error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
+}
+
+async function handleReviewApproveRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = reviewAuth(req, res);
+  if (!url) return;
+  try {
+    const body = (await readJsonBody(req)) as { slip?: string };
+    const slipEnc = body.slip ?? "";
+    if (!slipEnc) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Missing slip");
+      return;
+    }
+    const slipKey = decodeSlipKey(slipEnc);
+    const rows = await readDeliveryRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.photo_url === slipKey);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+    const user = (req.headers["x-review-user"] as string) || "review-ui";
+    await stampSlipApproval({
+      slipKey,
+      rowIndexes: slipRows.map((r) => r.rowIndex),
+      approvedBy: user
+    });
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Review approve error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
+}
+
 function startHttpServer(): void {
   const server = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
     const path = (req.url ?? "/").split("?")[0];
 
     if (req.method === "GET" && path === "/dashboard") {
       await handleDashboardRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/review") {
+      await handleReviewListRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/review/slip") {
+      await handleSlipDetailRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/edit") {
+      await handleReviewEditRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/approve") {
+      await handleReviewApproveRequest(req, res);
       return;
     }
 
@@ -1045,7 +1293,7 @@ function startHttpServer(): void {
   server.listen(port, () => {
     const routes: string[] = [];
     if (env.VOICE_WEBHOOK_SECRET) routes.push("/voice");
-    if (env.DASHBOARD_TOKEN) routes.push("/dashboard");
+    if (env.DASHBOARD_TOKEN) routes.push("/dashboard", "/review");
     console.log(`HTTP server listening on port ${port} (routes: ${routes.join(", ") || "none"})`);
   });
 }

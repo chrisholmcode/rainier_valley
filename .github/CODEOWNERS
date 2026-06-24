@@ -1,0 +1,9 @@
+# Vendor extraction prompts drive what lands in the Inbound Delivery Log.
+# All prompt changes require explicit owner review before merging.
+prompts/**          @chrisholmcode
+
+# Schema and routing files that downstream code (sheets, summary rollup,
+# review UI) depends on — also gated.
+src/types.ts        @chrisholmcode
+src/sheets.ts       @chrisholmcode
+src/extraction.ts   @chrisholmcode

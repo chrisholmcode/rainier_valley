@@ -52,7 +52,11 @@ export const SHEET_HEADERS = [
   "slack_channel",
   "slack_message_ts",
   "uploaded_by",
-  "warnings_json"
+  "warnings_json",
+  "donor_org",
+  "is_donation",
+  "approved_at",
+  "approved_by"
 ];
 
 export async function ensureSheetHeader(): Promise<void> {
@@ -94,7 +98,11 @@ export async function appendExtractionRows(params: {
     slackChannel,
     slackMessageTs,
     uploadedBy,
-    JSON.stringify(extraction.source_warnings)
+    JSON.stringify(extraction.source_warnings),
+    extraction.donor_org,
+    extraction.is_donation,
+    null,
+    null
   ]);
 
   const feeRows = extraction.fees.map((fee) => [
@@ -123,7 +131,11 @@ export async function appendExtractionRows(params: {
     slackChannel,
     slackMessageTs,
     uploadedBy,
-    JSON.stringify(extraction.source_warnings)
+    JSON.stringify(extraction.source_warnings),
+    extraction.donor_org,
+    extraction.is_donation,
+    null,
+    null
   ]);
 
   const allRows = [...rows, ...feeRows];
@@ -154,7 +166,11 @@ export async function appendExtractionRows(params: {
       slackChannel,
       slackMessageTs,
       uploadedBy,
-      JSON.stringify(extraction.source_warnings)
+      JSON.stringify(extraction.source_warnings),
+      extraction.donor_org,
+      extraction.is_donation,
+      null,
+      null
     ]);
   }
 
@@ -162,7 +178,7 @@ export async function appendExtractionRows(params: {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.GOOGLE_WORKSHEET_NAME}!A:Z`,
+    range: `${env.GOOGLE_WORKSHEET_NAME}!A:AD`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: allRows
@@ -423,7 +439,7 @@ export async function readEodRows(params: { date?: string; limit?: number }): Pr
 export async function readDeliveryRows(params: { date?: string; supplier?: string; limit?: number }): Promise<DeliverySheetRow[]> {
   const { date, supplier, limit = 50 } = params;
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.GOOGLE_WORKSHEET_NAME}!A:Z` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.GOOGLE_WORKSHEET_NAME}!A:AD` });
   const rows = (res.data.values ?? []).slice(1);
   const mapped: DeliverySheetRow[] = rows.map((r, i) => ({
     rowIndex: i + 2,
@@ -452,7 +468,11 @@ export async function readDeliveryRows(params: { date?: string; supplier?: strin
     slack_channel: r[22] ?? null,
     slack_message_ts: r[23] ?? null,
     uploaded_by: r[24] ?? null,
-    warnings_json: r[25] ?? null
+    warnings_json: r[25] ?? null,
+    donor_org: r[26] ?? null,
+    is_donation: r[27] ?? null,
+    approved_at: r[28] ?? null,
+    approved_by: r[29] ?? null
   }));
   const filtered = mapped.filter((r) => {
     if (date && r.delivery_date !== date) return false;
@@ -460,6 +480,283 @@ export async function readDeliveryRows(params: { date?: string; supplier?: strin
     return true;
   });
   return filtered.slice(-limit);
+}
+
+// ── Corrections Log (every human edit appends one row) ──────────────────────
+
+export const CORRECTIONS_LOG_HEADERS = [
+  "timestamp",
+  "user",
+  "slip_key",
+  "sheet",
+  "row_index",
+  "field",
+  "old_value",
+  "new_value",
+  "reason"
+];
+
+export async function ensureCorrectionsLogHeader(): Promise<void> {
+  await ensureHeader(env.CORRECTIONS_LOG_WORKSHEET_NAME, CORRECTIONS_LOG_HEADERS);
+}
+
+export async function appendCorrectionRow(params: {
+  user: string;
+  slipKey: string;
+  sheet: string;
+  rowIndex: number;
+  field: string;
+  oldValue: string | number | boolean | null;
+  newValue: string | number | boolean | null;
+  reason: string | null;
+}): Promise<void> {
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.CORRECTIONS_LOG_WORKSHEET_NAME}!A:I`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [[
+        new Date().toISOString(),
+        params.user,
+        params.slipKey,
+        params.sheet,
+        params.rowIndex,
+        params.field,
+        params.oldValue == null ? "" : String(params.oldValue),
+        params.newValue == null ? "" : String(params.newValue),
+        params.reason ?? ""
+      ]]
+    }
+  });
+}
+
+// ── Slip-level helpers (a "slip" = all inbound rows sharing one photo_url) ───
+
+export interface SlipSummary {
+  slipKey: string; // photo_url
+  supplier: string;
+  document_type: string;
+  delivery_date: string | null;
+  invoice_or_order_number: string | null;
+  destination_org: string | null;
+  donor_org: string | null;
+  is_donation: string | null;
+  created_at: string;
+  photo_url: string;
+  rowCount: number;
+  rowIndexes: number[];
+  minConfidence: number | null;
+  approved: boolean;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  uploaded_by: string | null;
+}
+
+export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
+  const byKey = new Map<string, DeliverySheetRow[]>();
+  for (const r of rows) {
+    const key = r.photo_url ?? "";
+    if (!key) continue;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key)!.push(r);
+  }
+  const summaries: SlipSummary[] = [];
+  for (const [key, group] of byKey) {
+    const first = group[0];
+    let minConf: number | null = null;
+    let allApproved = true;
+    let approvedAt: string | null = null;
+    let approvedBy: string | null = null;
+    for (const r of group) {
+      const c = r.confidence ? parseFloat(r.confidence) : NaN;
+      if (Number.isFinite(c)) {
+        if (minConf === null || c < minConf) minConf = c;
+      }
+      if (!r.approved_at) {
+        allApproved = false;
+      } else {
+        approvedAt = r.approved_at;
+        approvedBy = r.approved_by;
+      }
+    }
+    summaries.push({
+      slipKey: key,
+      supplier: first.supplier,
+      document_type: first.document_type,
+      delivery_date: first.delivery_date,
+      invoice_or_order_number: first.invoice_or_order_number,
+      destination_org: first.destination_org,
+      donor_org: first.donor_org,
+      is_donation: first.is_donation,
+      created_at: first.created_at,
+      photo_url: key,
+      rowCount: group.length,
+      rowIndexes: group.map((r) => r.rowIndex),
+      minConfidence: minConf,
+      approved: allApproved && group.length > 0,
+      approvedAt,
+      approvedBy,
+      uploaded_by: first.uploaded_by
+    });
+  }
+  summaries.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+  return summaries;
+}
+
+export function slipNeedsReview(slip: SlipSummary, threshold: number): boolean {
+  if (slip.approved) return false;
+  if (slip.minConfidence !== null && slip.minConfidence < threshold) return true;
+  return !slip.approved;
+}
+
+export async function stampSlipApproval(params: {
+  slipKey: string;
+  rowIndexes: number[];
+  approvedBy: string;
+}): Promise<void> {
+  const { slipKey, rowIndexes, approvedBy } = params;
+  void slipKey;
+  const approvedAtCol = indexToColumn(SHEET_HEADERS.indexOf("approved_at"));
+  const approvedByCol = indexToColumn(SHEET_HEADERS.indexOf("approved_by"));
+  const now = new Date().toISOString();
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: rowIndexes.flatMap((rowIndex) => [
+        { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[now]] },
+        { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[approvedBy]] }
+      ])
+    }
+  });
+}
+
+export async function clearSlipApproval(rowIndexes: number[]): Promise<void> {
+  const approvedAtCol = indexToColumn(SHEET_HEADERS.indexOf("approved_at"));
+  const approvedByCol = indexToColumn(SHEET_HEADERS.indexOf("approved_by"));
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: rowIndexes.flatMap((rowIndex) => [
+        { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[""]] },
+        { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[""]] }
+      ])
+    }
+  });
+}
+
+// ── Rerun Inventory Summary rollup for a single slip ────────────────────────
+
+export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Promise<void> {
+  if (slipRows.length === 0) return;
+  const first = slipRows[0];
+  const supplier = first.supplier;
+  const invoice = first.invoice_or_order_number ?? "";
+  const photoUrl = first.photo_url ?? "";
+
+  const lineItems = slipRows.filter((r) => !isFeeFlag(r.is_fee)).map(rowToLineItemForSummary);
+  const fees = slipRows.filter((r) => isFeeFlag(r.is_fee)).map(rowToFeeItemForSummary);
+  const totals: ExtractionResult["totals"] = { subtotal: null, tax: null, grand_total: null };
+  const extraction: ExtractionResult = {
+    document_type: (first.document_type as ExtractionResult["document_type"]) ?? "unknown",
+    supplier: (first.supplier as ExtractionResult["supplier"]) ?? "unknown",
+    delivery_date: first.delivery_date,
+    invoice_or_order_number: first.invoice_or_order_number,
+    destination_org: first.destination_org,
+    donor_org: first.donor_org,
+    is_donation: parseBoolNullable(first.is_donation),
+    line_items: lineItems,
+    fees,
+    totals,
+    source_warnings: []
+  };
+
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.SUMMARY_WORKSHEET_NAME}!A:Z`
+  });
+  const allRows = res.data.values ?? [];
+  let matchRowIndex = -1;
+  for (let i = 1; i < allRows.length; i++) {
+    const row = allRows[i];
+    const rSupplier = row[2] ?? "";
+    const rInvoice = row[5] ?? "";
+    const rPhoto = row[10] ?? "";
+    if (rPhoto && photoUrl && rPhoto === photoUrl) { matchRowIndex = i + 1; break; }
+    if (rSupplier === supplier && rInvoice && invoice && rInvoice === invoice) { matchRowIndex = i + 1; break; }
+  }
+
+  if (matchRowIndex === -1) {
+    await appendSummaryRow({ extraction, photoUrl });
+    return;
+  }
+
+  const rollup = rollupExtraction(extraction);
+  const row = [
+    new Date().toISOString(),
+    extraction.delivery_date,
+    extraction.supplier,
+    rollup.weight_lb,
+    "lb",
+    extraction.invoice_or_order_number,
+    rollup.food_type,
+    rollup.is_food,
+    rollup.cost,
+    rollup.donation,
+    photoUrl
+  ];
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.SUMMARY_WORKSHEET_NAME}!A${matchRowIndex}:K${matchRowIndex}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [row] }
+  });
+}
+
+function parseBoolNullable(v: string | null): boolean | null {
+  if (v == null || v === "") return null;
+  const s = String(v).trim().toLowerCase();
+  if (s === "true" || s === "1" || s === "yes") return true;
+  if (s === "false" || s === "0" || s === "no") return false;
+  return null;
+}
+
+function isFeeFlag(v: string | null): boolean {
+  if (!v) return false;
+  const s = String(v).trim().toLowerCase();
+  return s === "true" || s === "1" || s === "yes";
+}
+
+function rowToLineItemForSummary(r: DeliverySheetRow): ExtractionResult["line_items"][number] {
+  return {
+    item_code_raw: r.item_code_raw,
+    item_name_raw: r.item_name_raw,
+    item_name_normalized: r.item_name_normalized,
+    quantity_ordered: r.quantity_ordered ? parseFloat(r.quantity_ordered) : null,
+    quantity: r.quantity ? parseFloat(r.quantity) : null,
+    quantity_raw: r.quantity_raw,
+    unit: (r.unit as ExtractionResult["line_items"][number]["unit"]) ?? null,
+    pack_size_raw: r.pack_size_raw,
+    approx_weight: r.approx_weight ? parseFloat(r.approx_weight) : null,
+    category: ((r.category as ExtractionResult["line_items"][number]["category"]) ?? "unknown"),
+    unit_cost: r.unit_cost ? parseFloat(r.unit_cost) : null,
+    line_total: r.line_total ? parseFloat(r.line_total) : null,
+    is_fee: false,
+    notes: r.notes,
+    confidence: r.confidence ? parseFloat(r.confidence) : 0
+  };
+}
+
+function rowToFeeItemForSummary(r: DeliverySheetRow): ExtractionResult["fees"][number] {
+  return {
+    description: r.item_name_raw ?? r.notes ?? "fee",
+    amount: r.line_total ? parseFloat(r.line_total) : null
+  };
 }
 
 export async function updateSheetCell(params: {

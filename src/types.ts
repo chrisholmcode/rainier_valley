@@ -86,6 +86,10 @@ export interface DeliverySheetRow {
   slack_message_ts: string | null;
   uploaded_by: string | null;
   warnings_json: string | null;
+  donor_org: string | null;
+  is_donation: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
 }
 
 export interface EodLineItem {
