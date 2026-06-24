@@ -178,7 +178,7 @@ export function buildReviewListHtml(params: {
   const body = pendingOnly
     ? `
       <h2 class="section-title section-title-warn">
-        ★ Needs review
+        Needs review
         <span class="section-count">${needsReview.length}</span>
         <span class="section-sub muted">confidence &lt; ${Math.round(threshold * 100)}% · resolve these first</span>
       </h2>
