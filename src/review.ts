@@ -1,6 +1,6 @@
 import type { DeliverySheetRow } from "./types.js";
 import type { SlipSummary } from "./sheets.js";
-import { SHARED_CSS } from "./ui-styles.js";
+import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 
 function escapeHtml(s: string): string {
   return s
@@ -47,16 +47,22 @@ a.slip-link { color: var(--ink); text-decoration: none; font-weight: 600; displa
 a.slip-link:hover { color: var(--primary); }
 a.slip-link::after { content: ""; }
 
-.section-title { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
-                 margin:32px 0 14px; font-size:18px; font-weight:700; letter-spacing:-0.015em; color: var(--ink); }
+.section-title { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+                 margin:36px 0 16px;
+                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+                 font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+                 text-transform: none; color: var(--ink); line-height: 1.2; }
 .section-title:first-of-type { margin-top:0; }
 .section-title-warn { color: var(--warn); }
 .section-count { display:inline-flex; align-items:center; justify-content:center;
-                 min-width:24px; height:22px; padding:0 8px; border-radius:var(--radius-pill);
-                 background:var(--line); color:var(--ink); font-size:12px; font-weight:600;
-                 font-variant-numeric:tabular-nums; }
+                 min-width:22px; height:22px; padding:0 8px;
+                 border-radius: var(--radius-pill);
+                 background: var(--line); color: var(--ink);
+                 font-size: 12px; font-weight: 600;
+                 font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .section-title-warn .section-count { background: var(--warn-bg); color: var(--warn); }
-.section-sub { font-size:13px; font-weight:400; letter-spacing:0; color: var(--muted); }
+.section-sub { font-size: 13px; font-weight: 400; letter-spacing: 0;
+               color: var(--muted); text-transform: none; }
 
 /* Slip detail layout */
 .layout-detail { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(320px, 1fr); gap:16px; }
@@ -202,6 +208,7 @@ export function buildReviewListHtml(params: {
 <html lang="en"><head>
 <meta charset="UTF-8"><title>RVFB Review</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FONT_HEAD_LINKS}
 <style>${STYLE}</style>
 </head><body><div class="container">
 <header class="page">
@@ -327,6 +334,7 @@ export function buildSlipDetailHtml(params: {
 <html lang="en"><head>
 <meta charset="UTF-8"><title>RVFB Review · ${escapeHtml(slip.supplier)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FONT_HEAD_LINKS}
 <style>${STYLE}</style>
 </head><body><div class="container">
 <header class="page">

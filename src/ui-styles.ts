@@ -2,10 +2,16 @@
 // Inspired by Stripe + Ramp: monochrome neutral surface, single violet accent,
 // Inter typography, sharp lines, generous whitespace, tabular numerics.
 
-export const SHARED_CSS = `
-@import url('https://rsms.me/inter/inter.css');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+// Inject this in <head> BEFORE the <style> tag so Inter loads non-blocking
+// and the page renders with the real font on first paint. @import inside
+// <style> is render-blocking and unreliable on first load.
+export const FONT_HEAD_LINKS = `
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+`;
 
+export const SHARED_CSS = `
 :root {
   --bg:           #f6f5f4;
   --card:         #ffffff;
@@ -57,10 +63,13 @@ header.page {
   border-bottom: 1px solid var(--line);
 }
 header.page h1 {
-  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 32px; font-weight: 700; letter-spacing: -0.03em;
   color: var(--ink);
+  line-height: 1.15;
 }
-header.page .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+header.page .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
 
 /* Toolbar / button groups */
 .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
