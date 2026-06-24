@@ -80,10 +80,11 @@ const STYLE = `
   .conf-ok { background:var(--ok-bg); color:var(--ok); }
   a.slip-link { color:var(--ink); text-decoration:none; font-weight:600; }
   a.slip-link:hover { text-decoration:underline; }
-  .layout-detail { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  @media (max-width:1000px) { .layout-detail { grid-template-columns:1fr; } }
-  .photo-pane img { width:100%; height:auto; border-radius:8px; border:1px solid var(--line); }
-  .photo-pane a { color:var(--ok); font-size:13px; }
+  .layout-detail { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(320px, 1fr); gap:16px; }
+  @media (max-width:1100px) { .layout-detail { grid-template-columns:1fr; } }
+  .photo-pane img, .photo-pane iframe { width:100%; height:auto; border-radius:8px; border:1px solid var(--line); display:block; }
+  .photo-pane iframe { height:80vh; }
+  .photo-pane a { color:var(--ok); font-size:13px; word-break:break-all; }
   .slip-meta { background:var(--card); border:1px solid var(--line); border-radius:12px;
                padding:16px; margin-bottom:16px; font-size:13px; }
   .slip-meta dl { display:grid; grid-template-columns:140px 1fr; gap:8px 12px; margin:0; }
@@ -93,9 +94,23 @@ const STYLE = `
     width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px;
     background:#fff; font-family:inherit; font-size:13px; font-variant-numeric:tabular-nums;
   }
-  input.dirty { background:#fef3c7; }
+  input.dirty, select.dirty { background:#fef3c7; }
   .row-edit { display:flex; gap:6px; align-items:center; }
   .fee-row { background:#fefce8; }
+
+  /* Editable line-items table: give every cell room to breathe + horizontal scroll if needed */
+  .line-items-card { overflow-x:auto; }
+  table.line-items { min-width: 880px; }
+  table.line-items th, table.line-items td { padding:8px 8px; }
+  table.line-items col.col-raw      { width: 180px; }
+  table.line-items col.col-normalized { width: 200px; }
+  table.line-items col.col-qty      { width: 80px; }
+  table.line-items col.col-unit     { width: 90px; }
+  table.line-items col.col-category { width: 130px; }
+  table.line-items col.col-weight   { width: 90px; }
+  table.line-items col.col-fee      { width: 80px; }
+  table.line-items col.col-conf     { width: 60px; }
+  table.line-items input, table.line-items select { min-width: 0; }
   footer { margin-top:32px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; text-align:center; }
   .toast { position:fixed; bottom:20px; right:20px; padding:12px 18px; border-radius:8px;
            background:var(--ink); color:#fff; font-size:13px; font-weight:600; z-index:1000;
@@ -232,13 +247,19 @@ export function buildSlipDetailHtml(params: {
     </tr>`;
   }).join("");
 
-  const photoBlock = slip.photo_url
-    ? `<a href="${escapeHtml(slip.photo_url)}" target="_blank" rel="noopener">${escapeHtml(slip.photo_url)}</a>
-       <p class="muted" style="font-size:12px; margin-top:4px;">Slack-hosted; open in a new tab if it doesn't render below.</p>
-       <img src="${escapeHtml(slip.photo_url)}" alt="slip photo" onerror="this.style.display='none'">`
-    : `<p class="muted">No photo on this slip.</p>`;
-
   const slipKeyEnc = encodeSlipKey(slip.slipKey);
+  const proxyUrl = `/review/photo?slip=${slipKeyEnc}&token=${t}`;
+  const isPdf = (slip.photo_url ?? "").toLowerCase().includes(".pdf");
+  const photoBlock = slip.photo_url
+    ? `${isPdf
+        ? `<iframe src="${escapeHtml(proxyUrl)}" title="slip photo"></iframe>`
+        : `<img src="${escapeHtml(proxyUrl)}" alt="slip photo" onerror="this.style.display='none'">`}
+       <p class="muted" style="font-size:12px; margin-top:8px;">
+         Proxied through the bot using the Slack token.
+         <a href="${escapeHtml(proxyUrl)}" target="_blank" rel="noopener">Open in new tab</a>
+         · <a href="${escapeHtml(slip.photo_url)}" target="_blank" rel="noopener">Slack source</a>
+       </p>`
+    : `<p class="muted">No photo on this slip.</p>`;
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
@@ -260,9 +281,19 @@ export function buildSlipDetailHtml(params: {
 <div class="layout-detail">
   <div>
     ${slipMeta}
-    <div class="card">
+    <div class="card line-items-card">
       <h3 style="margin-top:0;">Line items</h3>
-      <table>
+      <table class="line-items">
+        <colgroup>
+          <col class="col-raw">
+          <col class="col-normalized">
+          <col class="col-qty">
+          <col class="col-unit">
+          <col class="col-category">
+          <col class="col-weight">
+          <col class="col-fee">
+          <col class="col-conf">
+        </colgroup>
         <thead><tr>
           <th>Raw name</th><th>Normalized</th><th>Qty</th><th>Unit</th><th>Category</th><th>Weight (lb)</th><th>Fee?</th><th>Conf</th>
         </tr></thead>
