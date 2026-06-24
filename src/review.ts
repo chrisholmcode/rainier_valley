@@ -80,6 +80,16 @@ const STYLE = `
   .conf-ok { background:var(--ok-bg); color:var(--ok); }
   a.slip-link { color:var(--ink); text-decoration:none; font-weight:600; }
   a.slip-link:hover { text-decoration:underline; }
+  .section-title { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+                   margin:32px 0 12px; font-size:18px; font-weight:700; letter-spacing:-0.01em; }
+  .section-title:first-of-type { margin-top:0; }
+  .section-title-warn { color:var(--warn); }
+  .section-count { display:inline-flex; align-items:center; justify-content:center;
+                   min-width:28px; height:24px; padding:0 8px; border-radius:999px;
+                   background:#f3f4f6; color:var(--ink); font-size:13px; font-weight:700;
+                   font-variant-numeric:tabular-nums; }
+  .section-title-warn .section-count { background:var(--warn-bg); color:var(--warn); }
+  .section-sub { font-size:13px; font-weight:400; letter-spacing:0; }
   .layout-detail { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(320px, 1fr); gap:16px; }
   @media (max-width:1100px) { .layout-detail { grid-template-columns:1fr; } }
   .photo-pane img, .photo-pane iframe { width:100%; height:auto; border-radius:8px; border:1px solid var(--line); display:block; }
@@ -119,6 +129,32 @@ const STYLE = `
   .toast.error { background:var(--danger); }
 `;
 
+function renderSlipRow(s: SlipSummary, threshold: number, t: string): string {
+  const enc = encodeSlipKey(s.slipKey);
+  const date = s.delivery_date || `<span class="muted">${escapeHtml(s.created_at.slice(0, 10))}</span>`;
+  const invoice = s.invoice_or_order_number ? escapeHtml(s.invoice_or_order_number) : `<span class="muted">—</span>`;
+  return `<tr>
+    <td>${statusBadge(s)}</td>
+    <td>${date}</td>
+    <td>${donorOrSupplier(s)}</td>
+    <td>${invoice}</td>
+    <td class="num">${s.rowCount}</td>
+    <td>${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td><a class="slip-link" href="/review/slip?slip=${enc}&token=${t}">Open ›</a></td>
+  </tr>`;
+}
+
+function renderSlipTable(slips: SlipSummary[], threshold: number, t: string): string {
+  const body = slips.map((s) => renderSlipRow(s, threshold, t)).join("");
+  return `<table>
+    <thead><tr>
+      <th>Status</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
+      <th class="num">Rows</th><th>Min confidence</th><th></th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
 export function buildReviewListHtml(params: {
   slips: SlipSummary[];
   pendingOnly: boolean;
@@ -129,24 +165,46 @@ export function buildReviewListHtml(params: {
   const { slips, pendingOnly, threshold, token, generatedAt } = params;
   const t = encodeURIComponent(token);
 
-  const rows = slips.map((s) => {
-    const enc = encodeSlipKey(s.slipKey);
-    const date = s.delivery_date || `<span class="muted">${escapeHtml(s.created_at.slice(0, 10))}</span>`;
-    const invoice = s.invoice_or_order_number ? escapeHtml(s.invoice_or_order_number) : `<span class="muted">—</span>`;
-    return `<tr>
-      <td>${statusBadge(s)}</td>
-      <td>${date}</td>
-      <td>${donorOrSupplier(s)}</td>
-      <td>${invoice}</td>
-      <td class="num">${s.rowCount}</td>
-      <td>${confidenceBadge(s.minConfidence, threshold)}</td>
-      <td><a class="slip-link" href="/review/slip?slip=${enc}&token=${t}">Open ›</a></td>
-    </tr>`;
-  }).join("");
+  // "Needs review" = below threshold AND not yet approved. Worst confidence first.
+  const needsReview = slips
+    .filter((s) => !s.approved && s.minConfidence !== null && s.minConfidence < threshold)
+    .sort((a, b) => (a.minConfidence ?? 1) - (b.minConfidence ?? 1));
+  const completed = slips
+    .filter((s) => s.approved || s.minConfidence === null || s.minConfidence >= threshold)
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
 
   const queueCls = pendingOnly ? "btn active" : "btn";
   const historyCls = pendingOnly ? "btn" : "btn active";
   const generated = generatedAt.toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+
+  const body = pendingOnly
+    ? `
+      <h2 class="section-title section-title-warn">
+        ★ Needs review
+        <span class="section-count">${needsReview.length}</span>
+        <span class="section-sub muted">confidence &lt; ${Math.round(threshold * 100)}% · resolve these first</span>
+      </h2>
+      <div class="card">
+        ${needsReview.length === 0
+          ? `<p class="muted" style="padding:24px; text-align:center;">Nothing to review — every slip is above ${Math.round(threshold * 100)}% confidence or already approved. 🎉</p>`
+          : renderSlipTable(needsReview, threshold, t)}
+      </div>
+
+      <h2 class="section-title">
+        Completed
+        <span class="section-count">${completed.length}</span>
+        <span class="section-sub muted">approved or above threshold · most recent first</span>
+      </h2>
+      <div class="card">
+        ${completed.length === 0
+          ? `<p class="muted" style="padding:24px; text-align:center;">No completed slips yet.</p>`
+          : renderSlipTable(completed, threshold, t)}
+      </div>`
+    : `<div class="card">
+        ${slips.length === 0
+          ? `<p class="muted" style="padding:24px; text-align:center;">No slips found.</p>`
+          : renderSlipTable(slips, threshold, t)}
+      </div>`;
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
@@ -165,17 +223,7 @@ export function buildReviewListHtml(params: {
     <a class="btn" href="/dashboard?view=daily&range=1w&token=${t}">← Dashboard</a>
   </div>
 </header>
-<div class="card">
-${slips.length === 0
-  ? `<p class="muted" style="padding:24px; text-align:center;">No slips ${pendingOnly ? "need review" : "found"}.</p>`
-  : `<table>
-      <thead><tr>
-        <th>Status</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
-        <th class="num">Rows</th><th>Min confidence</th><th></th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`}
-</div>
+${body}
 <footer>RVFB Inventory · Slip Review · Edit history in Corrections Log tab</footer>
 </div></body></html>`;
 }

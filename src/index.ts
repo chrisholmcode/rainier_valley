@@ -17,7 +17,6 @@ import {
   ensureCorrectionsLogHeader,
   appendCorrectionRow,
   groupSlips,
-  slipNeedsReview,
   stampSlipApproval,
   clearSlipApproval,
   recomputeSummaryForSlip,
@@ -1051,9 +1050,8 @@ async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse
     const rows = await readDeliveryRows({ limit: 5000 });
     const slips = groupSlips(rows);
     const threshold = env.REVIEW_CONFIDENCE_THRESHOLD;
-    const filtered = pendingOnly ? slips.filter((s) => slipNeedsReview(s, threshold)) : slips;
     const html = buildReviewListHtml({
-      slips: filtered,
+      slips,
       pendingOnly,
       threshold,
       token: env.DASHBOARD_TOKEN!,
