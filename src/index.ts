@@ -1111,8 +1111,32 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(raw);
 }
 
-const SLIP_LEVEL_FIELDS = new Set(["supplier", "delivery_date", "invoice_or_order_number", "donor_org", "is_donation"]);
-const ROW_LEVEL_FIELDS = new Set(["item_name_normalized", "quantity", "unit", "category", "approx_weight", "is_fee"]);
+const SLIP_LEVEL_FIELDS = new Set([
+  "supplier",
+  "document_type",
+  "delivery_date",
+  "invoice_or_order_number",
+  "destination_org",
+  "donor_org",
+  "is_donation"
+]);
+const ROW_LEVEL_FIELDS = new Set([
+  "item_code_raw",
+  "item_name_raw",
+  "item_name_normalized",
+  "quantity_ordered",
+  "quantity",
+  "quantity_raw",
+  "unit",
+  "pack_size_raw",
+  "approx_weight",
+  "category",
+  "unit_cost",
+  "line_total",
+  "confidence",
+  "is_fee",
+  "notes"
+]);
 
 async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = reviewAuth(req, res);
