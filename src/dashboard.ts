@@ -1,4 +1,5 @@
 import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
+import { SHARED_CSS } from "./ui-styles.js";
 
 const PROGRAM_LABEL: Record<ProgramType, string> = {
   home_delivery: "Home Delivery",
@@ -468,96 +469,20 @@ export function buildDashboardHtml(params: {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg: #f7f7f5;
-    --card: #ffffff;
-    --ink: #1a1a1a;
-    --muted: #6b7280;
-    --line: #e5e7eb;
-    --in: #047857;
-    --in-bg: #ecfdf5;
-    --out: #b45309;
-    --out-bg: #fef3c7;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 32px 24px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    line-height: 1.5;
-    font-size: 14px;
-  }
-  .container { max-width: 1400px; margin: 0 auto; }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    border-bottom: 2px solid var(--ink);
-    padding-bottom: 16px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
-  header .meta { color: var(--muted); font-size: 13px; }
-  .toolbar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-  .btn-group { display: flex; gap: 6px; }
-  .btn-group .divider { width: 1px; background: var(--line); align-self: stretch; margin: 0 4px; }
-  .btn {
-    display: inline-block;
-    padding: 6px 14px;
-    border: 1px solid var(--line);
-    background: var(--card);
-    color: var(--ink);
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-  }
-  .btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .btn:hover:not(.active) { background: #f3f4f6; }
-  .btn-export { border-color: var(--in); color: var(--in); }
-  .btn-export:hover { background: var(--in-bg); }
-  h2 { font-size: 16px; margin: 24px 0 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
-  .summary-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-  .summary-pill { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; min-width: 180px; }
-  .summary-pill.in { border-left: 4px solid var(--in); }
-  .summary-pill.out { border-left: 4px solid var(--out); }
-  .summary-pill .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .summary-pill .value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums; }
-  .summary-pill.in .value { color: var(--in); }
-  .summary-pill.out .value { color: var(--out); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
-  thead th {
-    text-align: center;
-    background: #f3f4f6;
-    border-bottom: 2px solid var(--line);
-    font-weight: 600;
-    font-size: 12px;
-    color: var(--muted);
-    position: sticky; top: 0;
-  }
-  thead th:first-child { text-align: left; }
-  tbody th { text-align: left; font-weight: 600; background: #fafafa; color: var(--ink); white-space: nowrap; }
-  .num { text-align: right; }
-  .num-in { color: var(--in); font-weight: 700; }
-  .num-out { color: var(--out); font-weight: 700; }
-  .muted { color: var(--muted); font-weight: 400; }
-  .col-weekday { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-  .col-date { font-size: 13px; font-weight: 600; color: var(--ink); }
-  .chart-wrap { position: relative; height: 320px; }
-  footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; text-align: center; }
+${SHARED_CSS}
+/* Dashboard-specific */
+.card { overflow-x: auto; }
+thead th { text-align: center; }
+thead th:first-child { text-align: left; }
+.col-weekday { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.col-date    { font-size: 13px; font-weight: 600; color: var(--ink); }
+.chart-wrap  { position: relative; height: 320px; }
 </style>
 </head>
 <body>
 <div class="container">
 
-<header>
+<header class="page">
   <div>
     <h1>RVFB Dashboard</h1>
     <div class="meta">Last ${periods} ${periodWord} · Generated ${escapeHtml(generatedLabel)} PT</div>
@@ -567,6 +492,7 @@ export function buildDashboardHtml(params: {
     <div class="btn-group">${rangeButtons(active, token, program)}</div>
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv&amp;token=${encodeURIComponent(token)}${programSuffix(program)}" download>↓ Export CSV</a>
+    <a class="btn" href="/review?token=${encodeURIComponent(token)}">Review queue →</a>
   </div>
 </header>
 
