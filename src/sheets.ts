@@ -24,9 +24,36 @@ async function ensureTabExists(worksheetName: string): Promise<void> {
   tabsKnownToExist.add(worksheetName);
 }
 
+// Sheets grids have a fixed columnCount that does NOT auto-grow when you write
+// past the last column; you have to appendDimension. Without this, writing to
+// AC298 on an Inbound Delivery Log that was sized at 28 columns fails with
+// "exceeds grid limits".
+async function ensureColumnCount(worksheetName: string, requiredCols: number): Promise<void> {
+  const sheets = google.sheets({ version: "v4", auth });
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID });
+  const sheet = meta.data.sheets?.find((s) => s.properties?.title === worksheetName);
+  const sheetId = sheet?.properties?.sheetId;
+  if (sheetId == null) return;
+  const currentCols = sheet?.properties?.gridProperties?.columnCount ?? 26;
+  if (currentCols >= requiredCols) return;
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      requests: [{
+        appendDimension: {
+          sheetId,
+          dimension: "COLUMNS",
+          length: requiredCols - currentCols
+        }
+      }]
+    }
+  });
+}
+
 async function ensureHeader(worksheetName: string, headers: string[]): Promise<void> {
   if (headersInitialized.has(worksheetName)) return;
   await ensureTabExists(worksheetName);
+  await ensureColumnCount(worksheetName, headers.length);
   const sheets = google.sheets({ version: "v4", auth });
   const existing = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${worksheetName}!1:1` });
   const existingRow = existing.data.values?.[0] ?? [];

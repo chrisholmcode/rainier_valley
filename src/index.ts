@@ -1143,6 +1143,8 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
       return;
     }
 
+    await ensureSheetHeader();
+
     const slipKey = decodeSlipKey(slipEnc);
     const rows = await readDeliveryRows({ limit: 5000 });
     const slipRows = rows.filter((r) => r.photo_url === slipKey);
@@ -1247,6 +1249,8 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
       res.end("Missing slip");
       return;
     }
+    await ensureSheetHeader();
+
     const slipKey = decodeSlipKey(slipEnc);
     const rows = await readDeliveryRows({ limit: 5000 });
     const slipRows = rows.filter((r) => r.photo_url === slipKey);
