@@ -1197,6 +1197,47 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
   }
 }
 
+async function handleReviewPhotoRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = reviewAuth(req, res);
+  if (!url) return;
+  const slipParam = url.searchParams.get("slip") ?? "";
+  let photoUrl = "";
+  try {
+    photoUrl = decodeSlipKey(slipParam);
+  } catch {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Invalid slip");
+    return;
+  }
+  if (!photoUrl || !/^https?:\/\//.test(photoUrl)) {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Slip has no photo URL");
+    return;
+  }
+  try {
+    const upstream = await axios.get<ArrayBuffer>(photoUrl, {
+      responseType: "arraybuffer",
+      headers: { Authorization: `Bearer ${env.SLACK_BOT_TOKEN}` },
+      validateStatus: () => true
+    });
+    if (upstream.status !== 200) {
+      res.writeHead(upstream.status, { "Content-Type": "text/plain" });
+      res.end(`Upstream ${upstream.status}`);
+      return;
+    }
+    const contentType = (upstream.headers["content-type"] as string | undefined) ?? "application/octet-stream";
+    res.writeHead(200, {
+      "Content-Type": contentType,
+      "Cache-Control": "private, max-age=3600"
+    });
+    res.end(Buffer.from(upstream.data));
+  } catch (err) {
+    console.error("Review photo error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Failed to fetch photo");
+  }
+}
+
 async function handleReviewApproveRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = reviewAuth(req, res);
   if (!url) return;
@@ -1257,6 +1298,11 @@ function startHttpServer(): void {
 
     if (req.method === "POST" && path === "/api/review/approve") {
       await handleReviewApproveRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/review/photo") {
+      await handleReviewPhotoRequest(req, res);
       return;
     }
 
