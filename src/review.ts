@@ -110,16 +110,23 @@ const STYLE = `
 
   /* Editable line-items table: give every cell room to breathe + horizontal scroll if needed */
   .line-items-card { overflow-x:auto; }
-  table.line-items { min-width: 880px; }
+  table.line-items { min-width: 1800px; }
   table.line-items th, table.line-items td { padding:8px 8px; }
-  table.line-items col.col-raw      { width: 180px; }
-  table.line-items col.col-normalized { width: 200px; }
-  table.line-items col.col-qty      { width: 80px; }
-  table.line-items col.col-unit     { width: 90px; }
-  table.line-items col.col-category { width: 130px; }
-  table.line-items col.col-weight   { width: 90px; }
-  table.line-items col.col-fee      { width: 80px; }
-  table.line-items col.col-conf     { width: 60px; }
+  table.line-items col.col-code       { width:  90px; }
+  table.line-items col.col-raw        { width: 170px; }
+  table.line-items col.col-normalized { width: 170px; }
+  table.line-items col.col-qty-ord    { width:  80px; }
+  table.line-items col.col-qty        { width:  80px; }
+  table.line-items col.col-qty-raw    { width:  90px; }
+  table.line-items col.col-pack       { width: 100px; }
+  table.line-items col.col-unit       { width:  95px; }
+  table.line-items col.col-category   { width: 135px; }
+  table.line-items col.col-weight     { width:  90px; }
+  table.line-items col.col-cost       { width:  90px; }
+  table.line-items col.col-total      { width:  90px; }
+  table.line-items col.col-fee        { width:  80px; }
+  table.line-items col.col-conf       { width:  80px; }
+  table.line-items col.col-notes      { width: 180px; }
   table.line-items input, table.line-items select { min-width: 0; }
   footer { margin-top:32px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; text-align:center; }
   .toast { position:fixed; bottom:20px; right:20px; padding:12px 18px; border-radius:8px;
@@ -228,11 +235,28 @@ ${body}
 </div></body></html>`;
 }
 
-const EDITABLE_PER_SLIP = ["supplier", "delivery_date", "invoice_or_order_number", "donor_org", "is_donation"];
-const EDITABLE_PER_ROW = ["item_name_normalized", "quantity", "unit", "category", "approx_weight", "is_fee"];
+const EDITABLE_PER_SLIP = ["supplier", "document_type", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation"];
+const EDITABLE_PER_ROW = [
+  "item_code_raw",
+  "item_name_raw",
+  "item_name_normalized",
+  "quantity_ordered",
+  "quantity",
+  "quantity_raw",
+  "unit",
+  "pack_size_raw",
+  "approx_weight",
+  "category",
+  "unit_cost",
+  "line_total",
+  "confidence",
+  "is_fee",
+  "notes"
+];
 
 const CATEGORY_OPTIONS = ["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"];
 const UNIT_OPTIONS = ["case", "ct", "lb", "oz", "ea", "bushel", "other"];
+const DOC_TYPE_OPTIONS = ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"];
 
 function selectInput(name: string, value: string | null, rowIndex: number, options: string[]): string {
   const opts = options.map((o) => `<option value="${escapeHtml(o)}"${value === o ? " selected" : ""}>${escapeHtml(o)}</option>`).join("");
@@ -269,8 +293,10 @@ export function buildSlipDetailHtml(params: {
     <h3 style="margin-top:0;">Slip-level fields</h3>
     <dl>
       <dt>supplier</dt><dd>${textInput("supplier", slip.supplier, slipMetaRowIndex)}</dd>
+      <dt>document_type</dt><dd>${selectInput("document_type", slip.document_type, slipMetaRowIndex, DOC_TYPE_OPTIONS)}</dd>
       <dt>delivery_date</dt><dd>${textInput("delivery_date", slip.delivery_date, slipMetaRowIndex)}</dd>
       <dt>invoice_or_order_number</dt><dd>${textInput("invoice_or_order_number", slip.invoice_or_order_number, slipMetaRowIndex)}</dd>
+      <dt>destination_org</dt><dd>${textInput("destination_org", slip.destination_org, slipMetaRowIndex)}</dd>
       <dt>donor_org</dt><dd>${textInput("donor_org", slip.donor_org, slipMetaRowIndex)}</dd>
       <dt>is_donation</dt><dd>${boolInput("is_donation", slip.is_donation, slipMetaRowIndex)}</dd>
     </dl>
@@ -279,19 +305,22 @@ export function buildSlipDetailHtml(params: {
 
   const lineRows = rows.map((r) => {
     const isFee = /^(true|1|yes)$/i.test(r.is_fee ?? "");
-    const conf = r.confidence ? parseFloat(r.confidence) : NaN;
-    const confCell = Number.isFinite(conf)
-      ? `<span class="conf conf-${conf < 0.85 ? "low" : "ok"}">${Math.round(conf * 100)}%</span>`
-      : `<span class="muted">—</span>`;
     return `<tr class="${isFee ? "fee-row" : ""}">
-      <td>${escapeHtml(r.item_name_raw ?? "")}<div class="muted" style="font-size:11px;">${escapeHtml(r.pack_size_raw ?? "")}</div></td>
+      <td>${textInput("item_code_raw", r.item_code_raw, r.rowIndex)}</td>
+      <td>${textInput("item_name_raw", r.item_name_raw, r.rowIndex)}</td>
       <td>${textInput("item_name_normalized", r.item_name_normalized, r.rowIndex)}</td>
+      <td>${textInput("quantity_ordered", r.quantity_ordered, r.rowIndex, "number")}</td>
       <td>${textInput("quantity", r.quantity, r.rowIndex, "number")}</td>
+      <td>${textInput("quantity_raw", r.quantity_raw, r.rowIndex)}</td>
+      <td>${textInput("pack_size_raw", r.pack_size_raw, r.rowIndex)}</td>
       <td>${selectInput("unit", r.unit, r.rowIndex, UNIT_OPTIONS)}</td>
       <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
       <td>${textInput("approx_weight", r.approx_weight, r.rowIndex, "number")}</td>
+      <td>${textInput("unit_cost", r.unit_cost, r.rowIndex, "number")}</td>
+      <td>${textInput("line_total", r.line_total, r.rowIndex, "number")}</td>
       <td>${boolInput("is_fee", r.is_fee, r.rowIndex)}</td>
-      <td>${confCell}</td>
+      <td>${textInput("confidence", r.confidence, r.rowIndex, "number")}</td>
+      <td>${textInput("notes", r.notes, r.rowIndex)}</td>
     </tr>`;
   }).join("");
 
@@ -331,19 +360,31 @@ export function buildSlipDetailHtml(params: {
     ${slipMeta}
     <div class="card line-items-card">
       <h3 style="margin-top:0;">Line items</h3>
+      <p class="muted" style="font-size:12px; margin:0 0 12px;">Scroll right to access source / cost / notes columns.</p>
       <table class="line-items">
         <colgroup>
+          <col class="col-code">
           <col class="col-raw">
           <col class="col-normalized">
+          <col class="col-qty-ord">
           <col class="col-qty">
+          <col class="col-qty-raw">
+          <col class="col-pack">
           <col class="col-unit">
           <col class="col-category">
           <col class="col-weight">
+          <col class="col-cost">
+          <col class="col-total">
           <col class="col-fee">
           <col class="col-conf">
+          <col class="col-notes">
         </colgroup>
         <thead><tr>
-          <th>Raw name</th><th>Normalized</th><th>Qty</th><th>Unit</th><th>Category</th><th>Weight (lb)</th><th>Fee?</th><th>Conf</th>
+          <th>Code</th><th>Raw name</th><th>Normalized</th>
+          <th>Qty ord</th><th>Qty</th><th>Qty raw</th>
+          <th>Pack</th><th>Unit</th><th>Category</th>
+          <th>Weight (lb)</th><th>Unit cost</th><th>Line total</th>
+          <th>Fee?</th><th>Conf</th><th>Notes</th>
         </tr></thead>
         <tbody>${lineRows}</tbody>
       </table>
