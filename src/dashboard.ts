@@ -1,5 +1,5 @@
 import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
-import { SHARED_CSS } from "./ui-styles.js";
+import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 
 const PROGRAM_LABEL: Record<ProgramType, string> = {
   home_delivery: "Home Delivery",
@@ -467,6 +467,7 @@ export function buildDashboardHtml(params: {
 <meta charset="UTF-8">
 <title>RVFB Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${FONT_HEAD_LINKS}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 ${SHARED_CSS}
