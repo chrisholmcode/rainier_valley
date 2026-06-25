@@ -593,7 +593,7 @@ app.event("message", async ({ event, client, logger }) => {
   } catch (error) {
     logger.error(error);
     const e = error as Error;
-    const message = "Inventory processing failed. Check app logs for details.";
+    const message = friendlyErrorMessage(e);
     try {
       const evt = event as { channel?: string; ts?: string };
       if (evt.channel && evt.ts) {
@@ -605,6 +605,30 @@ app.event("message", async ({ event, client, logger }) => {
     logger.error(`Pipeline error: ${e.message}`);
   }
 });
+
+function friendlyErrorMessage(e: Error): string {
+  const raw = `${e.message ?? ""} ${(e as { stack?: string }).stack ?? ""}`;
+  // Anthropic returns this exact string when the workspace credit balance is exhausted.
+  if (/credit balance is too low/i.test(raw)) {
+    return [
+      "⚠️ *Bot is offline — Anthropic API credit ran out.*",
+      "Nothing was logged for this slip. An admin needs to top up at console.anthropic.com → *Plans & Billing*, and then this can be re-uploaded."
+    ].join("\n");
+  }
+  if (/rate.?limit|429/i.test(raw)) {
+    return [
+      "⚠️ *Bot hit Anthropic's rate limit.*",
+      "Wait a minute and re-upload, or ping an admin if it keeps happening."
+    ].join("\n");
+  }
+  if (/exceeds.*grid limits|Unable to parse range/i.test(raw)) {
+    return [
+      "⚠️ *Sheet schema is out of sync.*",
+      "An admin needs to check the Inbound Delivery Log columns. Nothing was logged for this slip."
+    ].join("\n");
+  }
+  return "Inventory processing failed. Check app logs for details.";
+}
 
 app.event("reaction_added", async ({ event, client, logger }) => {
   try {
