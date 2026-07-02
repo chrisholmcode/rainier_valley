@@ -83,7 +83,7 @@ async function main(): Promise<void> {
   const supplierHint: Supplier = guessSupplierFromFilename(filename);
   console.log(`Supplier hint from filename: ${supplierHint}`);
   console.log(`Re-extracting (this calls Anthropic; may take ~30s)...`);
-  const extraction = await extractFromImage({ imageBytes: bytes, mimeType, filename, supplierHint });
+  const { result: extraction } = await extractFromImage({ imageBytes: bytes, mimeType, filename, supplierHint });
 
   const supplier = extraction.supplier;
   const invoice = extraction.invoice_or_order_number;

@@ -135,6 +135,18 @@ export interface FeeItem {
   amount: number | null;
 }
 
+export interface ExtractionTrace {
+  filename: string;
+  supplierHint: string;
+  model: string;
+  thinking: string;
+  rawToolInput: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheCreationTokens: number | null;
+  cacheReadTokens: number | null;
+}
+
 export interface ExtractionResult {
   document_type: DocumentType;
   supplier: Supplier;

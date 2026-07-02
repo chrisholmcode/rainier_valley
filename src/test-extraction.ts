@@ -39,7 +39,7 @@ async function main() {
   const startTime = Date.now();
 
   try {
-    const result = await extractFromImage({
+    const { result } = await extractFromImage({
       imageBytes,
       mimeType,
       filename: basename(imagePath),

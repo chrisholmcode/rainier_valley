@@ -21,6 +21,7 @@ import {
   stampSlipApproval,
   clearSlipApproval,
   recomputeSummaryForSlip,
+  appendExtractionTrace,
   SHEET_HEADERS
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
@@ -525,7 +526,7 @@ app.event("message", async ({ event, client, logger }) => {
         ? guessSupplierFromText(message.text || "")
         : guessSupplierFromFilename(file.name || "");
 
-      const extraction = await extractFromImage({
+      const { result: extraction, trace } = await extractFromImage({
         imageBytes: buffer,
         mimeType: file.mimetype,
         filename: file.name,
@@ -536,6 +537,19 @@ app.event("message", async ({ event, client, logger }) => {
       if (carusoRec.hits > 0) {
         console.log(`caruso catalog reconcile file=${file.name} hits=${carusoRec.hits} overwrites=${carusoRec.overwrites}`);
       }
+
+      // Persist the raw thinking + extracted JSON so we can review traces long
+      // after Railway's log buffer flushes on redeploy. Fire-and-forget: a
+      // Sheets outage must not block the actual write to Inbound Delivery Log.
+      appendExtractionTrace({
+        trace,
+        extraction,
+        photoUrl: file.url_private_download,
+        carusoReconcileHits: carusoRec.hits,
+        carusoReconcileOverwrites: carusoRec.overwrites
+      }).catch((err) => {
+        console.warn(`appendExtractionTrace failed file=${file.name}: ${(err as Error).message}`);
+      });
 
       if (!extraction.delivery_date) {
         extraction.delivery_date = slackTsToLocalDate(message.ts);

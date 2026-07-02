@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import { google } from "googleapis";
 import { env } from "./config.js";
-import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType } from "./types.js";
+import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType, ExtractionTrace } from "./types.js";
 
 const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
@@ -104,6 +104,99 @@ export const SHEET_HEADERS = [
 
 export async function ensureSheetHeader(): Promise<void> {
   await ensureHeader(env.GOOGLE_WORKSHEET_NAME, SHEET_HEADERS);
+}
+
+export const TRACE_SHEET_HEADERS = [
+  "created_at",
+  "filename",
+  "supplier",
+  "supplier_hint",
+  "delivery_date",
+  "invoice_or_order_number",
+  "destination_org",
+  "photo_url",
+  "line_item_count",
+  "confidence_avg",
+  "model",
+  "input_tokens",
+  "output_tokens",
+  "cache_creation_tokens",
+  "cache_read_tokens",
+  "caruso_reconcile_hits",
+  "caruso_reconcile_overwrites",
+  "source_warnings",
+  "extracted_json",
+  "thinking_1",
+  "thinking_2",
+  "thinking_3",
+  "thinking_truncated"
+];
+
+// Sheets caps at 50k chars per cell; leave headroom for JSON escaping.
+const TRACE_CELL_LIMIT = 45_000;
+
+function chunkForCells(text: string, chunkSize: number, maxChunks: number): { chunks: string[]; truncated: boolean } {
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < text.length && chunks.length < maxChunks) {
+    chunks.push(text.slice(i, i + chunkSize));
+    i += chunkSize;
+  }
+  return { chunks, truncated: i < text.length };
+}
+
+export async function appendExtractionTrace(params: {
+  trace: ExtractionTrace;
+  extraction: ExtractionResult;
+  photoUrl: string;
+  carusoReconcileHits: number;
+  carusoReconcileOverwrites: number;
+}): Promise<void> {
+  const { trace, extraction, photoUrl, carusoReconcileHits, carusoReconcileOverwrites } = params;
+  await ensureHeader(env.EXTRACTION_TRACES_WORKSHEET_NAME, TRACE_SHEET_HEADERS);
+
+  const { chunks: thinkingChunks, truncated: thinkingTruncated } = chunkForCells(trace.thinking, TRACE_CELL_LIMIT, 3);
+  const confidences = extraction.line_items.map((li) => li.confidence).filter((c) => typeof c === "number");
+  const confidenceAvg = confidences.length ? confidences.reduce((a, b) => a + b, 0) / confidences.length : null;
+
+  const extractedJsonRaw = JSON.stringify(extraction);
+  const extractedJson = extractedJsonRaw.length > TRACE_CELL_LIMIT
+    ? extractedJsonRaw.slice(0, TRACE_CELL_LIMIT) + "…[truncated]"
+    : extractedJsonRaw;
+
+  const row = [
+    new Date().toISOString(),
+    trace.filename,
+    extraction.supplier,
+    trace.supplierHint,
+    extraction.delivery_date,
+    extraction.invoice_or_order_number,
+    extraction.destination_org,
+    photoUrl,
+    extraction.line_items.length,
+    confidenceAvg,
+    trace.model,
+    trace.inputTokens,
+    trace.outputTokens,
+    trace.cacheCreationTokens,
+    trace.cacheReadTokens,
+    carusoReconcileHits,
+    carusoReconcileOverwrites,
+    JSON.stringify(extraction.source_warnings),
+    extractedJson,
+    thinkingChunks[0] ?? "",
+    thinkingChunks[1] ?? "",
+    thinkingChunks[2] ?? "",
+    thinkingTruncated
+  ];
+
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.EXTRACTION_TRACES_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [row] }
+  });
 }
 
 // Sheets' USER_ENTERED input parses numeric-looking strings as numbers, which

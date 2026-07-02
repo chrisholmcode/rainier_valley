@@ -199,7 +199,7 @@ async function runFixture(f: FixtureCase): Promise<CheckResult[]> {
 
   console.log(`\n▶ ${f.file}`);
   const start = Date.now();
-  const result = await extractFromImage({
+  const { result } = await extractFromImage({
     imageBytes: bytes,
     mimeType,
     filename,

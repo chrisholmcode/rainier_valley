@@ -54,6 +54,7 @@ Two sheets, two write paths. Don't confuse them.
 - **Outbound Delivery Log** (`EOD_WORKSHEET_NAME`) — one row per line item for **whiteboard outbound**, **EOD text**, and **EOD voice**. Written by `appendEodRows`. The `source` column (`whiteboard`/`text`/`voice`) is what tells the dashboard whether it's outbound-delivery or end-of-day inventory.
 - **Inventory Summary** — one row per inbound shipment, appended live (`appendSummaryRow`) and recomputed from scratch (`recomputeSummaryForSlip`) any time a review-UI edit lands on that slip's rows.
 - **Corrections Log** — append-only audit trail of every Review-UI edit. **Source of truth for which supplier prompts need tuning.**
+- **Extraction Traces** — append-only per-invoice log written by `appendExtractionTrace` right after `extractFromImage`. Captures Claude's thinking (chunked across `thinking_1`/`thinking_2`/`thinking_3` at 45k chars each), the raw tool-input JSON, model, token usage, and Caruso reconcile stats. Survives Railway redeploys — go here when Railway logs have flushed.
 
 `sheets.ts` auto-creates missing tabs (`ensureTabExists`) and grows `columnCount` when `SHEET_HEADERS` adds new columns. Adding a column is just a `SHEET_HEADERS` push; do **not** also manually widen the sheet.
 

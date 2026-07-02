@@ -6,7 +6,9 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { env } from "./config.js";
 import { loadPrompt } from "./prompts.js";
-import type { ExtractionResult, EodExtractionResult, Supplier } from "./types.js";
+import type { ExtractionResult, ExtractionTrace, EodExtractionResult, Supplier } from "./types.js";
+
+const EXTRACTION_MODEL = "claude-opus-4-8";
 
 const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
@@ -230,7 +232,7 @@ export async function extractFromImage(params: {
   mimeType: string;
   filename: string;
   supplierHint: Supplier;
-}): Promise<ExtractionResult> {
+}): Promise<{ result: ExtractionResult; trace: ExtractionTrace }> {
   const { imageBytes, mimeType, filename, supplierHint } = params;
 
   const isPdf = isPdfMime(mimeType);
@@ -261,7 +263,7 @@ Analyze the attached ${sourceKind}, then call the ${EXTRACTION_TOOL_NAME} tool w
       };
 
   const stream = client.messages.stream({
-    model: "claude-opus-4-8",
+    model: EXTRACTION_MODEL,
     max_tokens: 32768,
     output_config: { effort: "xhigh" },
     thinking: { type: "adaptive", display: "summarized" },
@@ -290,8 +292,10 @@ Analyze the attached ${sourceKind}, then call the ${EXTRACTION_TOOL_NAME} tool w
 
   const response = await stream.finalMessage();
 
+  const thinkingParts: string[] = [];
   for (const block of response.content) {
     if (block.type === "thinking") {
+      thinkingParts.push(block.thinking);
       console.log(`[extractFromImage:thinking ${filename}]\n${block.thinking}`);
     }
   }
@@ -304,7 +308,28 @@ Analyze the attached ${sourceKind}, then call the ${EXTRACTION_TOOL_NAME} tool w
     throw new Error(`Extraction schema validation failed: ${parsed.error.message}`);
   }
 
-  return parsed.data;
+  // Anthropic SDK exposes usage on the final message; fall back to null if the
+  // shape changes across SDK versions.
+  const usage = (response as unknown as { usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+  } }).usage;
+
+  const trace: ExtractionTrace = {
+    filename,
+    supplierHint,
+    model: EXTRACTION_MODEL,
+    thinking: thinkingParts.join("\n\n---\n\n"),
+    rawToolInput: JSON.stringify(toolInput),
+    inputTokens: usage?.input_tokens ?? null,
+    outputTokens: usage?.output_tokens ?? null,
+    cacheCreationTokens: usage?.cache_creation_input_tokens ?? null,
+    cacheReadTokens: usage?.cache_read_input_tokens ?? null
+  };
+
+  return { result: parsed.data, trace };
 }
 
 // ── EOD Inventory extraction ──────────────────────────────────────────────────
