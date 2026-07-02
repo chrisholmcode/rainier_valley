@@ -34,6 +34,7 @@ import {
   extractFromWhiteboard
 } from "./extraction.js";
 import { runAssistantLoop } from "./assistant.js";
+import { reconcileWithCarusoCatalog } from "./carusoCatalog.js";
 import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection, ProgramType } from "./types.js";
 
 interface ProcessedFileExtraction {
@@ -530,6 +531,11 @@ app.event("message", async ({ event, client, logger }) => {
         filename: file.name,
         supplierHint
       });
+
+      const carusoRec = reconcileWithCarusoCatalog(extraction);
+      if (carusoRec.hits > 0) {
+        console.log(`caruso catalog reconcile file=${file.name} hits=${carusoRec.hits} overwrites=${carusoRec.overwrites}`);
+      }
 
       if (!extraction.delivery_date) {
         extraction.delivery_date = slackTsToLocalDate(message.ts);
