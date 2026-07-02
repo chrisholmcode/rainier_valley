@@ -37,7 +37,9 @@ import {
   transcribeAudio,
   guessSupplierFromFilename,
   classifyImage,
-  extractFromWhiteboard
+  extractFromWhiteboard,
+  getInvoiceSupplierPrompt,
+  getInvoiceSystemPrompt
 } from "./extraction.js";
 import { runAssistantLoop } from "./assistant.js";
 import { reconcileWithCarusoCatalog } from "./carusoCatalog.js";
@@ -1196,7 +1198,13 @@ async function handleSlipDetailRequest(req: IncomingMessage, res: ServerResponse
       return;
     }
     const [slip] = groupSlips(slipRows);
-    const html = buildSlipDetailHtml({ slip, rows: slipRows, token: env.DASHBOARD_TOKEN ?? "" });
+    const html = buildSlipDetailHtml({
+      slip,
+      rows: slipRows,
+      token: env.DASHBOARD_TOKEN ?? "",
+      supplierPrompt: getInvoiceSupplierPrompt(slip.supplier ?? "unknown"),
+      systemPrompt: getInvoiceSystemPrompt()
+    });
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
     res.end(html);
   } catch (err) {
@@ -1393,6 +1401,20 @@ async function notifyAdminOfSuggestion(params: {
   }
 }
 
+async function handlePromptViewRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+  const supplier = (url.searchParams.get("supplier") ?? "").trim();
+  const prompt = getInvoiceSupplierPrompt(supplier);
+  if (!prompt) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(`No supplier prompt for "${supplier}"`);
+    return;
+  }
+  res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(prompt);
+}
+
 async function handleReviewSuggestRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = await reviewAuth(req, res);
   if (!url) return;
@@ -1530,6 +1552,11 @@ function startHttpServer(): void {
 
     if (req.method === "POST" && path === "/api/review/approve") {
       await handleReviewApproveRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/prompts") {
+      await handlePromptViewRequest(req, res);
       return;
     }
 

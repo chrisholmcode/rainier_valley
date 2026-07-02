@@ -68,6 +68,17 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   unknown: loadPrompt("invoice/suppliers/unknown.md")
 };
 
+export function getInvoiceSystemPrompt(): string {
+  return SYSTEM_PROMPT;
+}
+
+export function getInvoiceSupplierPrompt(supplier: string): string | null {
+  const key = supplier as Supplier;
+  return SUPPLIER_PROMPTS[key] ?? null;
+}
+
+export const INVOICE_SUPPLIER_KEYS: Supplier[] = Object.keys(SUPPLIER_PROMPTS) as Supplier[];
+
 // ── Tool schemas (force Claude to return structured JSON via tool_use) ────────
 
 const EXTRACTION_TOOL_NAME = "submit_delivery_extraction";

@@ -48,6 +48,7 @@ ${SHARED_CSS}
 .suggestion-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px; }
 .suggestion-body { white-space:pre-wrap; font-size:14px; color:var(--ink); }
 .suggestion-actions { display:flex; gap:6px; flex-shrink:0; }
+.prompt-view { max-height:340px; overflow:auto; background:var(--surface-alt, #f7f7f9); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:8px 0 0; font-size:12px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 a.slip-link { color: var(--ink); text-decoration: none; font-weight: 600; display:inline-flex; align-items:center; gap:4px; }
 a.slip-link:hover { color: var(--primary); }
 a.slip-link::after { content: ""; }
@@ -396,8 +397,10 @@ export function buildSlipDetailHtml(params: {
   slip: SlipSummary;
   rows: DeliverySheetRow[];
   token: string;
+  supplierPrompt: string | null;
+  systemPrompt: string | null;
 }): string {
-  const { slip, rows } = params;
+  const { slip, rows, supplierPrompt, systemPrompt } = params;
   const slipMetaRowIndex = rows[0]?.rowIndex ?? 0;
 
   const slipMeta = `<div class="slip-meta">
@@ -511,11 +514,20 @@ ${FONT_HEAD_LINKS}
     <p class="muted" style="font-size:12px; margin:0 0 8px;">See a pattern the extractor keeps missing on this supplier? Type it here — Chris reviews before any prompt change lands.</p>
     <div>
       <label style="display:block; font-size:12px; margin-bottom:4px;">Supplier</label>
-      <input type="text" id="suggest-supplier" value="${escapeHtml(slip.supplier ?? "")}" style="width:100%; margin-bottom:8px;">
+      <input type="text" id="suggest-supplier" value="${escapeHtml(slip.supplier ?? "")}" style="width:100%; margin-bottom:8px;" oninput="loadPromptForSupplier(this.value)">
       <label style="display:block; font-size:12px; margin-bottom:4px;">Suggestion</label>
       <textarea id="suggest-text" rows="4" style="width:100%; margin-bottom:8px;" placeholder="e.g. On Caruso slips, keep leading zeros on the item code column (5-digit SKUs)."></textarea>
       <button class="btn btn-primary" onclick="submitSuggestion()">Send to Chris</button>
     </div>
+
+    <details style="margin-top:16px;" open>
+      <summary style="cursor:pointer; font-weight:600;">Current supplier prompt <span class="muted" style="font-weight:400; font-size:12px;">(for reference)</span></summary>
+      <pre id="supplier-prompt" class="prompt-view">${escapeHtml(supplierPrompt ?? "(no supplier-specific prompt found)")}</pre>
+    </details>
+    <details style="margin-top:8px;">
+      <summary style="cursor:pointer; font-weight:600;">Shared invoice system prompt <span class="muted" style="font-weight:400; font-size:12px;">(applies to every supplier)</span></summary>
+      <pre class="prompt-view">${escapeHtml(systemPrompt ?? "(system prompt not loaded)")}</pre>
+    </details>
   </div>
 </div>
 
@@ -576,6 +588,22 @@ async function approveSlip() {
     setTimeout(() => { window.location.href = '/review?tab=queue'; }, 800);
   } catch (e) {
     showToast('Approve failed: ' + e.message, true);
+  }
+}
+
+let _promptFetchToken = 0;
+async function loadPromptForSupplier(supplier) {
+  const target = document.getElementById('supplier-prompt');
+  if (!target) return;
+  const t = ++_promptFetchToken;
+  try {
+    const res = await fetch('/api/prompts?supplier=' + encodeURIComponent(supplier.trim()));
+    const text = await res.text();
+    if (t !== _promptFetchToken) return; // superseded by newer keystroke
+    target.textContent = res.ok ? text : '(no prompt for "' + supplier + '")';
+  } catch (e) {
+    if (t !== _promptFetchToken) return;
+    target.textContent = '(failed to load prompt: ' + e.message + ')';
   }
 }
 
