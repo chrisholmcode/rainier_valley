@@ -31,6 +31,7 @@ import {
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
+import { buildLandingHtml } from "./landing.js";
 import {
   extractFromImage,
   extractFromText,
@@ -1529,6 +1530,16 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
 function startHttpServer(): void {
   const server = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
     const path = (req.url ?? "/").split("?")[0];
+
+    if (req.method === "GET" && path === "/") {
+      // Public marketing landing page — no auth. Uses the review origin so
+      // "Sign in" bounces the visitor straight into the Access-gated app.
+      const reviewUrl = env.CF_ACCESS_TEAM_DOMAIN ? "https://review.loadslip.com/review" : "/review";
+      const html = buildLandingHtml({ reviewUrl });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" });
+      res.end(html);
+      return;
+    }
 
     if (req.method === "GET" && path === "/dashboard") {
       await handleDashboardRequest(req, res);
