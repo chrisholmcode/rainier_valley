@@ -135,6 +135,21 @@ export interface FeeItem {
   amount: number | null;
 }
 
+export type PromptSuggestionStatus = "pending" | "approved" | "rejected";
+
+export interface PromptSuggestionRow {
+  rowIndex: number;
+  created_at: string;
+  submitted_by: string;
+  supplier: string;
+  slip_photo_url: string | null;
+  suggestion_text: string;
+  status: PromptSuggestionStatus;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolution_notes: string | null;
+}
+
 export interface ExtractionTrace {
   filename: string;
   supplierHint: string;

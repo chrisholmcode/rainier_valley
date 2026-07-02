@@ -1,4 +1,4 @@
-import type { DeliverySheetRow } from "./types.js";
+import type { DeliverySheetRow, PromptSuggestionRow } from "./types.js";
 import type { SlipSummary } from "./sheets.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 
@@ -42,7 +42,12 @@ const STYLE = `
 ${SHARED_CSS}
 
 /* Review-specific */
-.tabs { display:flex; gap:6px; }
+.tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.suggestion-item { padding:16px 20px; border-bottom:1px solid var(--border); }
+.suggestion-item:last-child { border-bottom:0; }
+.suggestion-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px; }
+.suggestion-body { white-space:pre-wrap; font-size:14px; color:var(--ink); }
+.suggestion-actions { display:flex; gap:6px; flex-shrink:0; }
 a.slip-link { color: var(--ink); text-decoration: none; font-weight: 600; display:inline-flex; align-items:center; gap:4px; }
 a.slip-link:hover { color: var(--primary); }
 a.slip-link::after { content: ""; }
@@ -159,8 +164,9 @@ export function buildReviewListHtml(params: {
   threshold: number;
   token: string;
   generatedAt: Date;
+  pendingSuggestionCount: number;
 }): string {
-  const { slips, pendingOnly, threshold, generatedAt } = params;
+  const { slips, pendingOnly, threshold, generatedAt, pendingSuggestionCount } = params;
 
   // "Needs review" = below threshold AND not yet approved. Worst confidence first.
   const needsReview = slips
@@ -218,12 +224,127 @@ ${FONT_HEAD_LINKS}
   <div class="tabs">
     <a class="${queueCls}" href="/review?tab=queue">Review Queue</a>
     <a class="${historyCls}" href="/review?tab=history">All Slips</a>
+    <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
 </header>
 ${body}
 <footer>RVFB Inventory · Slip Review · Edit history in Corrections Log tab</footer>
 </div></body></html>`;
+}
+
+export function buildSuggestionsListHtml(params: {
+  suggestions: PromptSuggestionRow[];
+  currentEmail: string | null;
+  isAdmin: boolean;
+  pendingCount: number;
+  generatedAt: Date;
+}): string {
+  const { suggestions, currentEmail, isAdmin, pendingCount, generatedAt } = params;
+  const pending = suggestions.filter((s) => s.status === "pending");
+  const resolved = suggestions.filter((s) => s.status !== "pending");
+  const generated = generatedAt.toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+
+  const renderRow = (s: PromptSuggestionRow) => {
+    const when = (s.created_at || "").slice(0, 16).replace("T", " ");
+    const actions = isAdmin && s.status === "pending"
+      ? `<div class="suggestion-actions">
+          <button class="btn btn-primary" onclick="resolveSuggestion(${s.rowIndex}, 'approved')">Approve</button>
+          <button class="btn" onclick="resolveSuggestion(${s.rowIndex}, 'rejected')">Reject</button>
+        </div>`
+      : "";
+    const statusBadge = s.status === "pending"
+      ? `<span class="badge badge-pending">pending</span>`
+      : s.status === "approved"
+        ? `<span class="badge badge-approved">approved</span>`
+        : `<span class="badge">rejected</span>`;
+    const slipLink = s.slip_photo_url ? `<a href="/review/slip?slip=${encodeSlipKey(s.slip_photo_url)}" target="_blank">source slip</a> · ` : "";
+    const resolution = s.resolved_at
+      ? `<div class="muted" style="font-size:12px; margin-top:6px;">Resolved ${escapeHtml(s.resolved_at.slice(0, 16).replace("T", " "))} by ${escapeHtml(s.resolved_by ?? "?")}${s.resolution_notes ? ` — ${escapeHtml(s.resolution_notes)}` : ""}</div>`
+      : "";
+    return `<div class="suggestion-item">
+      <div class="suggestion-header">
+        <div>
+          <strong>${escapeHtml(s.supplier || "general")}</strong> ${statusBadge}
+          <div class="muted" style="font-size:12px;">${escapeHtml(when)} · ${escapeHtml(s.submitted_by || "unknown")} · ${slipLink}row ${s.rowIndex}</div>
+        </div>
+        ${actions}
+      </div>
+      <div class="suggestion-body">${escapeHtml(s.suggestion_text)}</div>
+      ${resolution}
+    </div>`;
+  };
+
+  const pendingHtml = pending.length === 0
+    ? `<p class="muted" style="padding:24px; text-align:center;">No pending suggestions. Reviewers can submit one from a slip detail page.</p>`
+    : pending.map(renderRow).join("");
+  const resolvedHtml = resolved.length === 0
+    ? `<p class="muted" style="padding:24px; text-align:center;">No resolved suggestions yet.</p>`
+    : resolved.slice(0, 40).map(renderRow).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><title>RVFB Prompt Suggestions</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${FONT_HEAD_LINKS}
+<style>${STYLE}</style>
+</head><body><div class="container">
+<header class="page">
+  <div>
+    <h1>Prompt Suggestions</h1>
+    <div class="meta">${suggestions.length} total · ${pending.length} pending · ${escapeHtml(generated)} PT · ${currentEmail ? `signed in as ${escapeHtml(currentEmail)}` : "anonymous"}${isAdmin ? " · admin" : ""}</div>
+  </div>
+  <div class="tabs">
+    <a class="btn" href="/review?tab=queue">Review Queue</a>
+    <a class="btn" href="/review?tab=history">All Slips</a>
+    <a class="btn active" href="/review?tab=suggestions">Prompt Suggestions${pendingCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingCount}</span>` : ""}</a>
+    <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
+  </div>
+</header>
+
+<h2 class="section-title section-title-warn">
+  Pending
+  <span class="section-count">${pending.length}</span>
+  <span class="section-sub muted">awaiting Chris's review</span>
+</h2>
+<div class="card" style="padding:0;">${pendingHtml}</div>
+
+<h2 class="section-title">
+  Resolved (recent)
+  <span class="section-count">${Math.min(resolved.length, 40)}</span>
+</h2>
+<div class="card" style="padding:0;">${resolvedHtml}</div>
+
+<div class="toast" id="toast"></div>
+<footer>Suggestions live in the "Prompt Suggestions" tab. Approvals here don't touch the prompt files — Chris still lands the code change manually.</footer>
+</div>
+<script>
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { t.className = 'toast' + (isError ? ' error' : ''); }, 2000);
+}
+async function resolveSuggestion(rowIndex, status) {
+  const notes = prompt(status === 'approved'
+    ? 'Optional note (e.g. commit sha once applied):'
+    : 'Optional note (why rejected):');
+  if (notes === null) return;
+  try {
+    const res = await fetch('/api/review/suggest/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row_index: rowIndex, status, notes })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    showToast('Marked ' + status);
+    setTimeout(() => { window.location.reload(); }, 600);
+  } catch (e) {
+    showToast('Failed: ' + e.message, true);
+  }
+}
+</script>
+</body></html>`;
 }
 
 const EDITABLE_PER_SLIP = ["supplier", "document_type", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation"];
@@ -384,6 +505,17 @@ ${FONT_HEAD_LINKS}
   <div class="photo-pane card">
     <h3 style="margin-top:0;">Photo</h3>
     ${photoBlock}
+
+    <hr style="margin:20px 0;">
+    <h3 style="margin-top:0;">Suggest a prompt improvement</h3>
+    <p class="muted" style="font-size:12px; margin:0 0 8px;">See a pattern the extractor keeps missing on this supplier? Type it here — Chris reviews before any prompt change lands.</p>
+    <div>
+      <label style="display:block; font-size:12px; margin-bottom:4px;">Supplier</label>
+      <input type="text" id="suggest-supplier" value="${escapeHtml(slip.supplier ?? "")}" style="width:100%; margin-bottom:8px;">
+      <label style="display:block; font-size:12px; margin-bottom:4px;">Suggestion</label>
+      <textarea id="suggest-text" rows="4" style="width:100%; margin-bottom:8px;" placeholder="e.g. On Caruso slips, keep leading zeros on the item code column (5-digit SKUs)."></textarea>
+      <button class="btn btn-primary" onclick="submitSuggestion()">Send to Chris</button>
+    </div>
   </div>
 </div>
 
@@ -444,6 +576,24 @@ async function approveSlip() {
     setTimeout(() => { window.location.href = '/review?tab=queue'; }, 800);
   } catch (e) {
     showToast('Approve failed: ' + e.message, true);
+  }
+}
+
+async function submitSuggestion() {
+  const supplier = document.getElementById('suggest-supplier').value.trim();
+  const text = document.getElementById('suggest-text').value.trim();
+  if (!text) { showToast('Suggestion text is required', true); return; }
+  try {
+    const res = await fetch('/api/review/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slip: SLIP_KEY_B64, supplier, suggestion_text: text })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    showToast('Sent to Chris — thanks!');
+    document.getElementById('suggest-text').value = '';
+  } catch (e) {
+    showToast('Send failed: ' + e.message, true);
   }
 }
 

@@ -55,6 +55,7 @@ Two sheets, two write paths. Don't confuse them.
 - **Inventory Summary** — one row per inbound shipment, appended live (`appendSummaryRow`) and recomputed from scratch (`recomputeSummaryForSlip`) any time a review-UI edit lands on that slip's rows.
 - **Corrections Log** — append-only audit trail of every Review-UI edit. **Source of truth for which supplier prompts need tuning.**
 - **Extraction Traces** — append-only per-invoice log written by `appendExtractionTrace` right after `extractFromImage`. Captures Claude's thinking (chunked across `thinking_1`/`thinking_2`/`thinking_3` at 45k chars each), the raw tool-input JSON, model, token usage, and Caruso reconcile stats. Survives Railway redeploys — go here when Railway logs have flushed.
+- **Prompt Suggestions** — reviewer-submitted free-form suggestions for prompt improvements. Submitted from the slip-detail page (`/review/slip`), listed at `/review?tab=suggestions`. Only `ADMIN_EMAIL` (default `chrischolm@gmail.com`) can approve/reject. On submission the bot DMs `ADMIN_SLACK_USER_ID` if set. Nothing writes to `prompts/**` at runtime — approvals just mark the suggestion resolved; Chris still lands the code change manually.
 
 `sheets.ts` auto-creates missing tabs (`ensureTabExists`) and grows `columnCount` when `SHEET_HEADERS` adds new columns. Adding a column is just a `SHEET_HEADERS` push; do **not** also manually widen the sheet.
 

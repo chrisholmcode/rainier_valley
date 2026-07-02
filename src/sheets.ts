@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import { google } from "googleapis";
 import { env } from "./config.js";
-import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType, ExtractionTrace } from "./types.js";
+import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType, ExtractionTrace, PromptSuggestionRow, PromptSuggestionStatus } from "./types.js";
 
 const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
@@ -650,6 +650,113 @@ export async function ensureCorrectionsLogHeader(): Promise<void> {
 
 export async function ensureExtractionTracesHeader(): Promise<void> {
   await ensureHeader(env.EXTRACTION_TRACES_WORKSHEET_NAME, TRACE_SHEET_HEADERS);
+}
+
+// ── Prompt Suggestions ──────────────────────────────────────────────────────
+
+export const PROMPT_SUGGESTIONS_HEADERS = [
+  "created_at",
+  "submitted_by",
+  "supplier",
+  "slip_photo_url",
+  "suggestion_text",
+  "status",
+  "resolved_at",
+  "resolved_by",
+  "resolution_notes"
+];
+
+export async function ensurePromptSuggestionsHeader(): Promise<void> {
+  await ensureHeader(env.PROMPT_SUGGESTIONS_WORKSHEET_NAME, PROMPT_SUGGESTIONS_HEADERS);
+}
+
+export async function appendPromptSuggestion(params: {
+  submittedBy: string;
+  supplier: string;
+  slipPhotoUrl: string | null;
+  suggestionText: string;
+}): Promise<{ rowIndex: number; createdAt: string }> {
+  await ensurePromptSuggestionsHeader();
+  const createdAt = new Date().toISOString();
+  const row = [
+    createdAt,
+    params.submittedBy,
+    params.supplier,
+    params.slipPhotoUrl ?? "",
+    params.suggestionText,
+    "pending",
+    "",
+    "",
+    ""
+  ];
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.PROMPT_SUGGESTIONS_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [row] }
+  });
+  // updatedRange looks like `'Prompt Suggestions'!A17:I17` — pull the row number.
+  const updatedRange = res.data.updates?.updatedRange ?? "";
+  const rowMatch = updatedRange.match(/!\D+(\d+):/);
+  const rowIndex = rowMatch ? parseInt(rowMatch[1], 10) : -1;
+  return { rowIndex, createdAt };
+}
+
+export async function readPromptSuggestions(params?: {
+  status?: PromptSuggestionStatus;
+  limit?: number;
+}): Promise<PromptSuggestionRow[]> {
+  await ensurePromptSuggestionsHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.PROMPT_SUGGESTIONS_WORKSHEET_NAME}!A2:I`
+  });
+  const rows = res.data.values ?? [];
+  const parsed: PromptSuggestionRow[] = rows.map((r, i) => ({
+    rowIndex: i + 2,
+    created_at: r[0] ?? "",
+    submitted_by: r[1] ?? "",
+    supplier: r[2] ?? "",
+    slip_photo_url: r[3] || null,
+    suggestion_text: r[4] ?? "",
+    status: (r[5] as PromptSuggestionStatus) || "pending",
+    resolved_at: r[6] || null,
+    resolved_by: r[7] || null,
+    resolution_notes: r[8] || null
+  }));
+  const filtered = params?.status ? parsed.filter((s) => s.status === params.status) : parsed;
+  const sorted = filtered.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+  return params?.limit ? sorted.slice(0, params.limit) : sorted;
+}
+
+export async function updatePromptSuggestionStatus(params: {
+  rowIndex: number;
+  status: PromptSuggestionStatus;
+  resolvedBy: string;
+  notes: string | null;
+}): Promise<void> {
+  const { rowIndex, status, resolvedBy, notes } = params;
+  const statusCol = indexToColumn(PROMPT_SUGGESTIONS_HEADERS.indexOf("status"));
+  const resolvedAtCol = indexToColumn(PROMPT_SUGGESTIONS_HEADERS.indexOf("resolved_at"));
+  const resolvedByCol = indexToColumn(PROMPT_SUGGESTIONS_HEADERS.indexOf("resolved_by"));
+  const notesCol = indexToColumn(PROMPT_SUGGESTIONS_HEADERS.indexOf("resolution_notes"));
+  const now = new Date().toISOString();
+  const sheets = google.sheets({ version: "v4", auth });
+  const tab = env.PROMPT_SUGGESTIONS_WORKSHEET_NAME;
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      valueInputOption: "RAW",
+      data: [
+        { range: `${tab}!${statusCol}${rowIndex}`, values: [[status]] },
+        { range: `${tab}!${resolvedAtCol}${rowIndex}`, values: [[now]] },
+        { range: `${tab}!${resolvedByCol}${rowIndex}`, values: [[resolvedBy]] },
+        { range: `${tab}!${notesCol}${rowIndex}`, values: [[notes ?? ""]] }
+      ]
+    }
+  });
 }
 
 export async function appendCorrectionRow(params: {

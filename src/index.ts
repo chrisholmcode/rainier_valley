@@ -23,10 +23,14 @@ import {
   clearSlipApproval,
   recomputeSummaryForSlip,
   appendExtractionTrace,
+  appendPromptSuggestion,
+  readPromptSuggestions,
+  updatePromptSuggestionStatus,
+  ensurePromptSuggestionsHeader,
   SHEET_HEADERS
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
-import { buildReviewListHtml, buildSlipDetailHtml, decodeSlipKey } from "./review.js";
+import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
 import {
   extractFromImage,
   extractFromText,
@@ -992,6 +996,14 @@ async function verifyCfAccessJwt(req: IncomingMessage): Promise<{ email: string 
   }
 }
 
+// Best-effort email lookup for the current request. Non-throwing: returns null
+// when we can't identify the user (e.g. token-fallback path). Callers that need
+// hard auth still go through authRequest first — this is just for attribution.
+async function requestUserEmail(req: IncomingMessage): Promise<string | null> {
+  const jwt = await verifyCfAccessJwt(req);
+  return jwt?.email ?? null;
+}
+
 async function authRequest(req: IncomingMessage, res: ServerResponse): Promise<URL | null> {
   const url = new URL(req.url ?? "/", "http://localhost");
 
@@ -1117,18 +1129,36 @@ async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse
   const url = await reviewAuth(req, res);
   if (!url) return;
   const tab = url.searchParams.get("tab") ?? "queue";
-  const pendingOnly = tab !== "history";
 
   try {
+    if (tab === "suggestions") {
+      const email = await requestUserEmail(req);
+      const suggestions = await readPromptSuggestions({ limit: 200 });
+      const pendingCount = suggestions.filter((s) => s.status === "pending").length;
+      const html = buildSuggestionsListHtml({
+        suggestions,
+        currentEmail: email,
+        isAdmin: email === env.ADMIN_EMAIL,
+        pendingCount,
+        generatedAt: new Date()
+      });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(html);
+      return;
+    }
+
+    const pendingOnly = tab !== "history";
     const rows = await readDeliveryRows({ limit: 5000 });
     const slips = groupSlips(rows);
     const threshold = env.REVIEW_CONFIDENCE_THRESHOLD;
+    const pendingSuggestions = await readPromptSuggestions({ status: "pending", limit: 200 });
     const html = buildReviewListHtml({
       slips,
       pendingOnly,
       threshold,
       token: env.DASHBOARD_TOKEN ?? "",
-      generatedAt: new Date()
+      generatedAt: new Date(),
+      pendingSuggestionCount: pendingSuggestions.length
     });
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
     res.end(html);
@@ -1335,6 +1365,109 @@ async function handleReviewPhotoRequest(req: IncomingMessage, res: ServerRespons
   }
 }
 
+async function notifyAdminOfSuggestion(params: {
+  submittedBy: string;
+  supplier: string;
+  suggestionText: string;
+  slipPhotoUrl: string | null;
+}): Promise<void> {
+  if (!env.ADMIN_SLACK_USER_ID) return;
+  const { submittedBy, supplier, suggestionText, slipPhotoUrl } = params;
+  const base = env.CF_ACCESS_TEAM_DOMAIN ? "https://review.loadslip.com" : "";
+  const suggestionsLink = base ? `${base}/review?tab=suggestions` : "/review?tab=suggestions";
+  const slipLink = slipPhotoUrl && base ? `${base}/review/slip?slip=${encodeSlipKey(slipPhotoUrl)}` : null;
+
+  const text = [
+    `*New prompt suggestion* — ${supplier || "general"}`,
+    `From: ${submittedBy}`,
+    "",
+    `> ${suggestionText.split("\n").join("\n> ")}`,
+    "",
+    `<${suggestionsLink}|Review in the UI>${slipLink ? ` · <${slipLink}|source slip>` : ""}`
+  ].join("\n");
+
+  try {
+    await app.client.chat.postMessage({ channel: env.ADMIN_SLACK_USER_ID, text });
+  } catch (err) {
+    console.warn(`admin suggestion DM failed: ${(err as Error).message}`);
+  }
+}
+
+async function handleReviewSuggestRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+  try {
+    const body = (await readJsonBody(req)) as { slip?: string; supplier?: string; suggestion_text?: string };
+    const slipEnc = body.slip ?? "";
+    const supplier = (body.supplier ?? "").trim() || "general";
+    const suggestionText = (body.suggestion_text ?? "").trim();
+    if (!suggestionText) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("suggestion_text is required");
+      return;
+    }
+    if (suggestionText.length > 4000) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("suggestion_text too long (max 4000 chars)");
+      return;
+    }
+
+    let slipPhotoUrl: string | null = null;
+    if (slipEnc) {
+      try { slipPhotoUrl = decodeSlipKey(slipEnc); } catch { slipPhotoUrl = null; }
+    }
+
+    const submittedBy = (await requestUserEmail(req)) ?? "review-ui";
+    await appendPromptSuggestion({ submittedBy, supplier, slipPhotoUrl, suggestionText });
+    console.log(`prompt suggestion submitted by=${submittedBy} supplier=${supplier} len=${suggestionText.length}`);
+
+    // Fire-and-forget Slack DM — Sheets write is what actually matters.
+    notifyAdminOfSuggestion({ submittedBy, supplier, suggestionText, slipPhotoUrl });
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Review suggest error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
+}
+
+async function handleReviewSuggestResolveRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+  try {
+    const email = await requestUserEmail(req);
+    if (email !== env.ADMIN_EMAIL) {
+      res.writeHead(403, { "Content-Type": "text/plain" });
+      res.end("Only the admin can resolve prompt suggestions.");
+      return;
+    }
+    const body = (await readJsonBody(req)) as { row_index?: number; status?: string; notes?: string };
+    const rowIndex = Number(body.row_index);
+    const status = body.status;
+    const notes = (body.notes ?? "").trim();
+    if (!Number.isInteger(rowIndex) || rowIndex < 2) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Invalid row_index");
+      return;
+    }
+    if (status !== "approved" && status !== "rejected") {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("status must be 'approved' or 'rejected'");
+      return;
+    }
+    await updatePromptSuggestionStatus({ rowIndex, status, resolvedBy: email, notes: notes || null });
+    console.log(`prompt suggestion resolved row=${rowIndex} status=${status} by=${email}`);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Review suggest resolve error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
+}
+
 async function handleReviewApproveRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = await reviewAuth(req, res);
   if (!url) return;
@@ -1400,6 +1533,16 @@ function startHttpServer(): void {
       return;
     }
 
+    if (req.method === "POST" && path === "/api/review/suggest") {
+      await handleReviewSuggestRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/suggest/resolve") {
+      await handleReviewSuggestResolveRequest(req, res);
+      return;
+    }
+
     if (req.method === "GET" && path === "/review/photo") {
       await handleReviewPhotoRequest(req, res);
       return;
@@ -1454,6 +1597,12 @@ async function start(): Promise<void> {
     await ensureExtractionTracesHeader();
   } catch (err) {
     console.warn(`ensureExtractionTracesHeader failed at boot: ${(err as Error).message}`);
+  }
+
+  try {
+    await ensurePromptSuggestionsHeader();
+  } catch (err) {
+    console.warn(`ensurePromptSuggestionsHeader failed at boot: ${(err as Error).message}`);
   }
 
   if (env.SLACK_APP_TOKEN) {
