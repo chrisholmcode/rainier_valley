@@ -1,0 +1,12 @@
+{
+  "name": "caruso-scrape",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "explore": "node explore.js",
+    "scrape": "node scrape.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}
