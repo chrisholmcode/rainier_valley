@@ -373,8 +373,7 @@ function programSuffix(program: ProgramType | null): string {
   return program ? `&amp;program=${program}` : "";
 }
 
-function rangeButtons(active: ViewOption, token: string, program: ProgramType | null): string {
-  const tokenParam = encodeURIComponent(token);
+function rangeButtons(active: ViewOption, _token: string, program: ProgramType | null): string {
   const progParam = programSuffix(program);
   const opts: Array<{ label: string; range: Range }> = [
     { label: "1 week", range: "1w" },
@@ -383,24 +382,22 @@ function rangeButtons(active: ViewOption, token: string, program: ProgramType | 
   return opts
     .map((o) => {
       const cls = o.range === active.range ? "btn active" : "btn";
-      return `<a class="${cls}" href="?view=${active.view}&amp;range=${o.range}&amp;token=${tokenParam}${progParam}">${o.label}</a>`;
+      return `<a class="${cls}" href="?view=${active.view}&amp;range=${o.range}${progParam}">${o.label}</a>`;
     })
     .join("");
 }
 
-function viewButtons(active: ViewOption, token: string, program: ProgramType | null): string {
-  const tokenParam = encodeURIComponent(token);
+function viewButtons(active: ViewOption, _token: string, program: ProgramType | null): string {
   const progParam = programSuffix(program);
   const dailyCls = active.view === "daily" ? "btn active" : "btn";
   const weeklyCls = active.view === "weekly" ? "btn active" : "btn";
   return `
-    <a class="${dailyCls}" href="?view=daily&amp;range=${active.range}&amp;token=${tokenParam}${progParam}">Daily</a>
-    <a class="${weeklyCls}" href="?view=weekly&amp;range=${active.range}&amp;token=${tokenParam}${progParam}">Weekly</a>
+    <a class="${dailyCls}" href="?view=daily&amp;range=${active.range}${progParam}">Daily</a>
+    <a class="${weeklyCls}" href="?view=weekly&amp;range=${active.range}${progParam}">Weekly</a>
   `;
 }
 
-function programButtons(active: ViewOption, token: string, activeProgram: ProgramType | null): string {
-  const tokenParam = encodeURIComponent(token);
+function programButtons(active: ViewOption, _token: string, activeProgram: ProgramType | null): string {
   const opts: Array<{ label: string; value: ProgramType | null }> = [
     { label: "All", value: null },
     { label: "Home Delivery", value: "home_delivery" },
@@ -412,7 +409,7 @@ function programButtons(active: ViewOption, token: string, activeProgram: Progra
       const isActive = (o.value ?? null) === (activeProgram ?? null);
       const cls = isActive ? "btn active" : "btn";
       const progParam = o.value ? `&amp;program=${o.value}` : "";
-      return `<a class="${cls}" href="?view=${active.view}&amp;range=${active.range}&amp;token=${tokenParam}${progParam}">${o.label}</a>`;
+      return `<a class="${cls}" href="?view=${active.view}&amp;range=${active.range}${progParam}">${o.label}</a>`;
     })
     .join("");
 }
@@ -492,8 +489,8 @@ thead th:first-child { text-align: left; }
     <div class="btn-group">${viewButtons(active, token, program)}</div>
     <div class="btn-group">${rangeButtons(active, token, program)}</div>
     <div class="btn-group">${programButtons(active, token, program)}</div>
-    <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv&amp;token=${encodeURIComponent(token)}${programSuffix(program)}" download>↓ Export CSV</a>
-    <a class="btn" href="/review?token=${encodeURIComponent(token)}">Review queue →</a>
+    <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
+    <a class="btn" href="/review">Review queue →</a>
   </div>
 </header>
 

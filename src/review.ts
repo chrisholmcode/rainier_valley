@@ -127,7 +127,7 @@ table.line-items input, table.line-items select { min-width: 0; padding: 6px 8px
 .toast.error { background: var(--danger); }
 `;
 
-function renderSlipRow(s: SlipSummary, threshold: number, t: string): string {
+function renderSlipRow(s: SlipSummary, threshold: number): string {
   const enc = encodeSlipKey(s.slipKey);
   const date = s.delivery_date || `<span class="muted">${escapeHtml(s.created_at.slice(0, 10))}</span>`;
   const invoice = s.invoice_or_order_number ? escapeHtml(s.invoice_or_order_number) : `<span class="muted">—</span>`;
@@ -138,12 +138,12 @@ function renderSlipRow(s: SlipSummary, threshold: number, t: string): string {
     <td>${invoice}</td>
     <td class="num">${s.rowCount}</td>
     <td>${confidenceBadge(s.minConfidence, threshold)}</td>
-    <td><a class="slip-link" href="/review/slip?slip=${enc}&token=${t}">Open ›</a></td>
+    <td><a class="slip-link" href="/review/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
 
-function renderSlipTable(slips: SlipSummary[], threshold: number, t: string): string {
-  const body = slips.map((s) => renderSlipRow(s, threshold, t)).join("");
+function renderSlipTable(slips: SlipSummary[], threshold: number): string {
+  const body = slips.map((s) => renderSlipRow(s, threshold)).join("");
   return `<table>
     <thead><tr>
       <th>Status</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
@@ -160,8 +160,7 @@ export function buildReviewListHtml(params: {
   token: string;
   generatedAt: Date;
 }): string {
-  const { slips, pendingOnly, threshold, token, generatedAt } = params;
-  const t = encodeURIComponent(token);
+  const { slips, pendingOnly, threshold, generatedAt } = params;
 
   // "Needs review" = below threshold AND not yet approved. Worst confidence first.
   const needsReview = slips
@@ -185,7 +184,7 @@ export function buildReviewListHtml(params: {
       <div class="card">
         ${needsReview.length === 0
           ? `<p class="muted" style="padding:24px; text-align:center;">Nothing to review — every slip is above ${Math.round(threshold * 100)}% confidence or already approved. 🎉</p>`
-          : renderSlipTable(needsReview, threshold, t)}
+          : renderSlipTable(needsReview, threshold)}
       </div>
 
       <h2 class="section-title">
@@ -196,12 +195,12 @@ export function buildReviewListHtml(params: {
       <div class="card">
         ${completed.length === 0
           ? `<p class="muted" style="padding:24px; text-align:center;">No completed slips yet.</p>`
-          : renderSlipTable(completed, threshold, t)}
+          : renderSlipTable(completed, threshold)}
       </div>`
     : `<div class="card">
         ${slips.length === 0
           ? `<p class="muted" style="padding:24px; text-align:center;">No slips found.</p>`
-          : renderSlipTable(slips, threshold, t)}
+          : renderSlipTable(slips, threshold)}
       </div>`;
 
   return `<!DOCTYPE html>
@@ -217,9 +216,9 @@ ${FONT_HEAD_LINKS}
     <div class="meta">${slips.length} slip${slips.length === 1 ? "" : "s"} · confidence threshold ${Math.round(threshold * 100)}% · ${escapeHtml(generated)} PT</div>
   </div>
   <div class="tabs">
-    <a class="${queueCls}" href="/review?tab=queue&token=${t}">Review Queue</a>
-    <a class="${historyCls}" href="/review?tab=history&token=${t}">All Slips</a>
-    <a class="btn" href="/dashboard?view=daily&range=1w&token=${t}">← Dashboard</a>
+    <a class="${queueCls}" href="/review?tab=queue">Review Queue</a>
+    <a class="${historyCls}" href="/review?tab=history">All Slips</a>
+    <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
 </header>
 ${body}
@@ -277,8 +276,7 @@ export function buildSlipDetailHtml(params: {
   rows: DeliverySheetRow[];
   token: string;
 }): string {
-  const { slip, rows, token } = params;
-  const t = encodeURIComponent(token);
+  const { slip, rows } = params;
   const slipMetaRowIndex = rows[0]?.rowIndex ?? 0;
 
   const slipMeta = `<div class="slip-meta">
@@ -317,7 +315,7 @@ export function buildSlipDetailHtml(params: {
   }).join("");
 
   const slipKeyEnc = encodeSlipKey(slip.slipKey);
-  const proxyUrl = `/review/photo?slip=${slipKeyEnc}&token=${t}`;
+  const proxyUrl = `/review/photo?slip=${slipKeyEnc}`;
   const isPdf = (slip.photo_url ?? "").toLowerCase().includes(".pdf");
   const photoBlock = slip.photo_url
     ? `${isPdf
@@ -343,7 +341,7 @@ ${FONT_HEAD_LINKS}
     <div class="meta">${escapeHtml(slip.delivery_date ?? slip.created_at.slice(0, 10))} · ${slip.rowCount} row${slip.rowCount === 1 ? "" : "s"} · ${statusBadge(slip)}</div>
   </div>
   <div class="tabs">
-    <a class="btn" href="/review?tab=queue&token=${t}">← Back to Queue</a>
+    <a class="btn" href="/review?tab=queue">← Back to Queue</a>
     <button class="btn btn-primary" onclick="approveSlip()">${slip.approved ? "Re-approve" : "Approve slip"}</button>
   </div>
 </header>
@@ -395,7 +393,6 @@ ${FONT_HEAD_LINKS}
 </div>
 <script>
 const SLIP_KEY_B64 = ${JSON.stringify(slipKeyEnc)};
-const TOKEN = ${JSON.stringify(token)};
 
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
@@ -421,7 +418,7 @@ async function saveEdit(el) {
   const field = el.dataset.field;
   const new_value = el.value;
   try {
-    const res = await fetch('/api/review/edit?token=' + encodeURIComponent(TOKEN), {
+    const res = await fetch('/api/review/edit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slip: SLIP_KEY_B64, row_index, field, new_value })
@@ -437,14 +434,14 @@ async function saveEdit(el) {
 
 async function approveSlip() {
   try {
-    const res = await fetch('/api/review/approve?token=' + encodeURIComponent(TOKEN), {
+    const res = await fetch('/api/review/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slip: SLIP_KEY_B64 })
     });
     if (!res.ok) throw new Error(await res.text());
     showToast('Slip approved');
-    setTimeout(() => { window.location.href = '/review?tab=queue&token=' + encodeURIComponent(TOKEN); }, 800);
+    setTimeout(() => { window.location.href = '/review?tab=queue'; }, 800);
   } catch (e) {
     showToast('Approve failed: ' + e.message, true);
   }

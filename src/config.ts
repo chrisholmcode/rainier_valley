@@ -24,7 +24,9 @@ const EnvSchema = z.object({
   ASSISTANT_MAX_TOOL_ITERATIONS: z.coerce.number().default(8),
   VOICE_WEBHOOK_SECRET: z.string().min(1).optional(),
   VOICE_PORT: z.coerce.number().default(3001),
-  DASHBOARD_TOKEN: z.string().min(1).optional()
+  DASHBOARD_TOKEN: z.string().min(1).optional(),
+  CF_ACCESS_TEAM_DOMAIN: z.string().min(1).optional(),
+  CF_ACCESS_AUD_TAG: z.string().min(1).optional()
 });
 
 const parsed = EnvSchema.safeParse(process.env);

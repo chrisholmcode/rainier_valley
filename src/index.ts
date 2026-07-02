@@ -3,6 +3,7 @@ import { createServer as createHttpServer, IncomingMessage, ServerResponse } fro
 import axios from "axios";
 import { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { env } from "./config.js";
 import {
   appendExtractionRows,
@@ -947,20 +948,58 @@ async function handleAlexaRequest(body: unknown, res: ServerResponse): Promise<v
   res.end(JSON.stringify({ error: "Unknown request type" }));
 }
 
-async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  if (!env.DASHBOARD_TOKEN) {
-    res.writeHead(404);
-    res.end();
-    return;
+const cfJwks = env.CF_ACCESS_TEAM_DOMAIN
+  ? createRemoteJWKSet(new URL(`https://${env.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`))
+  : null;
+
+async function verifyCfAccessJwt(req: IncomingMessage): Promise<{ email: string } | null> {
+  if (!cfJwks || !env.CF_ACCESS_TEAM_DOMAIN || !env.CF_ACCESS_AUD_TAG) return null;
+  const raw = req.headers["cf-access-jwt-assertion"];
+  const token = Array.isArray(raw) ? raw[0] : raw;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, cfJwks, {
+      issuer: `https://${env.CF_ACCESS_TEAM_DOMAIN}`,
+      audience: env.CF_ACCESS_AUD_TAG
+    });
+    const email = typeof payload.email === "string" ? payload.email : "";
+    return email ? { email } : null;
+  } catch (err) {
+    console.warn("cf-access jwt verify failed:", (err as Error).message);
+    return null;
+  }
+}
+
+async function authRequest(req: IncomingMessage, res: ServerResponse): Promise<URL | null> {
+  const url = new URL(req.url ?? "/", "http://localhost");
+
+  const jwt = await verifyCfAccessJwt(req);
+  if (jwt) {
+    console.log(`auth path=jwt user=${jwt.email} path=${url.pathname}`);
+    return url;
   }
 
-  const url = new URL(req.url ?? "/", "http://localhost");
-  const token = url.searchParams.get("token") ?? "";
-  if (token !== env.DASHBOARD_TOKEN) {
-    res.writeHead(401, { "Content-Type": "text/plain" });
-    res.end("Unauthorized");
-    return;
+  if (env.DASHBOARD_TOKEN) {
+    const token = url.searchParams.get("token") ?? "";
+    if (token === env.DASHBOARD_TOKEN) {
+      console.log(`auth path=token-fallback path=${url.pathname}`);
+      return url;
+    }
   }
+
+  if (!env.DASHBOARD_TOKEN && !cfJwks) {
+    res.writeHead(404);
+    res.end();
+    return null;
+  }
+  res.writeHead(401, { "Content-Type": "text/plain" });
+  res.end("Unauthorized");
+  return null;
+}
+
+async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
 
   const viewParam = url.searchParams.get("view");
   const view: "daily" | "weekly" = viewParam === "weekly" ? "weekly" : "daily";
@@ -1032,7 +1071,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
       view,
       range,
       program,
-      token: env.DASHBOARD_TOKEN,
+      token: env.DASHBOARD_TOKEN ?? "",
       inboundRows,
       outboundRows,
       generatedAt: new Date()
@@ -1048,24 +1087,12 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
 
 // ── Review UI handlers ──────────────────────────────────────────────────────
 
-function reviewAuth(req: IncomingMessage, res: ServerResponse): URL | null {
-  if (!env.DASHBOARD_TOKEN) {
-    res.writeHead(404);
-    res.end();
-    return null;
-  }
-  const url = new URL(req.url ?? "/", "http://localhost");
-  const token = url.searchParams.get("token") ?? "";
-  if (token !== env.DASHBOARD_TOKEN) {
-    res.writeHead(401, { "Content-Type": "text/plain" });
-    res.end("Unauthorized");
-    return null;
-  }
-  return url;
+async function reviewAuth(req: IncomingMessage, res: ServerResponse): Promise<URL | null> {
+  return authRequest(req, res);
 }
 
 async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const url = reviewAuth(req, res);
+  const url = await reviewAuth(req, res);
   if (!url) return;
   const tab = url.searchParams.get("tab") ?? "queue";
   const pendingOnly = tab !== "history";
@@ -1078,7 +1105,7 @@ async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse
       slips,
       pendingOnly,
       threshold,
-      token: env.DASHBOARD_TOKEN!,
+      token: env.DASHBOARD_TOKEN ?? "",
       generatedAt: new Date()
     });
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
@@ -1091,7 +1118,7 @@ async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse
 }
 
 async function handleSlipDetailRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const url = reviewAuth(req, res);
+  const url = await reviewAuth(req, res);
   if (!url) return;
   const slipParam = url.searchParams.get("slip") ?? "";
   let slipKey = "";
@@ -1117,7 +1144,7 @@ async function handleSlipDetailRequest(req: IncomingMessage, res: ServerResponse
       return;
     }
     const [slip] = groupSlips(slipRows);
-    const html = buildSlipDetailHtml({ slip, rows: slipRows, token: env.DASHBOARD_TOKEN! });
+    const html = buildSlipDetailHtml({ slip, rows: slipRows, token: env.DASHBOARD_TOKEN ?? "" });
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
     res.end(html);
   } catch (err) {
@@ -1163,7 +1190,7 @@ const ROW_LEVEL_FIELDS = new Set([
 ]);
 
 async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const url = reviewAuth(req, res);
+  const url = await reviewAuth(req, res);
   if (!url) return;
 
   try {
@@ -1246,7 +1273,7 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
 }
 
 async function handleReviewPhotoRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const url = reviewAuth(req, res);
+  const url = await reviewAuth(req, res);
   if (!url) return;
   const slipParam = url.searchParams.get("slip") ?? "";
   let photoUrl = "";
@@ -1287,7 +1314,7 @@ async function handleReviewPhotoRequest(req: IncomingMessage, res: ServerRespons
 }
 
 async function handleReviewApproveRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const url = reviewAuth(req, res);
+  const url = await reviewAuth(req, res);
   if (!url) return;
   try {
     const body = (await readJsonBody(req)) as { slip?: string };
@@ -1389,8 +1416,11 @@ function startHttpServer(): void {
   server.listen(port, () => {
     const routes: string[] = [];
     if (env.VOICE_WEBHOOK_SECRET) routes.push("/voice");
-    if (env.DASHBOARD_TOKEN) routes.push("/dashboard", "/review");
-    console.log(`HTTP server listening on port ${port} (routes: ${routes.join(", ") || "none"})`);
+    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review");
+    const authModes: string[] = [];
+    if (cfJwks) authModes.push("cf-access-jwt");
+    if (env.DASHBOARD_TOKEN) authModes.push("token");
+    console.log(`HTTP server listening on port ${port} (routes: ${routes.join(", ") || "none"}, auth: ${authModes.join("+") || "none"})`);
   });
 }
 
@@ -1403,7 +1433,7 @@ async function start(): Promise<void> {
     console.log(`Slack app started on port ${env.SLACK_PORT}.`);
   }
 
-  if (env.VOICE_WEBHOOK_SECRET || env.DASHBOARD_TOKEN) {
+  if (env.VOICE_WEBHOOK_SECRET || env.DASHBOARD_TOKEN || cfJwks) {
     startHttpServer();
   }
 }
