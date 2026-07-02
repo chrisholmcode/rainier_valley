@@ -106,6 +106,18 @@ export async function ensureSheetHeader(): Promise<void> {
   await ensureHeader(env.GOOGLE_WORKSHEET_NAME, SHEET_HEADERS);
 }
 
+// Sheets' USER_ENTERED input parses numeric-looking strings as numbers, which
+// silently strips leading zeros from item SKUs (e.g. Caruso "00683" -> 683).
+// Prefixing with an apostrophe forces text storage; the apostrophe itself is
+// stripped from the displayed value.
+function asSheetCode(v: string | null): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return s;
+  if (s.startsWith("'")) return s;
+  return `'${s}`;
+}
+
 export async function appendExtractionRows(params: {
   extraction: ExtractionResult;
   photoUrl: string;
@@ -122,7 +134,7 @@ export async function appendExtractionRows(params: {
     extraction.delivery_date,
     extraction.invoice_or_order_number,
     extraction.destination_org,
-    item.item_code_raw,
+    asSheetCode(item.item_code_raw),
     item.item_name_raw,
     item.item_name_normalized,
     item.quantity_ordered,
@@ -814,11 +826,14 @@ export async function updateSheetCell(params: {
   const colIndex = headers.indexOf(columnName);
   if (colIndex === -1) throw new Error(`Unknown column: ${columnName}`);
   const colLetter = indexToColumn(colIndex);
+  const writeValue = columnName === "item_code_raw" && typeof newValue === "string"
+    ? asSheetCode(newValue)
+    : newValue;
   const sheets = google.sheets({ version: "v4", auth });
   await sheets.spreadsheets.values.update({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${worksheetName}!${colLetter}${rowIndex}`,
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[newValue]] }
+    requestBody: { values: [[writeValue]] }
   });
 }
