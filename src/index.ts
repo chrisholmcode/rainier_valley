@@ -16,6 +16,7 @@ import {
   appendSummaryRow,
   ensureSummarySheetHeader,
   ensureCorrectionsLogHeader,
+  ensureExtractionTracesHeader,
   appendCorrectionRow,
   groupSlips,
   stampSlipApproval,
@@ -324,6 +325,7 @@ async function processInvoiceBatch(params: {
     await ensureSheetHeader();
     await ensureSummarySheetHeader();
     await ensureCorrectionsLogHeader();
+    await ensureExtractionTracesHeader();
     let totalRows = 0;
     for (const file of processedFiles) {
       const rowsAdded = await appendExtractionRows({
@@ -1445,6 +1447,15 @@ function startHttpServer(): void {
 }
 
 async function start(): Promise<void> {
+  // Pre-create the Extraction Traces tab at boot so it's visible in the sheet
+  // immediately after deploy, not only after the first invoice runs. Other tabs
+  // are pre-existing so we don't need to bootstrap them here.
+  try {
+    await ensureExtractionTracesHeader();
+  } catch (err) {
+    console.warn(`ensureExtractionTracesHeader failed at boot: ${(err as Error).message}`);
+  }
+
   if (env.SLACK_APP_TOKEN) {
     await app.start();
     console.log("Slack app started in Socket Mode.");

@@ -648,6 +648,10 @@ export async function ensureCorrectionsLogHeader(): Promise<void> {
   await ensureHeader(env.CORRECTIONS_LOG_WORKSHEET_NAME, CORRECTIONS_LOG_HEADERS);
 }
 
+export async function ensureExtractionTracesHeader(): Promise<void> {
+  await ensureHeader(env.EXTRACTION_TRACES_WORKSHEET_NAME, TRACE_SHEET_HEADERS);
+}
+
 export async function appendCorrectionRow(params: {
   user: string;
   slipKey: string;
