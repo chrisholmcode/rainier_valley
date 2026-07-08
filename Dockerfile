@@ -13,4 +13,5 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY examples ./examples
 COPY prompts ./prompts
+COPY data ./data
 CMD ["node", "dist/index.js"]
