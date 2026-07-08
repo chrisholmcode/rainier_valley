@@ -231,6 +231,18 @@ export async function appendExtractionRows(params: {
 }): Promise<number> {
   const { extraction, photoUrl, slackChannel, slackMessageTs, uploadedBy } = params;
 
+  // Auto-approve on write if the slip's min line-item confidence meets the
+  // review threshold. Reviewers can still un-approve via the /review UI (any
+  // edit clears approval). "auto-approved" tags the source so we can tell
+  // human vs machine approvals apart in the sheet.
+  const lineConfidences = extraction.line_items
+    .map((li) => li.confidence)
+    .filter((c): c is number => typeof c === "number" && Number.isFinite(c));
+  const minConfidence = lineConfidences.length ? Math.min(...lineConfidences) : null;
+  const autoApprove = minConfidence !== null && minConfidence >= env.REVIEW_CONFIDENCE_THRESHOLD;
+  const approvedAt = autoApprove ? new Date().toISOString() : null;
+  const approvedBy = autoApprove ? "auto-approved" : null;
+
   const rows = extraction.line_items.map((item) => [
     new Date().toISOString(),
     extraction.supplier,
@@ -261,8 +273,8 @@ export async function appendExtractionRows(params: {
     JSON.stringify(extraction.source_warnings),
     extraction.donor_org,
     extraction.is_donation,
-    null,
-    null
+    approvedAt,
+    approvedBy
   ]);
 
   const feeRows = extraction.fees.map((fee) => [
@@ -295,8 +307,8 @@ export async function appendExtractionRows(params: {
     JSON.stringify(extraction.source_warnings),
     extraction.donor_org,
     extraction.is_donation,
-    null,
-    null
+    approvedAt,
+    approvedBy
   ]);
 
   const allRows = [...rows, ...feeRows];
