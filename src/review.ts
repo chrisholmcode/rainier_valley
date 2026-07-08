@@ -135,10 +135,14 @@ table.line-items input, table.line-items select { min-width: 0; padding: 6px 8px
 
 function renderSlipRow(s: SlipSummary, threshold: number): string {
   const enc = encodeSlipKey(s.slipKey);
+  const uploaded = s.created_at
+    ? escapeHtml(s.created_at.slice(0, 10))
+    : `<span class="muted">—</span>`;
   const date = s.delivery_date || `<span class="muted">${escapeHtml(s.created_at.slice(0, 10))}</span>`;
   const invoice = s.invoice_or_order_number ? escapeHtml(s.invoice_or_order_number) : `<span class="muted">—</span>`;
   return `<tr>
     <td>${statusBadge(s)}</td>
+    <td>${uploaded}</td>
     <td>${date}</td>
     <td>${donorOrSupplier(s)}</td>
     <td>${invoice}</td>
@@ -152,7 +156,7 @@ function renderSlipTable(slips: SlipSummary[], threshold: number): string {
   const body = slips.map((s) => renderSlipRow(s, threshold)).join("");
   return `<table>
     <thead><tr>
-      <th>Status</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
+      <th>Status</th><th>Uploaded</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
       <th class="num">Rows</th><th>Min confidence</th><th></th>
     </tr></thead>
     <tbody>${body}</tbody>
