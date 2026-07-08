@@ -5,14 +5,14 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Location: Canby, OR or 2100 SE 4th Avenue
 - Columns: ORDERED | SHIPPED | ITEM CODE | DESCRIPTION | ORIGIN | UNIT PRICE | EXTENDED AMOUNT
 - ORDERED => quantity_ordered. SHIPPED => quantity. Capture both. Filter out fuel surcharge.
-- delivery_date: Use the **SHIP DATE** field in the upper-right header (NOT the "DATE" / invoice date field).
+- delivery_date and invoice_date: Caruso's invoices carry a single date labeled **SHIP DATE**. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
 
 **Charlie's Produce** (set supplier: "charlies")
 - Logo says "Charlie's Produce"
 - Location: Seattle, WA or PO Box 24606 or 4123 2nd Ave S
 - Columns: ORDER | SHIP | ITEM# | PACK SIZE | DESCRIPTION | APPROX.WT. | PRICE | EXTENSION
 - Descriptions use commas (e.g., "AVOCADO,HASS GREEN"). ORDER => quantity_ordered. SHIP => quantity. APPROX.WT. => approx_weight (pounds). Capture all three. Filter out energy charge.
-- delivery_date: Use the **INVOICE DATE** field in the upper-right header (next to ACCOUNT# / INVOICE#). Convert MM/DD/YY to YYYY-MM-DD.
+- delivery_date and invoice_date: Charlie's invoices carry a single date labeled **INVOICE DATE** in the upper-right header (next to ACCOUNT# / INVOICE#). Convert MM/DD/YY to YYYY-MM-DD and populate BOTH `invoice_date` and `delivery_date` with that value.
 - invoice_or_order_number: Use the **INVOICE#** value in the upper-right header (between ACCOUNT# and INVOICE DATE), typically a 7-digit number.
 
 **Grand Central Bakery** (set supplier: "grand_central")
@@ -20,7 +20,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Location: 21 S Nevada St, Seattle WA 98123
 - Columns: Code | Description | Quantity | Unit Price | Ext. Price
 - Single quantity column (no ORDER/SHIP split) => quantity. unit = "ea". Bread items => category "shelf_stable". approx_weight = null.
-- delivery_date: Use the **Date** field in the upper-right header (convert to YYYY-MM-DD).
+- delivery_date and invoice_date: Grand Central invoices carry a single **Date** field in the upper-right header. Convert to YYYY-MM-DD and populate BOTH `invoice_date` and `delivery_date` with that value.
 - invoice_or_order_number: Use the **Invoice** value in the upper-right header.
 - destination_org: Use the **Customer** field verbatim including any "- Donation" / "- Purchased" suffix.
 - is_donation: read the Customer suffix — "- Donation" => true, "- Purchased" => false, otherwise null.
@@ -33,8 +33,8 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - If only a pallet label (no line items), add warning to source_warnings.
 
 **Food Lifeline** (set supplier: "food_lifeline") — TWO subtypes
-- AGENCY ORDER (printed): "FOOD LIFELINE" logo + "AGENCY ORDER" header. Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight. document_type = "manifest". donor_org = null. Quantity => quantity, Gross Weight => approx_weight. Item No. suffix `-TEFA` / `-CITY` => capture in notes. delivery_date from Ship Date, invoice_or_order_number from Agency Order No. Totals are $0 (preserve as 0).
-- GROCERY RESCUE (handwritten): "FOOD LIFELINE" logo + form fields Donor / Address / Agency / Date. Per-category Pounds (lb) column. document_type = "manifest". donor_org = the Donor field (e.g., "QFC-MI", "Safeway-RB"). delivery_date from Date field (Donor/Date may be swapped — disambiguate by shape). One line item per non-empty Pounds row using the row label as item_name_raw, unit = "lb", approx_weight = parsed pounds. Apply the running-tally rule (see supplier prompt). Totals null. fees[] empty.
+- AGENCY ORDER (printed): "FOOD LIFELINE" logo + "AGENCY ORDER" header. Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight. document_type = "manifest". donor_org = null. Quantity => quantity, Gross Weight => approx_weight. Item No. suffix `-TEFA` / `-CITY` => capture in notes. Populate BOTH invoice_date and delivery_date from Ship Date. invoice_or_order_number from Agency Order No. Totals are $0 (preserve as 0).
+- GROCERY RESCUE (handwritten): "FOOD LIFELINE" logo + form fields Donor / Address / Agency / Date. Per-category Pounds (lb) column. document_type = "manifest". donor_org = the Donor field (e.g., "QFC-MI", "Safeway-RB"). Populate BOTH invoice_date and delivery_date from the Date field (Donor/Date may be swapped — disambiguate by shape). One line item per non-empty Pounds row using the row label as item_name_raw, unit = "lb", approx_weight = parsed pounds. Apply the running-tally rule (see supplier prompt). Totals null. fees[] empty.
 - Both subtypes: is_donation = true. supplier = "food_lifeline".
 
 **Costco Business Delivery** (set supplier: "costco")
@@ -42,7 +42,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Location: Whse 767, 3900 20th St E, Fife, WA (or similar Costco Business Center warehouse)
 - Columns: Ordered | Shipped | Item | Description | Unit Price | Tax | Resale/Exempt | Instant Savings | Amount
 - Ordered => quantity_ordered. Shipped => quantity. Capture both. Item column is the SKU => item_code_raw.
-- delivery_date: Use the **Scheduled Delivery Date** field (NOT Order Date).
+- delivery_date: Use the **Scheduled Delivery Date** field. invoice_date: Use the **Order Date** field. Costco invoices show both; capture each in its own column.
 - invoice_or_order_number: Use the **Order Number** value.
 - Pack notation lives at the end of the Description (e.g., `0.85 OZ, 64 CT`); derive approx_weight from `quantity × N × X / 16` when the pack has a weight unit.
 - Section headers (Dry Items / Refrigerated / Frozen / Produce) tag the lines beneath them for category.
@@ -55,7 +55,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 **Terrebonne Truck Patch** (set supplier: "terrebonne")
 - Letterhead says "Terrebonne Truck Patch", North Bend WA. Hand-written carbon-copy invoice book with a printed "No. <NNN>" in the upper-right.
 - Columns: Quantity | Description | Price | Amount. Single Quantity column => quantity. unit = "ea". approx_weight = null (count-only).
-- delivery_date: Use the handwritten **Date** field (M-D-YY); convert to YYYY-MM-DD.
+- delivery_date and invoice_date: Terrebonne invoices carry a single handwritten **Date** field (M-D-YY); convert to YYYY-MM-DD and populate BOTH `invoice_date` and `delivery_date` with that value.
 - invoice_or_order_number: Use the printed **No.** value (e.g., "137").
 - Category = "produce" for all items. is_donation = false.
 
@@ -67,7 +67,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Single Qty column => quantity (no separate ORDER column; leave quantity_ordered null). Qty may be fractional (e.g., 1480.5) — keep as-is.
 - The bold number in the "Product or service" column (e.g., "012248", "111724345") => item_code_raw.
 - Pack notation lives inside the Description (e.g., "12/1#-10cs", "12 pkgs/cs-10cs", "#8 Frozen-42cs"). Capture into pack_size_raw and keep in item_name_raw.
-- delivery_date: Use the **Ship date** field in the "Shipping info" block (NOT "Invoice date" / "Due date").
+- delivery_date: Use the **Ship date** field in the "Shipping info" block. invoice_date: Use the **Invoice date** field in the "Invoice details" block (NOT "Due date"). Weigelt invoices always show both.
 - invoice_or_order_number: Use the **Invoice no.** value (e.g., "065315").
 - No fuel surcharge / energy charge — leave fees[] empty unless one is explicitly visible.
 

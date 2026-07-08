@@ -1226,6 +1226,7 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 const SLIP_LEVEL_FIELDS = new Set([
   "supplier",
   "document_type",
+  "invoice_date",
   "delivery_date",
   "invoice_or_order_number",
   "destination_org",

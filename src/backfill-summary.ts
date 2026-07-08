@@ -97,6 +97,7 @@ interface RawSheetRow {
   created_at: string;
   supplier: string;
   document_type: string;
+  invoice_date: string;
   delivery_date: string;
   invoice_or_order_number: string;
   destination_org: string;
@@ -202,6 +203,7 @@ async function main(): Promise<void> {
   for (const [key, rows] of groups) {
     const supplier = normalizeSupplier(rows[0].supplier);
     const documentType = normalizeDocType(rows[0].document_type);
+    const invoiceDate = rows[0].invoice_date || null;
     const deliveryDate = rows[0].delivery_date || null;
     const invoice = rows[0].invoice_or_order_number || null;
     const destinationOrg = rows[0].destination_org || null;
@@ -221,6 +223,7 @@ async function main(): Promise<void> {
     const extraction: ExtractionResult = {
       document_type: documentType,
       supplier,
+      invoice_date: invoiceDate,
       delivery_date: deliveryDate,
       invoice_or_order_number: invoice,
       destination_org: destinationOrg,

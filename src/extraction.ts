@@ -15,6 +15,7 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
   supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"]),
+  invoice_date: z.string().nullable(),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
   destination_org: z.string().nullable(),
@@ -89,7 +90,8 @@ const EXTRACTION_INPUT_SCHEMA = {
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
     supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"] },
-    delivery_date: { type: ["string", "null"] },
+    invoice_date: { type: ["string", "null"], description: "The date printed on the invoice/document (labels vary: 'Invoice date', 'Order date', 'Date'). Format YYYY-MM-DD. When the document shows both an invoice date and a distinct ship/delivery date, they go in separate columns. When the document shows only one date, populate BOTH invoice_date and delivery_date with that same value — do not leave either null." },
+    delivery_date: { type: ["string", "null"], description: "The date the goods physically shipped or arrived (labels vary: 'Ship date', 'Shipped on', 'Delivered', 'Received'). Format YYYY-MM-DD. When the document shows only one date, populate BOTH invoice_date and delivery_date with that same value." },
     invoice_or_order_number: { type: ["string", "null"] },
     destination_org: { type: ["string", "null"] },
     donor_org: { type: ["string", "null"], description: "The party that contributed the goods, when distinct from the supplier (e.g., the grocery store on a Food Lifeline grocery rescue form: 'QFC-MI', 'Safeway-RB'). Null when the supplier is itself the donor." },
@@ -140,7 +142,7 @@ const EXTRACTION_INPUT_SCHEMA = {
     },
     source_warnings: { type: "array", items: { type: "string" } }
   },
-  required: ["document_type", "supplier", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation", "line_items", "fees", "totals", "source_warnings"]
+  required: ["document_type", "supplier", "invoice_date", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation", "line_items", "fees", "totals", "source_warnings"]
 };
 
 const EOD_INPUT_SCHEMA = {

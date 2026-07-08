@@ -71,7 +71,7 @@ const ASSISTANT_TOOLS: Anthropic.Tool[] = [
       type: "object" as const,
       properties: {
         row_index: { type: "number", description: "The rowIndex from the read_delivery_log result (1-based sheet row)." },
-        column_name: { type: "string", description: "Column to correct. Valid values: supplier, document_type, delivery_date, invoice_or_order_number, destination_org, item_name_raw, item_name_normalized, quantity_ordered, quantity, quantity_raw, unit, pack_size_raw, approx_weight, category, unit_cost, line_total, notes." },
+        column_name: { type: "string", description: "Column to correct. Valid values: supplier, document_type, invoice_date, delivery_date, invoice_or_order_number, destination_org, item_name_raw, item_name_normalized, quantity_ordered, quantity, quantity_raw, unit, pack_size_raw, approx_weight, category, unit_cost, line_total, notes." },
         old_value: { type: "string", description: "The current value in that field (from the read result), for the confirmation message." },
         new_value: { type: "string", description: "The corrected value." },
         reason: { type: "string", description: "Brief explanation of why this correction is needed." }

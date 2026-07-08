@@ -5,7 +5,8 @@ Document format: PDF invoice titled "Invoice" with the Costco Business Center lo
 - Item column (numeric SKU, e.g., "1212860") => item_code_raw.
 - Description => item_name_raw, kept verbatim including the trailing pack notation (e.g., "KIRKLAND SIGNATURE SOFT & CHEWY CHOCOLATE CHIP GRANOLA BARS, 0.85 OZ, 64 CT").
 - Unit Price => unit_cost. Amount => line_total.
-- delivery_date: Use the **Scheduled Delivery Date** field in the header (NOT Order Date).
+- delivery_date: Use the **Scheduled Delivery Date** field in the header.
+- invoice_date: Use the **Order Date** field in the header (the date the order was placed; distinct from Scheduled Delivery Date). Convert to YYYY-MM-DD. Capture both when visible.
 - invoice_or_order_number: Use the **Order Number** value (e.g., "1292264544").
 - Section headers in the body (e.g., "Dry Items", "Refrigerated", "Frozen", "Produce") tag the lines beneath them. Map to category:
   - "Dry Items" / "Pantry" => shelf_stable

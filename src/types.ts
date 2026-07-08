@@ -63,6 +63,7 @@ export interface DeliverySheetRow {
   created_at: string;
   supplier: string;
   document_type: string;
+  invoice_date: string | null;
   delivery_date: string | null;
   invoice_or_order_number: string | null;
   destination_org: string | null;
@@ -165,6 +166,7 @@ export interface ExtractionTrace {
 export interface ExtractionResult {
   document_type: DocumentType;
   supplier: Supplier;
+  invoice_date: string | null;
   delivery_date: string | null;
   invoice_or_order_number: string | null;
   destination_org: string | null;

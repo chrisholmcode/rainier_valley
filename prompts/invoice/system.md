@@ -15,7 +15,13 @@ Non-negotiable rules:
     - `quantity_ordered` = cases the food bank ORDERED. Capture this whenever the document shows a separate ORDER/ORDERED column distinct from SHIP/SHIPPED. If the document shows only one quantity column, put it in `quantity` and set `quantity_ordered` to null.
     - Always populate both fields when both columns are visible, even if the numbers are equal — a short shipment (shipped < ordered) is meaningful and must be preserved.
 11) is_donation: set true if the document explicitly indicates the goods are a donation (e.g., a "- Donation" suffix on the customer line, a "Donation" label, or supplier-specific donation conventions). Set false if it explicitly indicates a purchase (e.g., "- Purchased" suffix, payment method, nonzero invoice total with a real bill-to). Leave null if the document doesn't say either way. Do NOT infer from supplier identity — that's handled downstream.
-12) approx_weight is the TOTAL pounds for the line item (not per-unit). Populate it whenever you can determine it:
+12) Date capture — invoice_date vs delivery_date:
+    - `invoice_date` = the date printed on the invoice/document itself (labels vary: "Invoice date", "Order date", "Date"). Format YYYY-MM-DD.
+    - `delivery_date` = the date the goods physically shipped or arrived (labels vary: "Ship date", "Shipped on", "Delivered", "Received", "Ship On"). Format YYYY-MM-DD.
+    - When the document shows BOTH dates as distinct fields, capture each in the correct column — they are often different by days.
+    - **When the document shows only ONE date field, populate BOTH `invoice_date` and `delivery_date` with that same value.** Null values in either column create downstream ambiguity; dual-writing the single date is intentional. Supplier-specific prompts may override this default when they have concrete guidance.
+    - Never infer or synthesize a date — if you can't read one, leave both null.
+13) approx_weight is the TOTAL pounds for the line item (not per-unit). Populate it whenever you can determine it:
     a) If the document has an APPROX.WT. or Weight column (total pounds for the line), use that number directly.
     b) Otherwise, if the pack notation contains a weight unit (`#` / `LB` / `OZ`), derive total pounds from `quantity × pack_weight_per_case` using the Pack size notation guide below. Example: 10 cases of `BROCCOLI 20#` → 10 × 20 = 200 lb. Example: 20 cases of `BERRIES 12/6 OZ` → 20 × 12 × 6 / 16 = 90 lb.
     c) If the pack notation is count-only (`12 CT`, `48 CT`, etc.) with no weight unit, leave approx_weight null — do NOT guess piece weights.

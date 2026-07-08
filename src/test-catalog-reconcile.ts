@@ -5,6 +5,7 @@ function synth(supplier: ExtractionResult["supplier"], items: Array<Partial<Extr
   return {
     document_type: "invoice",
     supplier,
+    invoice_date: "2026-07-01",
     delivery_date: "2026-07-02",
     invoice_or_order_number: "TEST",
     destination_org: "RVFB",

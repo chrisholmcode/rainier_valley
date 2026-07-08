@@ -348,7 +348,7 @@ async function resolveSuggestion(rowIndex, status) {
 </body></html>`;
 }
 
-const EDITABLE_PER_SLIP = ["supplier", "document_type", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation"];
+const EDITABLE_PER_SLIP = ["supplier", "document_type", "invoice_date", "delivery_date", "invoice_or_order_number", "destination_org", "donor_org", "is_donation"];
 const EDITABLE_PER_ROW = [
   "item_code_raw",
   "item_name_raw",
@@ -408,6 +408,7 @@ export function buildSlipDetailHtml(params: {
     <dl>
       <dt>supplier</dt><dd>${textInput("supplier", slip.supplier, slipMetaRowIndex)}</dd>
       <dt>document_type</dt><dd>${selectInput("document_type", slip.document_type, slipMetaRowIndex, DOC_TYPE_OPTIONS)}</dd>
+      <dt>invoice_date</dt><dd>${textInput("invoice_date", slip.invoice_date, slipMetaRowIndex)}</dd>
       <dt>delivery_date</dt><dd>${textInput("delivery_date", slip.delivery_date, slipMetaRowIndex)}</dd>
       <dt>invoice_or_order_number</dt><dd>${textInput("invoice_or_order_number", slip.invoice_or_order_number, slipMetaRowIndex)}</dd>
       <dt>destination_org</dt><dd>${textInput("destination_org", slip.destination_org, slipMetaRowIndex)}</dd>

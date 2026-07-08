@@ -10,6 +10,16 @@ const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
 const headersInitialized = new Set<string>();
 const tabsKnownToExist = new Set<string>();
 
+function indexToColumnLetter(col0: number): string {
+  let n = col0;
+  let s = "";
+  do {
+    s = String.fromCharCode(65 + (n % 26)) + s;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return s;
+}
+
 async function ensureTabExists(worksheetName: string): Promise<void> {
   if (tabsKnownToExist.has(worksheetName)) return;
   const sheets = google.sheets({ version: "v4", auth });
@@ -73,6 +83,7 @@ export const SHEET_HEADERS = [
   "created_at",
   "supplier",
   "document_type",
+  "invoice_date",
   "delivery_date",
   "invoice_or_order_number",
   "destination_org",
@@ -224,6 +235,7 @@ export async function appendExtractionRows(params: {
     new Date().toISOString(),
     extraction.supplier,
     extraction.document_type,
+    extraction.invoice_date,
     extraction.delivery_date,
     extraction.invoice_or_order_number,
     extraction.destination_org,
@@ -257,6 +269,7 @@ export async function appendExtractionRows(params: {
     new Date().toISOString(),
     extraction.supplier,
     extraction.document_type,
+    extraction.invoice_date,
     extraction.delivery_date,
     extraction.invoice_or_order_number,
     extraction.destination_org,
@@ -292,6 +305,7 @@ export async function appendExtractionRows(params: {
       new Date().toISOString(),
       extraction.supplier,
       extraction.document_type,
+      extraction.invoice_date,
       extraction.delivery_date,
       extraction.invoice_or_order_number,
       extraction.destination_org,
@@ -324,9 +338,42 @@ export async function appendExtractionRows(params: {
 
   const sheets = google.sheets({ version: "v4", auth });
 
+  // Dedupe: skip if the Inbound Delivery Log already has rows for this
+  // photo_url OR (supplier, invoice_or_order_number). Re-uploads after a
+  // Railway restart bypass the in-memory dedupes in index.ts, so this is
+  // the durable guard. Update-in-place is not the right move here because a
+  // reviewer may have already corrected fields on the existing rows.
+  const supIdx = SHEET_HEADERS.indexOf("supplier");
+  const invIdx = SHEET_HEADERS.indexOf("invoice_or_order_number");
+  const photoIdx = SHEET_HEADERS.indexOf("photo_url");
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.GOOGLE_WORKSHEET_NAME}!A:${indexToColumnLetter(SHEET_HEADERS.length - 1)}`
+  });
+  const existingRows = existing.data.values ?? [];
+  for (let i = 1; i < existingRows.length; i++) {
+    const r = existingRows[i];
+    const rPhoto = r[photoIdx] ?? "";
+    const rSupplier = r[supIdx] ?? "";
+    const rInvoice = r[invIdx] ?? "";
+    if (rPhoto && photoUrl && rPhoto === photoUrl) {
+      console.log(`appendExtractionRows: skipping — photo_url already logged (${photoUrl})`);
+      return 0;
+    }
+    if (
+      extraction.supplier !== "unknown" &&
+      extraction.invoice_or_order_number &&
+      rSupplier === extraction.supplier &&
+      rInvoice === extraction.invoice_or_order_number
+    ) {
+      console.log(`appendExtractionRows: skipping — ${extraction.supplier}/${extraction.invoice_or_order_number} already logged`);
+      return 0;
+    }
+  }
+
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.GOOGLE_WORKSHEET_NAME}!A:AD`,
+    range: `${env.GOOGLE_WORKSHEET_NAME}!A:${indexToColumnLetter(SHEET_HEADERS.length - 1)}`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: allRows
@@ -340,6 +387,7 @@ export async function appendExtractionRows(params: {
 
 export const SUMMARY_SHEET_HEADERS = [
   "created_at",
+  "invoice_date",
   "delivery_date",
   "supplier",
   "weight_lb",
@@ -442,6 +490,7 @@ export async function appendSummaryRow(params: {
 
   const row = [
     new Date().toISOString(),
+    extraction.invoice_date,
     extraction.delivery_date,
     extraction.supplier,
     rollup.weight_lb,
@@ -455,9 +504,46 @@ export async function appendSummaryRow(params: {
   ];
 
   const sheets = google.sheets({ version: "v4", auth });
+
+  // Dedupe: if a Summary row already exists for this photo_url OR
+  // (supplier, invoice_or_order_number), update in place instead of appending.
+  // Re-uploads of the same slip after a Railway restart bypass the in-memory
+  // dedupes in index.ts, so this is the durable guard.
+  const sSupIdx = SUMMARY_SHEET_HEADERS.indexOf("supplier");
+  const sInvIdx = SUMMARY_SHEET_HEADERS.indexOf("invoice_or_order_number");
+  const sPhotoIdx = SUMMARY_SHEET_HEADERS.indexOf("photo_url");
+  const supplier = extraction.supplier;
+  const invoice = extraction.invoice_or_order_number ?? "";
+  const summaryRange = `${env.SUMMARY_WORKSHEET_NAME}!A:${indexToColumnLetter(SUMMARY_SHEET_HEADERS.length - 1)}`;
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: summaryRange
+  });
+  const allRows = existing.data.values ?? [];
+  let matchRowIndex = -1;
+  for (let i = 1; i < allRows.length; i++) {
+    const r = allRows[i];
+    const rSupplier = r[sSupIdx] ?? "";
+    const rInvoice = r[sInvIdx] ?? "";
+    const rPhoto = r[sPhotoIdx] ?? "";
+    if (rPhoto && photoUrl && rPhoto === photoUrl) { matchRowIndex = i + 1; break; }
+    if (rSupplier === supplier && rInvoice && invoice && rInvoice === invoice) { matchRowIndex = i + 1; break; }
+  }
+
+  const lastCol = indexToColumnLetter(SUMMARY_SHEET_HEADERS.length - 1);
+  if (matchRowIndex !== -1) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+      range: `${env.SUMMARY_WORKSHEET_NAME}!A${matchRowIndex}:${lastCol}${matchRowIndex}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [row] }
+    });
+    return;
+  }
+
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.SUMMARY_WORKSHEET_NAME}!A:K`,
+    range: summaryRange,
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [row] }
   });
@@ -587,40 +673,73 @@ export async function readEodRows(params: { date?: string; limit?: number }): Pr
 export async function readDeliveryRows(params: { date?: string; supplier?: string; limit?: number }): Promise<DeliverySheetRow[]> {
   const { date, supplier, limit = 50 } = params;
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.GOOGLE_WORKSHEET_NAME}!A:AD` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.GOOGLE_WORKSHEET_NAME}!A:${indexToColumnLetter(SHEET_HEADERS.length - 1)}` });
   const rows = (res.data.values ?? []).slice(1);
+  const h = (name: string) => SHEET_HEADERS.indexOf(name);
+  const idxCreated = h("created_at");
+  const idxSupplier = h("supplier");
+  const idxDocType = h("document_type");
+  const idxInvoiceDate = h("invoice_date");
+  const idxDelivery = h("delivery_date");
+  const idxInv = h("invoice_or_order_number");
+  const idxDest = h("destination_org");
+  const idxItemCode = h("item_code_raw");
+  const idxItemName = h("item_name_raw");
+  const idxItemNorm = h("item_name_normalized");
+  const idxQtyOrd = h("quantity_ordered");
+  const idxQty = h("quantity");
+  const idxQtyRaw = h("quantity_raw");
+  const idxUnit = h("unit");
+  const idxPack = h("pack_size_raw");
+  const idxWeight = h("approx_weight");
+  const idxCat = h("category");
+  const idxCost = h("unit_cost");
+  const idxTotal = h("line_total");
+  const idxConf = h("confidence");
+  const idxFee = h("is_fee");
+  const idxNotes = h("notes");
+  const idxPhoto = h("photo_url");
+  const idxChannel = h("slack_channel");
+  const idxTs = h("slack_message_ts");
+  const idxUploader = h("uploaded_by");
+  const idxWarn = h("warnings_json");
+  const idxDonor = h("donor_org");
+  const idxDonation = h("is_donation");
+  const idxAppAt = h("approved_at");
+  const idxAppBy = h("approved_by");
   const mapped: DeliverySheetRow[] = rows.map((r, i) => ({
     rowIndex: i + 2,
-    created_at: r[0] ?? "",
-    supplier: r[1] ?? "",
-    document_type: r[2] ?? "",
-    delivery_date: r[3] ?? null,
-    invoice_or_order_number: r[4] ?? null,
-    destination_org: r[5] ?? null,
-    item_code_raw: r[6] ?? null,
-    item_name_raw: r[7] ?? null,
-    item_name_normalized: r[8] ?? null,
-    quantity_ordered: r[9] ?? null,
-    quantity: r[10] ?? null,
-    quantity_raw: r[11] ?? null,
-    unit: r[12] ?? null,
-    pack_size_raw: r[13] ?? null,
-    approx_weight: r[14] ?? null,
-    category: r[15] ?? null,
-    unit_cost: r[16] ?? null,
-    line_total: r[17] ?? null,
-    confidence: r[18] ?? null,
-    is_fee: r[19] ?? null,
-    notes: r[20] ?? null,
-    photo_url: r[21] ?? null,
-    slack_channel: r[22] ?? null,
-    slack_message_ts: r[23] ?? null,
-    uploaded_by: r[24] ?? null,
-    warnings_json: r[25] ?? null,
-    donor_org: r[26] ?? null,
-    is_donation: r[27] ?? null,
-    approved_at: r[28] ?? null,
-    approved_by: r[29] ?? null
+    created_at: r[idxCreated] ?? "",
+    supplier: r[idxSupplier] ?? "",
+    document_type: r[idxDocType] ?? "",
+    invoice_date: r[idxInvoiceDate] ?? null,
+    delivery_date: r[idxDelivery] ?? null,
+    invoice_or_order_number: r[idxInv] ?? null,
+    destination_org: r[idxDest] ?? null,
+    item_code_raw: r[idxItemCode] ?? null,
+    item_name_raw: r[idxItemName] ?? null,
+    item_name_normalized: r[idxItemNorm] ?? null,
+    quantity_ordered: r[idxQtyOrd] ?? null,
+    quantity: r[idxQty] ?? null,
+    quantity_raw: r[idxQtyRaw] ?? null,
+    unit: r[idxUnit] ?? null,
+    pack_size_raw: r[idxPack] ?? null,
+    approx_weight: r[idxWeight] ?? null,
+    category: r[idxCat] ?? null,
+    unit_cost: r[idxCost] ?? null,
+    line_total: r[idxTotal] ?? null,
+    confidence: r[idxConf] ?? null,
+    is_fee: r[idxFee] ?? null,
+    notes: r[idxNotes] ?? null,
+    photo_url: r[idxPhoto] ?? null,
+    slack_channel: r[idxChannel] ?? null,
+    slack_message_ts: r[idxTs] ?? null,
+    uploaded_by: r[idxUploader] ?? null,
+    warnings_json: r[idxWarn] ?? null,
+    donor_org: r[idxDonor] ?? null,
+    is_donation: r[idxDonation] ?? null,
+    approved_at: r[idxAppAt] ?? null,
+    approved_by: r[idxAppBy] ?? null
   }));
   const filtered = mapped.filter((r) => {
     if (date && r.delivery_date !== date) return false;
@@ -797,6 +916,7 @@ export interface SlipSummary {
   slipKey: string; // photo_url
   supplier: string;
   document_type: string;
+  invoice_date: string | null;
   delivery_date: string | null;
   invoice_or_order_number: string | null;
   destination_org: string | null;
@@ -844,6 +964,7 @@ export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
       slipKey: key,
       supplier: first.supplier,
       document_type: first.document_type,
+      invoice_date: first.invoice_date,
       delivery_date: first.delivery_date,
       invoice_or_order_number: first.invoice_or_order_number,
       destination_org: first.destination_org,
@@ -924,6 +1045,7 @@ export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Pro
   const extraction: ExtractionResult = {
     document_type: (first.document_type as ExtractionResult["document_type"]) ?? "unknown",
     supplier: (first.supplier as ExtractionResult["supplier"]) ?? "unknown",
+    invoice_date: first.invoice_date,
     delivery_date: first.delivery_date,
     invoice_or_order_number: first.invoice_or_order_number,
     destination_org: first.destination_org,
@@ -936,17 +1058,21 @@ export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Pro
   };
 
   const sheets = google.sheets({ version: "v4", auth });
+  const lastSumCol = indexToColumnLetter(SUMMARY_SHEET_HEADERS.length - 1);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.SUMMARY_WORKSHEET_NAME}!A:Z`
+    range: `${env.SUMMARY_WORKSHEET_NAME}!A:${lastSumCol}`
   });
   const allRows = res.data.values ?? [];
+  const sSupIdx = SUMMARY_SHEET_HEADERS.indexOf("supplier");
+  const sInvIdx = SUMMARY_SHEET_HEADERS.indexOf("invoice_or_order_number");
+  const sPhotoIdx = SUMMARY_SHEET_HEADERS.indexOf("photo_url");
   let matchRowIndex = -1;
   for (let i = 1; i < allRows.length; i++) {
     const row = allRows[i];
-    const rSupplier = row[2] ?? "";
-    const rInvoice = row[5] ?? "";
-    const rPhoto = row[10] ?? "";
+    const rSupplier = row[sSupIdx] ?? "";
+    const rInvoice = row[sInvIdx] ?? "";
+    const rPhoto = row[sPhotoIdx] ?? "";
     if (rPhoto && photoUrl && rPhoto === photoUrl) { matchRowIndex = i + 1; break; }
     if (rSupplier === supplier && rInvoice && invoice && rInvoice === invoice) { matchRowIndex = i + 1; break; }
   }
@@ -959,6 +1085,7 @@ export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Pro
   const rollup = rollupExtraction(extraction);
   const row = [
     new Date().toISOString(),
+    extraction.invoice_date,
     extraction.delivery_date,
     extraction.supplier,
     rollup.weight_lb,
@@ -972,7 +1099,7 @@ export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Pro
   ];
   await sheets.spreadsheets.values.update({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.SUMMARY_WORKSHEET_NAME}!A${matchRowIndex}:K${matchRowIndex}`,
+    range: `${env.SUMMARY_WORKSHEET_NAME}!A${matchRowIndex}:${lastSumCol}${matchRowIndex}`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [row] }
   });
