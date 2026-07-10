@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx tests/extraction.spec.ts",
-    "backfill:is-donation": "tsx src/backfill-is-donation.ts"
+    "backfill:is-donation": "tsx src/backfill-is-donation.ts",
+    "tune:prompts": "tsx src/prompt-tuner.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
