@@ -228,18 +228,20 @@ export async function appendExtractionRows(params: {
   slackChannel: string;
   slackMessageTs: string;
   uploadedBy: string;
+  skipAutoApprove?: boolean;
 }): Promise<number> {
-  const { extraction, photoUrl, slackChannel, slackMessageTs, uploadedBy } = params;
+  const { extraction, photoUrl, slackChannel, slackMessageTs, uploadedBy, skipAutoApprove } = params;
 
   // Auto-approve on write if the slip's min line-item confidence meets the
   // review threshold. Reviewers can still un-approve via the /review UI (any
   // edit clears approval). "auto-approved" tags the source so we can tell
-  // human vs machine approvals apart in the sheet.
+  // human vs machine approvals apart in the sheet. Callers can force
+  // human review by passing skipAutoApprove (e.g., possible duplicate).
   const lineConfidences = extraction.line_items
     .map((li) => li.confidence)
     .filter((c): c is number => typeof c === "number" && Number.isFinite(c));
   const minConfidence = lineConfidences.length ? Math.min(...lineConfidences) : null;
-  const autoApprove = minConfidence !== null && minConfidence >= env.REVIEW_CONFIDENCE_THRESHOLD;
+  const autoApprove = !skipAutoApprove && minConfidence !== null && minConfidence >= env.REVIEW_CONFIDENCE_THRESHOLD;
   const approvedAt = autoApprove ? new Date().toISOString() : null;
   const approvedBy = autoApprove ? "auto-approved" : null;
 
@@ -943,6 +945,25 @@ export interface SlipSummary {
   approvedAt: string | null;
   approvedBy: string | null;
   uploaded_by: string | null;
+  flaggedForReview: boolean;
+}
+
+export function rescueDedupeKey(supplier: string | null, donorOrg: string | null, deliveryDate: string | null): string | null {
+  if (!supplier || !donorOrg || !deliveryDate) return null;
+  if (supplier !== "food_lifeline") return null;
+  const donor = donorOrg.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!donor) return null;
+  return `food_lifeline:${donor}:${deliveryDate}`;
+}
+
+export async function readRescueDedupeKeys(): Promise<Set<string>> {
+  const rows = await readDeliveryRows({ limit: 100000 });
+  const keys = new Set<string>();
+  for (const r of rows) {
+    const k = rescueDedupeKey(r.supplier, r.donor_org, r.delivery_date);
+    if (k) keys.add(k);
+  }
+  return keys;
 }
 
 export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
@@ -960,6 +981,7 @@ export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
     let allApproved = true;
     let approvedAt: string | null = null;
     let approvedBy: string | null = null;
+    let flaggedForReview = false;
     for (const r of group) {
       const c = r.confidence ? parseFloat(r.confidence) : NaN;
       if (Number.isFinite(c)) {
@@ -970,6 +992,9 @@ export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
       } else {
         approvedAt = r.approved_at;
         approvedBy = r.approved_by;
+      }
+      if (r.warnings_json && r.warnings_json.includes("possible duplicate")) {
+        flaggedForReview = true;
       }
     }
     summaries.push({
@@ -990,7 +1015,8 @@ export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
       approved: allApproved && group.length > 0,
       approvedAt,
       approvedBy,
-      uploaded_by: first.uploaded_by
+      uploaded_by: first.uploaded_by,
+      flaggedForReview
     });
   }
   summaries.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));

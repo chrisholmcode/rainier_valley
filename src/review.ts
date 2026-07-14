@@ -21,6 +21,7 @@ export function decodeSlipKey(encoded: string): string {
 
 function statusBadge(slip: SlipSummary): string {
   if (slip.approved) return `<span class="badge badge-approved">approved</span>`;
+  if (slip.flaggedForReview) return `<span class="badge badge-pending" title="Possible duplicate — see source_warnings">possible dupe</span>`;
   return `<span class="badge badge-pending">pending</span>`;
 }
 
@@ -173,12 +174,16 @@ export function buildReviewListHtml(params: {
 }): string {
   const { slips, pendingOnly, threshold, generatedAt, pendingSuggestionCount } = params;
 
-  // "Needs review" = below threshold AND not yet approved. Worst confidence first.
+  // "Needs review" = not yet approved AND (below threshold OR flagged, e.g. possible duplicate).
+  // Worst confidence first; flagged slips sort to the top.
   const needsReview = slips
-    .filter((s) => !s.approved && s.minConfidence !== null && s.minConfidence < threshold)
-    .sort((a, b) => (a.minConfidence ?? 1) - (b.minConfidence ?? 1));
+    .filter((s) => !s.approved && (s.flaggedForReview || (s.minConfidence !== null && s.minConfidence < threshold)))
+    .sort((a, b) => {
+      if (a.flaggedForReview !== b.flaggedForReview) return a.flaggedForReview ? -1 : 1;
+      return (a.minConfidence ?? 1) - (b.minConfidence ?? 1);
+    });
   const completed = slips
-    .filter((s) => s.approved || s.minConfidence === null || s.minConfidence >= threshold)
+    .filter((s) => !(!s.approved && (s.flaggedForReview || (s.minConfidence !== null && s.minConfidence < threshold))))
     .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
 
   const queueCls = pendingOnly ? "btn active" : "btn";

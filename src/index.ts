@@ -27,6 +27,8 @@ import {
   readPromptSuggestions,
   updatePromptSuggestionStatus,
   ensurePromptSuggestionsHeader,
+  readRescueDedupeKeys,
+  rescueDedupeKey,
   SHEET_HEADERS
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
@@ -52,6 +54,7 @@ interface ProcessedFileExtraction {
   fileName: string;
   photoUrl: string;
   extraction: ExtractionResult;
+  flagPossibleDuplicate?: boolean;
 }
 
 interface ProcessedWhiteboardFile {
@@ -82,6 +85,10 @@ const processedFileIds = new Set<string>();
 const processedContentHashes = new Set<string>();
 const processedInvoiceKeys = new Set<string>();
 const processedMessageKeys = new Set<string>();
+// Natural-key dedupe for Food Lifeline grocery rescue: `food_lifeline:<donor_lower>:<delivery_date>`.
+// These forms have no invoice number, so we dedupe on donor + date. Populated from
+// the sheet at boot so the check survives Railway restarts.
+const processedRescueKeys = new Set<string>();
 
 interface PendingEodEntry {
   channel: string;
@@ -328,7 +335,8 @@ async function processInvoiceBatch(params: {
         photoUrl: file.photoUrl,
         slackChannel: channel,
         slackMessageTs: messageTs,
-        uploadedBy
+        uploadedBy,
+        skipAutoApprove: file.flagPossibleDuplicate
       });
       totalRows += rowsAdded;
       await appendSummaryRow({ extraction: file.extraction, photoUrl: file.photoUrl });
@@ -579,12 +587,28 @@ app.event("message", async ({ event, client, logger }) => {
         }
       }
 
+      const rescueKey = rescueDedupeKey(extraction.supplier, extraction.donor_org, extraction.delivery_date);
+      let flagPossibleDuplicate = false;
+      if (rescueKey && processedRescueKeys.has(rescueKey)) {
+        flagPossibleDuplicate = true;
+        extraction.source_warnings.push(
+          `possible duplicate — an existing food_lifeline rescue slip for ${extraction.donor_org} on ${extraction.delivery_date} was already logged`
+        );
+        await client.chat.postMessage({
+          channel: message.channel,
+          thread_ts: message.ts,
+          text: `⚠️ Possible duplicate — we already have a *${extraction.donor_org}* rescue slip for *${extraction.delivery_date}*. Logging anyway and flagging for review at https://review.loadslip.com`
+        });
+      }
+      if (rescueKey) processedRescueKeys.add(rescueKey);
+
       processedFiles.push({
         fileId: file.id,
         contentHash,
         fileName: file.name,
         photoUrl: file.url_private_download,
-        extraction
+        extraction,
+        flagPossibleDuplicate
       });
     }
 
@@ -1641,6 +1665,14 @@ async function start(): Promise<void> {
     await ensurePromptSuggestionsHeader();
   } catch (err) {
     console.warn(`ensurePromptSuggestionsHeader failed at boot: ${(err as Error).message}`);
+  }
+
+  try {
+    const rescueKeys = await readRescueDedupeKeys();
+    for (const k of rescueKeys) processedRescueKeys.add(k);
+    console.log(`Loaded ${rescueKeys.size} existing food_lifeline rescue dedupe key(s).`);
+  } catch (err) {
+    console.warn(`readRescueDedupeKeys failed at boot: ${(err as Error).message}`);
   }
 
   if (env.SLACK_APP_TOKEN) {
