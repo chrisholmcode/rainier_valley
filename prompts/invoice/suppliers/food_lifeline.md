@@ -46,9 +46,9 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
 - For each row that has a non-empty Pounds value, emit ONE line item:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
-  - quantity = null. quantity_raw = the verbatim contents of the Pounds cell (all visible numbers as one string, e.g., "151 123 108 40" — preserve so the human can audit).
   - unit = "lb".
   - approx_weight = the final/accepted pounds for that row, parsed per the **Running-tally rule** below.
+  - quantity = the same value as approx_weight (on grocery rescue forms the Pounds cell IS both the weight and the billed quantity — mirror it into both fields). quantity_raw = the verbatim contents of the Pounds cell (all visible numbers as one string, e.g., "151 123 108 40" — preserve so the human can audit).
   - category = per the table above.
   - notes = brief description of what you saw (e.g., "running tally 151→123→108→40, taking 40 as last value" or "two weighings summed: 144+27=171").
   - confidence = lower (0.6–0.8) when the cell has crossed-out / overwritten numbers, higher (0.9+) when it's a single clean number.
