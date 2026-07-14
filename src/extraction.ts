@@ -251,9 +251,12 @@ export async function extractFromImage(params: {
   const isPdf = isPdfMime(mimeType);
   const sourceKind = isPdf ? "PDF" : "image";
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const userPrompt = `${SUPPLIER_PROMPTS[supplierHint]}
 
 Filename: ${filename}
+Today's date: ${today}
 
 Analyze the attached ${sourceKind}, then call the ${EXTRACTION_TOOL_NAME} tool with the extracted delivery line items.`;
 

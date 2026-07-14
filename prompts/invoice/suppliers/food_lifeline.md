@@ -27,7 +27,7 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
 - document_type = "manifest". supplier = "food_lifeline". is_donation = true.
 - **donor_org**: Read the **Donor** field at the top. Typical format is `<Store> - <Neighborhood>` (e.g., `QFC-MI` for QFC Mercer Island, `Safeway-RB` for Safeway Rainier Beach). Capture verbatim.
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
-- delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD; assume 20YY when only two digits are given. Populate BOTH `invoice_date` and `delivery_date` with that value.
+- delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD. If only two digits are given for the year, assume 20YY. If no year is written at all (bare M/D like "7/1"), use the year from `Today's date` in the user message — these forms are filled the day of pickup, so year-boundary edge cases (e.g., a bare "12/28" seen in early January) should use the previous year. Populate BOTH `invoice_date` and `delivery_date` with the resolved value.
 - destination_org: The Agency field if filled in; otherwise null. (Often blank — the destination is implicit.)
 - invoice_or_order_number: null (these forms have no number).
 - Predefined category rows (visible on every form):
