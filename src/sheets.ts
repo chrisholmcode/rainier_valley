@@ -110,7 +110,13 @@ export const SHEET_HEADERS = [
   "donor_org",
   "is_donation",
   "approved_at",
-  "approved_by"
+  "approved_by",
+  "donor_name",
+  "donor_email",
+  "donor_anonymous",
+  "send_receipt",
+  "is_food_drive",
+  "is_food"
 ];
 
 export async function ensureSheetHeader(): Promise<void> {
@@ -214,6 +220,23 @@ export async function appendExtractionTrace(params: {
 // silently strips leading zeros from item SKUs (e.g. Caruso "00683" -> 683).
 // Prefixing with an apostrophe forces text storage; the apostrophe itself is
 // stripped from the displayed value.
+// True for food subcategories, false for non_food, null for unknown/other.
+// Fees are always non-food (see appendExtractionRows fee path).
+function categoryIsFood(category: string | null | undefined): boolean | null {
+  switch (category) {
+    case "produce":
+    case "meat_protein":
+    case "dairy":
+    case "shelf_stable":
+    case "frozen":
+      return true;
+    case "non_food":
+      return false;
+    default:
+      return null;
+  }
+}
+
 function asSheetCode(v: string | null): string | null {
   if (v == null) return null;
   const s = String(v).trim();
@@ -276,7 +299,13 @@ export async function appendExtractionRows(params: {
     extraction.donor_org,
     extraction.is_donation,
     approvedAt,
-    approvedBy
+    approvedBy,
+    null,
+    null,
+    null,
+    null,
+    null,
+    categoryIsFood(item.category)
   ]);
 
   const feeRows = extraction.fees.map((fee) => [
@@ -310,7 +339,13 @@ export async function appendExtractionRows(params: {
     extraction.donor_org,
     extraction.is_donation,
     approvedAt,
-    approvedBy
+    approvedBy,
+    null,
+    null,
+    null,
+    null,
+    null,
+    false
   ]);
 
   const allRows = [...rows, ...feeRows];
@@ -345,6 +380,12 @@ export async function appendExtractionRows(params: {
       JSON.stringify(extraction.source_warnings),
       extraction.donor_org,
       extraction.is_donation,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
       null,
       null
     ]);
@@ -395,6 +436,107 @@ export async function appendExtractionRows(params: {
   });
 
   return allRows.length;
+}
+
+// ── In-kind donation intake (web form → one delivery row + one summary row) ──
+
+export interface InKindDonationSubmission {
+  submissionId: string;
+  donorName: string;
+  donorEmail: string;
+  donorAnonymous: boolean;
+  sendReceipt: boolean;
+  isFoodDrive: boolean;
+  foodDriveOrg: string | null;
+  category: "food" | "non_food";
+  approxWeightLb: number | null;
+  quantity: number | null;
+  unit: string | null;
+  notes: string | null;
+  submittedBy: string;
+}
+
+export async function appendInKindDonationRow(sub: InKindDonationSubmission): Promise<void> {
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const displayName = sub.donorAnonymous ? "Anonymous" : sub.donorName;
+  const rowCategory = sub.category === "food" ? "unknown" : "non_food";
+  const itemName = sub.category === "food" ? "In-kind food donation" : "In-kind non-food donation";
+  const row = [
+    now,
+    "in_kind",
+    "in_kind_donation",
+    today,
+    today,
+    sub.submissionId,
+    "Rainier Valley Food Bank",
+    null,
+    itemName,
+    itemName,
+    null,
+    sub.quantity,
+    sub.quantity !== null ? String(sub.quantity) : null,
+    sub.unit,
+    null,
+    sub.approxWeightLb,
+    rowCategory,
+    null,
+    null,
+    1,
+    false,
+    sub.notes,
+    `donate://${sub.submissionId}`,
+    "web-donate",
+    sub.submissionId,
+    sub.submittedBy,
+    JSON.stringify([]),
+    sub.foodDriveOrg,
+    true,
+    now,
+    "auto-approved",
+    displayName,
+    sub.donorEmail,
+    sub.donorAnonymous,
+    sub.sendReceipt,
+    sub.isFoodDrive,
+    sub.category === "food"
+  ];
+  if (row.length !== SHEET_HEADERS.length) {
+    throw new Error(`appendInKindDonationRow: row width ${row.length} != SHEET_HEADERS ${SHEET_HEADERS.length}`);
+  }
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.GOOGLE_WORKSHEET_NAME}!A:${indexToColumnLetter(SHEET_HEADERS.length - 1)}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [row] }
+  });
+}
+
+export async function appendInKindSummaryRow(sub: InKindDonationSubmission): Promise<void> {
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const row = [
+    now,
+    today,
+    today,
+    "in_kind",
+    sub.approxWeightLb ?? null,
+    "lb",
+    sub.submissionId,
+    sub.category,
+    sub.category === "food",
+    0,
+    true,
+    `donate://${sub.submissionId}`
+  ];
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.SUMMARY_WORKSHEET_NAME}!A:${indexToColumnLetter(SUMMARY_SHEET_HEADERS.length - 1)}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [row] }
+  });
 }
 
 // ── Inventory Summary sheet (one row per shipment, for Salesforce) ───────────
@@ -721,6 +863,12 @@ export async function readDeliveryRows(params: { date?: string; supplier?: strin
   const idxDonation = h("is_donation");
   const idxAppAt = h("approved_at");
   const idxAppBy = h("approved_by");
+  const idxDonorName = h("donor_name");
+  const idxDonorEmail = h("donor_email");
+  const idxDonorAnon = h("donor_anonymous");
+  const idxSendReceipt = h("send_receipt");
+  const idxFoodDrive = h("is_food_drive");
+  const idxIsFood = h("is_food");
   const mapped: DeliverySheetRow[] = rows.map((r, i) => ({
     rowIndex: i + 2,
     created_at: r[idxCreated] ?? "",
@@ -753,7 +901,13 @@ export async function readDeliveryRows(params: { date?: string; supplier?: strin
     donor_org: r[idxDonor] ?? null,
     is_donation: r[idxDonation] ?? null,
     approved_at: r[idxAppAt] ?? null,
-    approved_by: r[idxAppBy] ?? null
+    approved_by: r[idxAppBy] ?? null,
+    donor_name: r[idxDonorName] ?? null,
+    donor_email: r[idxDonorEmail] ?? null,
+    donor_anonymous: r[idxDonorAnon] ?? null,
+    send_receipt: r[idxSendReceipt] ?? null,
+    is_food_drive: r[idxFoodDrive] ?? null,
+    is_food: r[idxIsFood] ?? null
   }));
   const filtered = mapped.filter((r) => {
     if (date && r.delivery_date !== date) return false;

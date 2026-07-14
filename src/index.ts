@@ -7,6 +7,8 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { env } from "./config.js";
 import {
   appendExtractionRows,
+  appendInKindDonationRow,
+  appendInKindSummaryRow,
   ensureSheetHeader,
   appendEodRows,
   ensureEodSheetHeader,
@@ -34,6 +36,7 @@ import {
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
 import { buildLandingHtml } from "./landing.js";
+import { buildDonateHtml, parseDonateFormBody } from "./donate.js";
 import {
   extractFromImage,
   extractFromText,
@@ -1551,6 +1554,54 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
   }
 }
 
+async function handleDonateGetRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+  const staffEmail = await requestUserEmail(req);
+  const html = buildDonateHtml({ staffEmail });
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(html);
+}
+
+async function handleDonatePostRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+  const staffEmail = (await requestUserEmail(req)) ?? "unknown";
+  try {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const body = Buffer.concat(chunks).toString("utf8");
+    const { submission, errors } = parseDonateFormBody(body);
+    if (errors.length) {
+      const html = buildDonateHtml({ staffEmail, notice: { kind: "err", text: errors.join(" ") } });
+      res.writeHead(400, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(html);
+      return;
+    }
+    const submissionId = `donate-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const full = { ...submission, submissionId, submittedBy: staffEmail };
+    await ensureSheetHeader();
+    await ensureSummarySheetHeader();
+    await appendInKindDonationRow(full);
+    await appendInKindSummaryRow(full);
+    const donorLabel = submission.donorAnonymous ? "Anonymous donor" : submission.donorName || "donor";
+    const html = buildDonateHtml({
+      staffEmail,
+      notice: { kind: "ok", text: `Logged donation from ${donorLabel}. Ready for the next one.` }
+    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Donate submit error:", (err as Error).message);
+    const html = buildDonateHtml({
+      staffEmail,
+      notice: { kind: "err", text: `Could not log donation: ${(err as Error).message}` }
+    });
+    res.writeHead(500, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  }
+}
+
 function startHttpServer(): void {
   const server = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
     const path = (req.url ?? "/").split("?")[0];
@@ -1572,6 +1623,16 @@ function startHttpServer(): void {
 
     if (req.method === "GET" && path === "/review") {
       await handleReviewListRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/donate") {
+      await handleDonateGetRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/donate") {
+      await handleDonatePostRequest(req, res);
       return;
     }
 
@@ -1643,7 +1704,7 @@ function startHttpServer(): void {
   server.listen(port, () => {
     const routes: string[] = [];
     if (env.VOICE_WEBHOOK_SECRET) routes.push("/voice");
-    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review");
+    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review", "/donate");
     const authModes: string[] = [];
     if (cfJwks) authModes.push("cf-access-jwt");
     if (env.DASHBOARD_TOKEN) authModes.push("token");

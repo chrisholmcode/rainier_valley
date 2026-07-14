@@ -62,6 +62,7 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   costco: loadPrompt("invoice/suppliers/costco.md"),
   food_lifeline: loadPrompt("invoice/suppliers/food_lifeline.md"),
   grand_central: loadPrompt("invoice/suppliers/grand_central.md"),
+  in_kind: loadPrompt("invoice/suppliers/unknown.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
   terrebonne: loadPrompt("invoice/suppliers/terrebonne.md"),

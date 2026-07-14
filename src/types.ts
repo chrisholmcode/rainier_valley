@@ -1,4 +1,4 @@
-export type Supplier = "carusos" | "charlies" | "costco" | "food_lifeline" | "grand_central" | "nw_harvest" | "pacific" | "terrebonne" | "weigelt" | "unknown";
+export type Supplier = "carusos" | "charlies" | "costco" | "food_lifeline" | "grand_central" | "in_kind" | "nw_harvest" | "pacific" | "terrebonne" | "weigelt" | "unknown";
 
 export type ProgramType = "home_delivery" | "in_person_shopping" | "pre_made_bags" | "unknown";
 
@@ -91,6 +91,12 @@ export interface DeliverySheetRow {
   is_donation: string | null;
   approved_at: string | null;
   approved_by: string | null;
+  donor_name: string | null;
+  donor_email: string | null;
+  donor_anonymous: string | null;
+  send_receipt: string | null;
+  is_food_drive: string | null;
+  is_food: string | null;
 }
 
 export interface EodLineItem {
