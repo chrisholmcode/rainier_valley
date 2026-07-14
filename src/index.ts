@@ -316,18 +316,6 @@ async function processInvoiceBatch(params: {
     `📦 *Inbound Extraction* — Files: *${processedFiles.length}* | Line items: *${summary.lineItems}* | Fees: *${summary.fees}*\n` +
     `${confidenceEmoji} Avg confidence: *${confidencePct}%*`;
 
-  if (summary.avgConfidence < CONFIDENCE_THRESHOLD) {
-    await client.chat.postMessage({
-      channel,
-      thread_ts: messageTs,
-      text:
-        `${headerLine}\n\n${tableText}\n\n` +
-        `❌ *Confidence too low* (${confidencePct}% < ${Math.round(CONFIDENCE_THRESHOLD * 100)}%). ` +
-        `The photo wasn't clear enough — please retake (good lighting, flat page, full document in frame) and try again. Nothing was logged.`
-    });
-    return;
-  }
-
   try {
     await ensureSheetHeader();
     await ensureSummarySheetHeader();
@@ -358,10 +346,14 @@ async function processInvoiceBatch(params: {
     const unreadableFeesLine = summary.unreadableFees.length
       ? `\n⚠️ *Unreadable fee amount${summary.unreadableFees.length > 1 ? "s" : ""}* — fill in manually in the sheet: ${summary.unreadableFees.map((d) => `_${d}_`).join(", ")}`
       : "";
+    const needsReview = summary.avgConfidence < env.REVIEW_CONFIDENCE_THRESHOLD;
+    const statusLine = needsReview
+      ? `⚠️ *Low confidence (${confidencePct}%)* — logged ${totalRows} row(s), flagged for review at https://review.loadslip.com`
+      : `✅ *Logged ${totalRows} row(s) to Google Sheets.*`;
     await client.chat.postMessage({
       channel,
       thread_ts: messageTs,
-      text: `${headerLine}\n\n${tableText}\n\n✅ *Logged ${totalRows} row(s) to Google Sheets.*${unreadableFeesLine}`
+      text: `${headerLine}\n\n${tableText}\n\n${statusLine}${unreadableFeesLine}`
     });
   } catch (sheetsError) {
     console.error("Google Sheets error:", sheetsError);
