@@ -559,6 +559,13 @@ app.event("message", async ({ event, client, logger }) => {
         );
       }
 
+      if (!extraction.destination_org || !extraction.destination_org.trim()) {
+        extraction.destination_org = "Rainier Valley Food Bank";
+        extraction.source_warnings.push(
+          `destination_org not found on document — defaulted to Rainier Valley Food Bank`
+        );
+      }
+
       if (extraction.invoice_or_order_number && extraction.supplier !== "unknown") {
         const invoiceKey = `${extraction.supplier}:${extraction.invoice_or_order_number}`;
         if (processedInvoiceKeys.has(invoiceKey)) {
