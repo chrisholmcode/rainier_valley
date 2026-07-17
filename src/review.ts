@@ -128,6 +128,11 @@ input.dirty, select.dirty { background: var(--warn-bg); }
 .row-blank td { opacity: 0.45; transition: opacity 0.15s; }
 .row-blank td input, .row-blank td select { opacity: 1; }
 .row-blank.row-touched td { opacity: 1; }
+/* Duplicate rescue row labels — warn but don't block. */
+select.row-label-dup { border-color: var(--danger); box-shadow: 0 0 0 2px var(--danger-bg); }
+tr.row-label-dup-row td { background: var(--danger-bg); }
+.dup-banner { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger);
+              border-radius: var(--radius-sm); padding: 8px 12px; margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 
 /* Editable line-items table — wider, with horizontal scroll */
 .line-items-card { overflow-x: auto; }
@@ -575,6 +580,7 @@ ${FONT_HEAD_LINKS}
       <h3 style="margin-top:0;">Line items</h3>
       ${rescue
         ? `<p class="muted" style="font-size:12px; margin:0 0 12px;">Grocery rescue slip — pick the category row from the form, then edit Pounds. Saving Pounds fills quantity + approx_weight together; changing the row label re-tags item_name + category.</p>
+           <div class="dup-banner" id="rescue-dup-banner" style="display:none;">⚠️ Two or more rows share the same category label. Each rescue slip should have one row per category.</div>
            <table>
              <thead><tr>
                <th>Category row</th><th>Pounds (lb)</th><th>Notes</th><th>Conf</th>
@@ -651,11 +657,34 @@ function showToast(msg, isError) {
   setTimeout(() => { t.className = 'toast' + (isError ? ' error' : ''); }, 2000);
 }
 
+function checkRescueLabelDupes() {
+  const selects = document.querySelectorAll('select[data-field="row_label"]');
+  if (!selects.length) return;
+  const counts = new Map();
+  selects.forEach((s) => {
+    const v = (s.value || '').trim();
+    if (!v) return;
+    counts.set(v, (counts.get(v) || 0) + 1);
+  });
+  let dupeCount = 0;
+  selects.forEach((s) => {
+    const v = (s.value || '').trim();
+    const isDupe = v && counts.get(v) > 1;
+    if (isDupe) dupeCount++;
+    s.classList.toggle('row-label-dup', isDupe);
+    const tr = s.closest('tr');
+    if (tr) tr.classList.toggle('row-label-dup-row', isDupe);
+  });
+  const banner = document.getElementById('rescue-dup-banner');
+  if (banner) banner.style.display = dupeCount > 0 ? '' : 'none';
+}
+
 function markEdit(el) {
   el.classList.add('dirty');
   const original = el.dataset.original ?? el.defaultValue ?? '';
   if (el.value === original) {
     el.classList.remove('dirty');
+    if (el.dataset.field === 'row_label') checkRescueLabelDupes();
     return;
   }
   // Un-dim the containing skeleton row on first edit.
@@ -664,6 +693,7 @@ function markEdit(el) {
   // debounce save per element
   clearTimeout(el._t);
   el._t = setTimeout(() => saveEdit(el), 600);
+  if (el.dataset.field === 'row_label') checkRescueLabelDupes();
 }
 
 async function saveEdit(el) {
@@ -738,6 +768,8 @@ async function submitSuggestion() {
 document.querySelectorAll('input,select,textarea').forEach((el) => {
   el.dataset.original = el.value;
 });
+// Run duplicate check once at page load in case the extractor emitted dupes.
+checkRescueLabelDupes();
 </script>
 </body></html>`;
 }
