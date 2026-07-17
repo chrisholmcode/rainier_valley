@@ -40,7 +40,7 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
 - delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD. If only two digits are given for the year, assume 20YY. If no year is written at all (bare M/D like "7/1"), use the year from `Today's date` in the user message — these forms are filled the day of pickup, so year-boundary edge cases (e.g., a bare "12/28" seen in early January) should use the previous year. Populate BOTH `invoice_date` and `delivery_date` with the resolved value.
 - destination_org: The Agency field if filled in with a legible organization name; otherwise default to "Rainier Valley Food Bank" (the receiving food bank is implicit on rescue forms). Only use a different value if the Agency field clearly names another organization.
-- invoice_or_order_number: null (these forms have no number).
+- invoice_or_order_number: synthesize a shipment ID as `<donor_org>-<delivery_date>` (e.g. `QFC-MI-2026-07-13`, `Safeway-G-2026-07-01`). This is the unique key for one grocery rescue pickup — only one shipment per store per day, so the store+date combination is guaranteed unique. If either donor_org or delivery_date is unresolved (null), leave invoice_or_order_number null and let a reviewer fill it in.
 - Predefined category rows (visible on every form):
   | Row label | category | Notes |
   |---|---|---|
