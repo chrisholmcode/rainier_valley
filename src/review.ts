@@ -49,6 +49,18 @@ ${SHARED_CSS}
 
 /* Review-specific */
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.search-bar { display:flex; align-items:center; gap:12px; margin:0 0 20px; }
+.search-bar input[type="search"] {
+  flex:1; padding:10px 14px;
+  border:1px solid var(--line); border-radius: var(--radius-md);
+  background:#fff; color: var(--ink);
+  font-family: inherit; font-size:14px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.search-bar input[type="search"]:focus {
+  outline:none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg);
+}
+.search-count { font-size:12px; font-variant-numeric: tabular-nums; }
 .suggestion-item { padding:16px 20px; border-bottom:1px solid var(--border); }
 .suggestion-item:last-child { border-bottom:0; }
 .suggestion-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px; }
@@ -251,9 +263,32 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
 </header>
+<div class="search-bar">
+  <input type="search" id="slip-search" placeholder="Search slips — supplier, donor, invoice #, date…" autocomplete="off" oninput="filterSlips(this.value)">
+  <span class="muted search-count" id="search-count"></span>
+</div>
 ${body}
 <footer>RVFB Inventory · Slip Review · Edit history in Corrections Log tab</footer>
-</div></body></html>`;
+</div>
+<script>
+function filterSlips(q) {
+  const query = q.trim().toLowerCase();
+  const tables = document.querySelectorAll('.card table');
+  let totalVisible = 0;
+  tables.forEach((tbl) => {
+    const rows = tbl.querySelectorAll('tbody tr');
+    rows.forEach((tr) => {
+      const text = tr.textContent.toLowerCase();
+      const match = !query || text.includes(query);
+      tr.style.display = match ? '' : 'none';
+      if (match) totalVisible++;
+    });
+  });
+  const badge = document.getElementById('search-count');
+  badge.textContent = query ? totalVisible + ' match' + (totalVisible === 1 ? '' : 'es') : '';
+}
+</script>
+</body></html>`;
 }
 
 export function buildSuggestionsListHtml(params: {
