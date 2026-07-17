@@ -41,16 +41,20 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
 - delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD. If only two digits are given for the year, assume 20YY. If no year is written at all (bare M/D like "7/1"), use the year from `Today's date` in the user message — these forms are filled the day of pickup, so year-boundary edge cases (e.g., a bare "12/28" seen in early January) should use the previous year. Populate BOTH `invoice_date` and `delivery_date` with the resolved value.
 - destination_org: The Agency field if filled in with a legible organization name; otherwise default to "Rainier Valley Food Bank" (the receiving food bank is implicit on rescue forms). Only use a different value if the Agency field clearly names another organization.
 - invoice_or_order_number: synthesize a shipment ID as `<donor_org>-<delivery_date>` (e.g. `QFC-MI-2026-07-13`, `Safeway-G-2026-07-01`). This is the unique key for one grocery rescue pickup — only one shipment per store per day, so the store+date combination is guaranteed unique. If either donor_org or delivery_date is unresolved (null), leave invoice_or_order_number null and let a reviewer fill it in.
+- **Pick Up Temp (F) and Drop Off Temp (F) columns are NOT USED — ignore them entirely.** The RVFB team never fills these consistently and does not track them downstream. Do not extract, do not warn, do not derive anything from these two columns. Only the Product/Description column (row label) and the Pounds (lb) column matter.
+- **Hatched cells: distinguish between whole-row and temp-column hatching.**
+  - The two **temperature columns** are pre-printed hatched for shelf-stable rows (Canned/Dry Goods, Nonfood, sometimes Bakery / Coffee Kiosk) because temperature doesn't apply to non-perishables. This is **NOT** a signal that the category is unaccepted — it's the form design. If the Pounds cell for that row has a value, extract it normally. If it's blank, treat it as a blank skeleton row (per the rules below). **Never mark a row "not accepted" because its Temp columns are hatched.**
+  - Only when the **entire row label / Product name** is struck through, hatched over, or "X-ed" out end-to-end should you treat it as "category not accepted this pickup." This is much rarer.
 - Predefined category rows (visible on every form):
   | Row label | category | Notes |
   |---|---|---|
-  | Bakery | shelf_stable | Bread, pastries |
-  | Canned/Dry Goods | shelf_stable | |
-  | Coffee Kiosk | shelf_stable | Often hatched out (not accepted) |
+  | Bakery | shelf_stable | Bread, pastries. Temp columns often hatched (normal). |
+  | Canned/Dry Goods | shelf_stable | Temp columns ALWAYS hatched (normal for shelf-stable — category IS accepted). |
+  | Coffee Kiosk | shelf_stable | Temp columns often hatched. Rarely delivered. |
   | Dairy/Juice/Alt. Dairy | dairy | |
   | Frozen Foods | frozen | |
   | Meat | meat_protein | |
-  | Nonfood | non_food | Often hatched out (not accepted) |
+  | Nonfood | non_food | Temp columns ALWAYS hatched (normal — category IS accepted when Pounds is filled). |
   | Non-Meat Protein (eggs, tofu) | dairy | Eggs/tofu — best fit is dairy |
   | Prepared/Perishable | produce | |
   | Produce | produce | |
