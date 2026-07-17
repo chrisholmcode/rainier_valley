@@ -35,24 +35,34 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
   |---|---|---|
   | Bakery | shelf_stable | Bread, pastries |
   | Canned/Dry Goods | shelf_stable | |
-  | Coffee Kiosk | shelf_stable | Often hatched out (not accepted) — skip if hatched |
+  | Coffee Kiosk | shelf_stable | Often hatched out (not accepted) |
   | Dairy/Juice/Alt. Dairy | dairy | |
   | Frozen Foods | frozen | |
   | Meat | meat_protein | |
-  | Nonfood | non_food | Often hatched out (not accepted) — skip if hatched |
+  | Nonfood | non_food | Often hatched out (not accepted) |
   | Non-Meat Protein (eggs, tofu) | dairy | Eggs/tofu — best fit is dairy |
   | Prepared/Perishable | produce | |
   | Produce | produce | |
-- For each row that has a non-empty Pounds value, emit ONE line item:
+- **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
+- Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
-  - approx_weight = the final/accepted pounds for that row, parsed per the **Running-tally rule** below.
-  - quantity = the same value as approx_weight (on grocery rescue forms the Pounds cell IS both the weight and the billed quantity — mirror it into both fields). quantity_raw = the verbatim contents of the Pounds cell (all visible numbers as one string, e.g., "151 123 108 40" — preserve so the human can audit).
   - category = per the table above.
-  - notes = brief description of what you saw (e.g., "running tally 151→123→108→40, taking 40 as last value" or "two weighings summed: 144+27=171").
+- **Rows with a non-empty Pounds cell:**
+  - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below.
+  - quantity = same value as approx_weight (on grocery rescue forms the Pounds cell IS both the weight and the billed quantity — mirror it into both fields).
+  - quantity_raw = verbatim contents of the Pounds cell (all visible numbers as one string, e.g., "151 123 108 40" — preserve so the human can audit).
+  - notes = brief description (e.g., "running tally 151→123→108→40, taking 40 as last value" or "two weighings summed: 144+27=171").
   - confidence = lower (0.6–0.8) when the cell has crossed-out / overwritten numbers, higher (0.9+) when it's a single clean number.
-- Rows with no value (or with hatched/struck-through row labels indicating the category isn't accepted) => skip entirely.
+- **Rows with an empty Pounds cell (blank, no writing):**
+  - approx_weight = null, quantity = null, quantity_raw = null.
+  - notes = "no value on form".
+  - confidence = 0.95 (blank is unambiguous; do not drag the slip into review queue for a legitimately empty row).
+- **Rows with hatched/struck-through row label (category not accepted this pickup):**
+  - approx_weight = null, quantity = null, quantity_raw = null.
+  - notes = "row hatched out — category not accepted this pickup".
+  - confidence = 0.95.
 
 ### Running-tally rule for the Pounds column
 

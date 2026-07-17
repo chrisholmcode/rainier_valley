@@ -106,6 +106,10 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:foc
 }
 input.dirty, select.dirty { background: var(--warn-bg); }
 .fee-row { background: #fdfbeb; }
+/* Skeleton rows (no value on form / hatched-out category) — dimmed but fully editable. */
+.row-blank td { opacity: 0.45; transition: opacity 0.15s; }
+.row-blank td input, .row-blank td select { opacity: 1; }
+.row-blank.row-touched td { opacity: 1; }
 
 /* Editable line-items table — wider, with horizontal scroll */
 .line-items-card { overflow-x: auto; }
@@ -438,7 +442,11 @@ export function buildSlipDetailHtml(params: {
 
   const lineRows = rows.map((r) => {
     const isFee = /^(true|1|yes)$/i.test(r.is_fee ?? "");
-    return `<tr class="${isFee ? "fee-row" : ""}">
+    const isBlank = !isFee
+      && (r.quantity == null || r.quantity === "")
+      && (r.approx_weight == null || r.approx_weight === "");
+    const cls = [isFee ? "fee-row" : "", isBlank ? "row-blank" : ""].filter(Boolean).join(" ");
+    return `<tr class="${cls}">
       <td>${textInput("item_code_raw", r.item_code_raw, r.rowIndex)}</td>
       <td>${textInput("item_name_raw", r.item_name_raw, r.rowIndex)}</td>
       <td>${textInput("item_name_normalized", r.item_name_normalized, r.rowIndex)}</td>
@@ -571,6 +579,9 @@ function markEdit(el) {
     el.classList.remove('dirty');
     return;
   }
+  // Un-dim the containing skeleton row on first edit.
+  const tr = el.closest('tr');
+  if (tr && tr.classList.contains('row-blank')) tr.classList.add('row-touched');
   // debounce save per element
   clearTimeout(el._t);
   el._t = setTimeout(() => saveEdit(el), 600);
