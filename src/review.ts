@@ -457,6 +457,11 @@ function boolInput(name: string, value: string | null, rowIndex: number): string
   </select>`;
 }
 
+function isGroceryRescue(slip: SlipSummary): boolean {
+  // Food Lifeline has two subtypes; grocery rescue is the one with a donor_org.
+  return slip.supplier === "food_lifeline" && !!(slip.donor_org && slip.donor_org.trim());
+}
+
 export function buildSlipDetailHtml(params: {
   slip: SlipSummary;
   rows: DeliverySheetRow[];
@@ -482,30 +487,50 @@ export function buildSlipDetailHtml(params: {
     <p class="muted" style="margin-top:12px; font-size:12px;">Editing a slip-level field updates every row of this slip.</p>
   </div>`;
 
-  const lineRows = rows.map((r) => {
-    const isFee = /^(true|1|yes)$/i.test(r.is_fee ?? "");
-    const isBlank = !isFee
-      && (r.quantity == null || r.quantity === "")
-      && (r.approx_weight == null || r.approx_weight === "");
-    const cls = [isFee ? "fee-row" : "", isBlank ? "row-blank" : ""].filter(Boolean).join(" ");
-    return `<tr class="${cls}">
-      <td>${textInput("item_code_raw", r.item_code_raw, r.rowIndex)}</td>
-      <td>${textInput("item_name_raw", r.item_name_raw, r.rowIndex)}</td>
-      <td>${textInput("item_name_normalized", r.item_name_normalized, r.rowIndex)}</td>
-      <td>${textInput("quantity_ordered", r.quantity_ordered, r.rowIndex, "number")}</td>
-      <td>${textInput("quantity", r.quantity, r.rowIndex, "number")}</td>
-      <td>${textInput("quantity_raw", r.quantity_raw, r.rowIndex)}</td>
-      <td>${textInput("pack_size_raw", r.pack_size_raw, r.rowIndex)}</td>
-      <td>${selectInput("unit", r.unit, r.rowIndex, UNIT_OPTIONS)}</td>
-      <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
-      <td>${textInput("approx_weight", r.approx_weight, r.rowIndex, "number")}</td>
-      <td>${textInput("unit_cost", r.unit_cost, r.rowIndex, "number")}</td>
-      <td>${textInput("line_total", r.line_total, r.rowIndex, "number")}</td>
-      <td>${boolInput("is_fee", r.is_fee, r.rowIndex)}</td>
-      <td>${textInput("confidence", r.confidence, r.rowIndex, "number")}</td>
-      <td>${textInput("notes", r.notes, r.rowIndex)}</td>
-    </tr>`;
-  }).join("");
+  const rescue = isGroceryRescue(slip);
+
+  const lineRows = rescue
+    ? rows.map((r) => {
+        const isBlank = (r.quantity == null || r.quantity === "")
+          && (r.approx_weight == null || r.approx_weight === "");
+        const cls = isBlank ? "row-blank" : "";
+        // For grocery rescue slips, all quantity-shaped columns share one value
+        // (the Pounds cell on the paper form). We show a single editable
+        // "pounds" input; the server mirrors it into quantity, quantity_raw,
+        // and approx_weight on save.
+        const poundsValue = r.approx_weight ?? r.quantity ?? null;
+        return `<tr class="${cls}">
+          <td class="muted">${escapeHtml(r.item_name_normalized ?? r.item_name_raw ?? "")}</td>
+          <td>${textInput("pounds", poundsValue, r.rowIndex, "number")}</td>
+          <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
+          <td>${textInput("notes", r.notes, r.rowIndex)}</td>
+          <td class="muted">${r.confidence ? escapeHtml(String(Math.round(parseFloat(r.confidence) * 100)) + "%") : "—"}</td>
+        </tr>`;
+      }).join("")
+    : rows.map((r) => {
+        const isFee = /^(true|1|yes)$/i.test(r.is_fee ?? "");
+        const isBlank = !isFee
+          && (r.quantity == null || r.quantity === "")
+          && (r.approx_weight == null || r.approx_weight === "");
+        const cls = [isFee ? "fee-row" : "", isBlank ? "row-blank" : ""].filter(Boolean).join(" ");
+        return `<tr class="${cls}">
+          <td>${textInput("item_code_raw", r.item_code_raw, r.rowIndex)}</td>
+          <td>${textInput("item_name_raw", r.item_name_raw, r.rowIndex)}</td>
+          <td>${textInput("item_name_normalized", r.item_name_normalized, r.rowIndex)}</td>
+          <td>${textInput("quantity_ordered", r.quantity_ordered, r.rowIndex, "number")}</td>
+          <td>${textInput("quantity", r.quantity, r.rowIndex, "number")}</td>
+          <td>${textInput("quantity_raw", r.quantity_raw, r.rowIndex)}</td>
+          <td>${textInput("pack_size_raw", r.pack_size_raw, r.rowIndex)}</td>
+          <td>${selectInput("unit", r.unit, r.rowIndex, UNIT_OPTIONS)}</td>
+          <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
+          <td>${textInput("approx_weight", r.approx_weight, r.rowIndex, "number")}</td>
+          <td>${textInput("unit_cost", r.unit_cost, r.rowIndex, "number")}</td>
+          <td>${textInput("line_total", r.line_total, r.rowIndex, "number")}</td>
+          <td>${boolInput("is_fee", r.is_fee, r.rowIndex)}</td>
+          <td>${textInput("confidence", r.confidence, r.rowIndex, "number")}</td>
+          <td>${textInput("notes", r.notes, r.rowIndex)}</td>
+        </tr>`;
+      }).join("");
 
   const slipKeyEnc = encodeSlipKey(slip.slipKey);
   const proxyUrl = `/review/photo?slip=${slipKeyEnc}`;
@@ -542,36 +567,44 @@ ${FONT_HEAD_LINKS}
 <div class="layout-detail">
   <div>
     ${slipMeta}
-    <div class="card line-items-card">
+    <div class="card ${rescue ? "" : "line-items-card"}">
       <h3 style="margin-top:0;">Line items</h3>
-      <p class="muted" style="font-size:12px; margin:0 0 12px;">Scroll right to access source / cost / notes columns.</p>
-      <table class="line-items">
-        <colgroup>
-          <col class="col-code">
-          <col class="col-raw">
-          <col class="col-normalized">
-          <col class="col-qty-ord">
-          <col class="col-qty">
-          <col class="col-qty-raw">
-          <col class="col-pack">
-          <col class="col-unit">
-          <col class="col-category">
-          <col class="col-weight">
-          <col class="col-cost">
-          <col class="col-total">
-          <col class="col-fee">
-          <col class="col-conf">
-          <col class="col-notes">
-        </colgroup>
-        <thead><tr>
-          <th>Code</th><th>Raw name</th><th>Normalized</th>
-          <th>Qty ord</th><th>Qty</th><th>Qty raw</th>
-          <th>Pack</th><th>Unit</th><th>Category</th>
-          <th>Weight (lb)</th><th>Unit cost</th><th>Line total</th>
-          <th>Fee?</th><th>Conf</th><th>Notes</th>
-        </tr></thead>
-        <tbody>${lineRows}</tbody>
-      </table>
+      ${rescue
+        ? `<p class="muted" style="font-size:12px; margin:0 0 12px;">Grocery rescue slip — only Pounds is meaningful. Saving Pounds fills quantity + approx_weight together.</p>
+           <table>
+             <thead><tr>
+               <th>Category row</th><th>Pounds (lb)</th><th>Category tag</th><th>Notes</th><th>Conf</th>
+             </tr></thead>
+             <tbody>${lineRows}</tbody>
+           </table>`
+        : `<p class="muted" style="font-size:12px; margin:0 0 12px;">Scroll right to access source / cost / notes columns.</p>
+           <table class="line-items">
+             <colgroup>
+               <col class="col-code">
+               <col class="col-raw">
+               <col class="col-normalized">
+               <col class="col-qty-ord">
+               <col class="col-qty">
+               <col class="col-qty-raw">
+               <col class="col-pack">
+               <col class="col-unit">
+               <col class="col-category">
+               <col class="col-weight">
+               <col class="col-cost">
+               <col class="col-total">
+               <col class="col-fee">
+               <col class="col-conf">
+               <col class="col-notes">
+             </colgroup>
+             <thead><tr>
+               <th>Code</th><th>Raw name</th><th>Normalized</th>
+               <th>Qty ord</th><th>Qty</th><th>Qty raw</th>
+               <th>Pack</th><th>Unit</th><th>Category</th>
+               <th>Weight (lb)</th><th>Unit cost</th><th>Line total</th>
+               <th>Fee?</th><th>Conf</th><th>Notes</th>
+             </tr></thead>
+             <tbody>${lineRows}</tbody>
+           </table>`}
     </div>
   </div>
   <div class="photo-pane card">
