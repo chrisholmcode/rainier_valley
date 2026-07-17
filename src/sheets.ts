@@ -1111,6 +1111,7 @@ export interface SlipSummary {
   rowCount: number;
   rowIndexes: number[];
   minConfidence: number | null;
+  totalPounds: number | null;
   approved: boolean;
   approvedAt: string | null;
   approvedBy: string | null;
@@ -1152,11 +1153,14 @@ export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
     let approvedAt: string | null = null;
     let approvedBy: string | null = null;
     let flaggedForReview = false;
+    let totalPounds: number | null = null;
     for (const r of group) {
       const c = r.confidence ? parseFloat(r.confidence) : NaN;
       if (Number.isFinite(c)) {
         if (minConf === null || c < minConf) minConf = c;
       }
+      const w = r.approx_weight ? parseFloat(r.approx_weight) : NaN;
+      if (Number.isFinite(w)) totalPounds = (totalPounds ?? 0) + w;
       if (!r.approved_at) {
         allApproved = false;
       } else {
@@ -1182,6 +1186,7 @@ export function groupSlips(rows: DeliverySheetRow[]): SlipSummary[] {
       rowCount: group.length,
       rowIndexes: group.map((r) => r.rowIndex),
       minConfidence: minConf,
+      totalPounds,
       approved: allApproved && group.length > 0,
       approvedAt,
       approvedBy,
