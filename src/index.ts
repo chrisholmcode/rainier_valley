@@ -49,6 +49,7 @@ import {
   classifyImage,
   extractFromWhiteboard,
   ensureRescueSkeleton,
+  RESCUE_CATEGORIES,
   getInvoiceSupplierPrompt,
   getInvoiceSystemPrompt
 } from "./extraction.js";
@@ -1328,19 +1329,28 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
       res.end("Missing slip/row_index/field");
       return;
     }
-    // "pounds" is a virtual field for grocery rescue slips: one Pounds cell on
-    // the paper form maps to three sheet columns (quantity, quantity_raw,
-    // approx_weight). We fan it out below.
+    // Virtual fields for grocery rescue slips:
+    //   "pounds"    — one Pounds cell on the paper form maps to three sheet
+    //                 columns (quantity, quantity_raw, approx_weight).
+    //   "row_label" — the category row dropdown drives item_name_raw,
+    //                 item_name_normalized, and category together.
     const isPoundsVirtual = field === "pounds";
-    if (!isPoundsVirtual && !SHEET_HEADERS.includes(field)) {
+    const isRowLabelVirtual = field === "row_label";
+    const isVirtual = isPoundsVirtual || isRowLabelVirtual;
+    if (!isVirtual && !SHEET_HEADERS.includes(field)) {
       res.writeHead(400, { "Content-Type": "text/plain" });
       res.end(`Unknown field: ${field}`);
       return;
     }
     const isSlipLevel = SLIP_LEVEL_FIELDS.has(field);
-    if (!isPoundsVirtual && !isSlipLevel && !ROW_LEVEL_FIELDS.has(field)) {
+    if (!isVirtual && !isSlipLevel && !ROW_LEVEL_FIELDS.has(field)) {
       res.writeHead(400, { "Content-Type": "text/plain" });
       res.end(`Field not editable: ${field}`);
+      return;
+    }
+    if (isRowLabelVirtual && !RESCUE_CATEGORIES.some((c) => c.label === newValue)) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end(`Unknown rescue row label: ${newValue}`);
       return;
     }
 
@@ -1363,26 +1373,42 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
     }
 
     const user = (req.headers["x-review-user"] as string) || "review-ui";
-    // Pounds edits fan out to three columns; per-column comparison happens inside the loop.
-    const fanoutFields = isPoundsVirtual ? ["quantity", "quantity_raw", "approx_weight"] : [field];
+    // Virtual field fanouts: each virtual maps to N real (field, value) pairs.
+    let fanout: Array<{ field: string; value: string }>;
+    if (isPoundsVirtual) {
+      fanout = [
+        { field: "quantity",      value: newValue },
+        { field: "quantity_raw",  value: newValue },
+        { field: "approx_weight", value: newValue }
+      ];
+    } else if (isRowLabelVirtual) {
+      const cat = RESCUE_CATEGORIES.find((c) => c.label === newValue)!;
+      fanout = [
+        { field: "item_name_raw",        value: cat.label },
+        { field: "item_name_normalized", value: cat.normalized },
+        { field: "category",             value: cat.category }
+      ];
+    } else {
+      fanout = [{ field, value: newValue }];
+    }
     for (const target of targets) {
-      for (const realField of fanoutFields) {
-        const oldValue = (target as unknown as Record<string, string | null>)[realField];
-        if (oldValue === newValue) continue;
+      for (const f of fanout) {
+        const oldValue = (target as unknown as Record<string, string | null>)[f.field];
+        if (oldValue === f.value) continue;
         await updateSheetCell({
           worksheetName: env.GOOGLE_WORKSHEET_NAME,
           rowIndex: target.rowIndex,
-          columnName: realField,
-          newValue: newValue === "" ? null : newValue
+          columnName: f.field,
+          newValue: f.value === "" ? null : f.value
         });
         await appendCorrectionRow({
           user,
           slipKey,
           sheet: env.GOOGLE_WORKSHEET_NAME,
           rowIndex: target.rowIndex,
-          field: isPoundsVirtual ? `pounds→${realField}` : realField,
+          field: isVirtual ? `${field}→${f.field}` : f.field,
           oldValue,
-          newValue,
+          newValue: f.value,
           reason
         });
       }
