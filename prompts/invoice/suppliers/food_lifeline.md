@@ -25,7 +25,18 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
 - "FOOD LIFELINE" logo upper-left. Form fields: Donor | Address | Agency | Date. Then a 3-column table: Product/Description | Pick Up Temp (F) | Drop Off Temp (F) | Pounds (lb).
 - This is a hand-filled grocery rescue donation form. Goods come FROM a grocery store, Food Lifeline brokers the pickup, the food bank receives them.
 - document_type = "manifest". supplier = "food_lifeline". is_donation = true.
-- **donor_org**: Read the **Donor** field at the top. Typical format is `<Store> - <Neighborhood>` (e.g., `QFC-MI` for QFC Mercer Island, `Safeway-RB` for Safeway Rainier Beach). Capture verbatim.
+- **donor_org**: Read the **Donor** field at the top. Grocery rescue only picks up from **5 fixed locations**. Map whatever is written on the slip to one of these exact short codes — do not invent new ones.
+
+  | Slip variants (any of these) | donor_org (exact) |
+  |---|---|
+  | `QFC-MI`, `QFC MI`, `QFC Mercer Island`, `QFC Mercer`, `QFC-Mercer` | `QFC-MI` |
+  | `QFC-B`, `QFC-BW`, `QFC Brdwy`, `QFC Broadway`, `QFC-Broadway` | `QFC-B` |
+  | `Safeway-RB`, `Safeway RB`, `Safeway Rainier Beach`, `Safeway-Rainier` | `Safeway-RB` |
+  | `Safeway-G`, `Safeway Gen`, `Safeway Genesee`, `Safeway-Genesee` | `Safeway-G` |
+  | `Homegrown`, `Home Grown`, `HG` | `Homegrown` |
+
+  If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
+
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
 - delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD. If only two digits are given for the year, assume 20YY. If no year is written at all (bare M/D like "7/1"), use the year from `Today's date` in the user message — these forms are filled the day of pickup, so year-boundary edge cases (e.g., a bare "12/28" seen in early January) should use the previous year. Populate BOTH `invoice_date` and `delivery_date` with the resolved value.
 - destination_org: The Agency field if filled in with a legible organization name; otherwise default to "Rainier Valley Food Bank" (the receiving food bank is implicit on rescue forms). Only use a different value if the Agency field clearly names another organization.
