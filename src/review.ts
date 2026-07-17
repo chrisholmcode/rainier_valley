@@ -1,5 +1,6 @@
 import type { DeliverySheetRow, EodSheetRow, PromptSuggestionRow } from "./types.js";
 import type { SlipSummary, EodSlipSummary } from "./sheets.js";
+import { RESCUE_CATEGORIES } from "./extraction.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 
 function escapeHtml(s: string): string {
@@ -489,6 +490,8 @@ export function buildSlipDetailHtml(params: {
 
   const rescue = isGroceryRescue(slip);
 
+  const rescueLabelOptions = RESCUE_CATEGORIES.map((c) => c.label);
+
   const lineRows = rescue
     ? rows.map((r) => {
         const isBlank = (r.quantity == null || r.quantity === "")
@@ -497,12 +500,13 @@ export function buildSlipDetailHtml(params: {
         // For grocery rescue slips, all quantity-shaped columns share one value
         // (the Pounds cell on the paper form). We show a single editable
         // "pounds" input; the server mirrors it into quantity, quantity_raw,
-        // and approx_weight on save.
+        // and approx_weight on save. The "row_label" dropdown drives
+        // item_name_raw, item_name_normalized, and category together.
         const poundsValue = r.approx_weight ?? r.quantity ?? null;
+        const currentLabel = r.item_name_raw ?? r.item_name_normalized ?? "";
         return `<tr class="${cls}">
-          <td class="muted">${escapeHtml(r.item_name_normalized ?? r.item_name_raw ?? "")}</td>
+          <td>${selectInput("row_label", currentLabel, r.rowIndex, rescueLabelOptions)}</td>
           <td>${textInput("pounds", poundsValue, r.rowIndex, "number")}</td>
-          <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
           <td>${textInput("notes", r.notes, r.rowIndex)}</td>
           <td class="muted">${r.confidence ? escapeHtml(String(Math.round(parseFloat(r.confidence) * 100)) + "%") : "—"}</td>
         </tr>`;
@@ -570,10 +574,10 @@ ${FONT_HEAD_LINKS}
     <div class="card ${rescue ? "" : "line-items-card"}">
       <h3 style="margin-top:0;">Line items</h3>
       ${rescue
-        ? `<p class="muted" style="font-size:12px; margin:0 0 12px;">Grocery rescue slip — only Pounds is meaningful. Saving Pounds fills quantity + approx_weight together.</p>
+        ? `<p class="muted" style="font-size:12px; margin:0 0 12px;">Grocery rescue slip — pick the category row from the form, then edit Pounds. Saving Pounds fills quantity + approx_weight together; changing the row label re-tags item_name + category.</p>
            <table>
              <thead><tr>
-               <th>Category row</th><th>Pounds (lb)</th><th>Category tag</th><th>Notes</th><th>Conf</th>
+               <th>Category row</th><th>Pounds (lb)</th><th>Notes</th><th>Conf</th>
              </tr></thead>
              <tbody>${lineRows}</tbody>
            </table>`

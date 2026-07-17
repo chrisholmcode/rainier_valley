@@ -636,7 +636,7 @@ Extract every line from this photo. First, identify the layout (Home Delivery / 
 // the invariant so reviewers always see the full skeleton and can fill in a
 // missing value without adding a row by hand.
 
-const RESCUE_CATEGORIES: Array<{
+export const RESCUE_CATEGORIES: Array<{
   label: string;
   normalized: string;
   matchKeys: string[];
