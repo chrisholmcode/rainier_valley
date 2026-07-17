@@ -29,18 +29,18 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
 
   | Slip variants (any of these) | donor_org (exact) |
   |---|---|
-  | `QFC-MI`, `QFC MI`, `QFC Mercer Island`, `QFC Mercer`, `QFC-Mercer` | `QFC-MI` |
-  | `QFC-B`, `QFC-BW`, `QFC Brdwy`, `QFC Broadway`, `QFC-Broadway` | `QFC-B` |
-  | `Safeway-RB`, `Safeway RB`, `Safeway Rainier Beach`, `Safeway-Rainier` | `Safeway-RB` |
-  | `Safeway-G`, `Safeway Gen`, `Safeway Genesee`, `Safeway-Genesee` | `Safeway-G` |
-  | `Homegrown`, `Home Grown`, `HG` | `Homegrown` |
+  | `QFC-MI`, `QFC MI`, `MI-QFC`, `QFC Mercer Island`, `QFC Mercer`, `QFC-Mercer` | `QFC-MI` |
+  | `QFC-BWY`, `QFC-B`, `QFC-BW`, `QFC Brdwy`, `QFC Broadway`, `QFC-Broadway` | `QFC-BWY` |
+  | `SWY-RB`, `Safeway-RB`, `Safeway RB`, `RB-Safeway`, `Safeway Rainier Beach`, `Safeway-Rainier` | `SWY-RB` |
+  | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
+  | `Homegrown`, `HomeGrown`, `Home Grown`, `HG` | `Homegrown` |
 
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
 - delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD. If only two digits are given for the year, assume 20YY. If no year is written at all (bare M/D like "7/1"), use the year from `Today's date` in the user message — these forms are filled the day of pickup, so year-boundary edge cases (e.g., a bare "12/28" seen in early January) should use the previous year. Populate BOTH `invoice_date` and `delivery_date` with the resolved value.
 - destination_org: The Agency field if filled in with a legible organization name; otherwise default to "Rainier Valley Food Bank" (the receiving food bank is implicit on rescue forms). Only use a different value if the Agency field clearly names another organization.
-- invoice_or_order_number: synthesize a shipment ID as `<donor_org>-<delivery_date>` (e.g. `QFC-MI-2026-07-13`, `Safeway-G-2026-07-01`). This is the unique key for one grocery rescue pickup — only one shipment per store per day, so the store+date combination is guaranteed unique. If either donor_org or delivery_date is unresolved (null), leave invoice_or_order_number null and let a reviewer fill it in.
+- invoice_or_order_number: synthesize a shipment ID as `<donor_org>-<delivery_date>` (e.g. `QFC-MI-2026-07-13`, `SWY-GEN-2026-07-01`). This is the unique key for one grocery rescue pickup — only one shipment per store per day, so the store+date combination is guaranteed unique. If either donor_org or delivery_date is unresolved (null), leave invoice_or_order_number null and let a reviewer fill it in.
 - **Pick Up Temp (F) and Drop Off Temp (F) columns are NOT USED — ignore them entirely.** The RVFB team never fills these consistently and does not track them downstream. Do not extract, do not warn, do not derive anything from these two columns. Only the Product/Description column (row label) and the Pounds (lb) column matter.
 - **Hatched cells: distinguish between whole-row and temp-column hatching.**
   - The two **temperature columns** are pre-printed hatched for shelf-stable rows (Canned/Dry Goods, Nonfood, sometimes Bakery / Coffee Kiosk) because temperature doesn't apply to non-perishables. This is **NOT** a signal that the category is unaccepted — it's the form design. If the Pounds cell for that row has a value, extract it normally. If it's blank, treat it as a blank skeleton row (per the rules below). **Never mark a row "not accepted" because its Temp columns are hatched.**
