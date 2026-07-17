@@ -49,6 +49,7 @@ import {
   classifyImage,
   extractFromWhiteboard,
   ensureRescueSkeleton,
+  normalizeRescueSlip,
   RESCUE_CATEGORIES,
   getInvoiceSupplierPrompt,
   getInvoiceSystemPrompt
@@ -590,9 +591,13 @@ app.event("message", async ({ event, client, logger }) => {
         );
       }
 
-      // Grocery rescue slips always have a fixed set of 10 category rows on the
-      // paper form. Deterministically enforce that the extraction contains all
-      // 10 (skeleton-fill missing ones) so reviewers can correct blanks
+      // Grocery rescue slips: normalize donor_org onto one of the 5 canonicals
+      // (QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / Homegrown) and resynthesize
+      // invoice_or_order_number so downstream dedupe + reporting see a single
+      // canonical form regardless of what the LLM emitted.
+      normalizeRescueSlip(extraction);
+      // Deterministically enforce that the extraction contains all 10 category
+      // rows (skeleton-fill missing ones) so reviewers can correct blanks
       // without needing to add a row by hand.
       ensureRescueSkeleton(extraction);
 

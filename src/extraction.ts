@@ -658,6 +658,66 @@ function normKey(s: string | null): string {
   return (s ?? "").toLowerCase().replace(/[^a-z]/g, "");
 }
 
+// Canonical short codes for the 5 grocery rescue donor locations. Extractor
+// output goes through normalizeRescueDonor() before any dedupe / write so that
+// even if the LLM emits a variant (or an older canonical from a stale prompt),
+// downstream code sees exactly one of these 5 strings.
+const RESCUE_DONOR_CANONICAL = ["QFC-MI", "QFC-BWY", "SWY-RB", "SWY-GEN", "Homegrown"] as const;
+
+function normDonorKey(s: string): string {
+  return s.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+// Map any handwritten / historical donor string to one of the 5 canonicals.
+// Order matters: longer / more specific matches first so "swyrb" doesn't match
+// "safeway" before "rb".
+const RESCUE_DONOR_ALIASES: Array<{ canonical: typeof RESCUE_DONOR_CANONICAL[number]; keys: string[] }> = [
+  { canonical: "QFC-MI",   keys: ["qfcmi", "miqfc", "qfcmercerisland", "qfcmercer"] },
+  { canonical: "QFC-BWY",  keys: ["qfcbwy", "qfcb", "qfcbw", "qfcbrdwy", "qfcbroadway"] },
+  { canonical: "SWY-RB",   keys: ["swyrb", "safewayrb", "safewayrainierbeach", "safewayrainier", "rbsafeway"] },
+  { canonical: "SWY-GEN",  keys: ["swygen", "safewayg", "safewaygen", "safewaygenesee", "gensafeway"] },
+  { canonical: "Homegrown", keys: ["homegrown", "homegrown", "hg"] }
+];
+
+export function normalizeRescueDonor(raw: string | null): string | null {
+  if (!raw) return null;
+  const key = normDonorKey(raw);
+  if (!key) return null;
+  if ((RESCUE_DONOR_CANONICAL as readonly string[]).includes(raw)) return raw; // already canonical
+  for (const entry of RESCUE_DONOR_ALIASES) {
+    if (entry.keys.some((k) => key === k || key.includes(k))) return entry.canonical;
+  }
+  return null;
+}
+
+// Normalize an extractor result for grocery rescue slips: forces donor_org
+// onto one of the 5 canonicals and (re)synthesizes invoice_or_order_number
+// as `<canonical>-<delivery_date>`. Runs before ensureRescueSkeleton in the
+// ingest path so downstream code (dedupe, review UI, backfill) sees canonical
+// donor names regardless of what the LLM emitted.
+export function normalizeRescueSlip(extraction: ExtractionResult): void {
+  if (extraction.supplier !== "food_lifeline") return;
+  if (!extraction.donor_org) return;
+  const canonical = normalizeRescueDonor(extraction.donor_org);
+  if (!canonical) {
+    extraction.source_warnings.push(
+      `donor_org unrecognized: "${extraction.donor_org}" — expected one of QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / Homegrown`
+    );
+    extraction.donor_org = null;
+    extraction.invoice_or_order_number = null;
+    return;
+  }
+  if (extraction.donor_org !== canonical) {
+    extraction.donor_org = canonical;
+  }
+  if (extraction.delivery_date) {
+    const synthesized = `${canonical}-${extraction.delivery_date}`;
+    if (extraction.invoice_or_order_number !== synthesized) {
+      extraction.invoice_or_order_number = synthesized;
+    }
+  }
+}
+
 export function ensureRescueSkeleton(extraction: ExtractionResult): void {
   if (extraction.supplier !== "food_lifeline") return;
   if (!extraction.donor_org || !extraction.donor_org.trim()) return;
