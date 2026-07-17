@@ -176,6 +176,7 @@ tbody th { text-align: left; font-weight: 600; color: var(--ink); background: tr
 }
 .badge-pending  { background: var(--warn-bg);  color: var(--warn); }
 .badge-approved { background: var(--ok-bg);    color: var(--ok); }
+.badge-human    { background: var(--primary-bg); color: var(--primary); }
 
 /* Confidence pill */
 .conf {
