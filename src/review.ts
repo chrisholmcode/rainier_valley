@@ -20,7 +20,12 @@ export function decodeSlipKey(encoded: string): string {
 }
 
 function statusBadge(slip: SlipSummary): string {
-  if (slip.approved) return `<span class="badge badge-approved">approved</span>`;
+  if (slip.approved) {
+    const humanApproved = slip.approvedBy && slip.approvedBy !== "auto-approved";
+    return humanApproved
+      ? `<span class="badge badge-human" title="Manually approved by ${escapeHtml(slip.approvedBy ?? "")}">human approved</span>`
+      : `<span class="badge badge-approved">auto approved</span>`;
+  }
   if (slip.flaggedForReview) return `<span class="badge badge-pending" title="Possible duplicate — see source_warnings">possible dupe</span>`;
   return `<span class="badge badge-pending">pending</span>`;
 }
