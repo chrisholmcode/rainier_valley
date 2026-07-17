@@ -628,6 +628,100 @@ Extract every line from this photo. First, identify the layout (Home Delivery / 
   return normalized;
 }
 
+// ── Grocery rescue skeleton fill ──────────────────────────────────────────
+//
+// Every Food Lifeline grocery rescue slip has a fixed set of 10 category rows
+// on the paper form. The prompt asks the extractor to always emit all 10, but
+// LLMs sometimes drop the empty ones. This helper deterministically enforces
+// the invariant so reviewers always see the full skeleton and can fill in a
+// missing value without adding a row by hand.
+
+const RESCUE_CATEGORIES: Array<{
+  label: string;
+  normalized: string;
+  matchKeys: string[];
+  category: "produce" | "meat_protein" | "dairy" | "shelf_stable" | "frozen" | "non_food";
+}> = [
+  { label: "Bakery",                        normalized: "Bakery",                     matchKeys: ["bakery"],                       category: "shelf_stable" },
+  { label: "Canned/Dry Goods",              normalized: "Canned / Dry Goods",         matchKeys: ["canneddrygoods", "canned"],     category: "shelf_stable" },
+  { label: "Coffee Kiosk",                  normalized: "Coffee Kiosk",               matchKeys: ["coffeekiosk", "coffee"],        category: "shelf_stable" },
+  { label: "Dairy/Juice/Alt. Dairy",        normalized: "Dairy / Juice / Alt. Dairy", matchKeys: ["dairyjuicealtdairy", "dairy"],  category: "dairy" },
+  { label: "Frozen Foods",                  normalized: "Frozen Foods",               matchKeys: ["frozenfoods", "frozen"],        category: "frozen" },
+  { label: "Meat",                          normalized: "Meat",                       matchKeys: ["meat"],                         category: "meat_protein" },
+  { label: "Nonfood",                       normalized: "Nonfood",                    matchKeys: ["nonfood"],                      category: "non_food" },
+  { label: "Non-Meat Protein (eggs, tofu)", normalized: "Non-Meat Protein",           matchKeys: ["nonmeatprotein", "eggstofu"],   category: "dairy" },
+  { label: "Prepared/Perishable",           normalized: "Prepared / Perishable",      matchKeys: ["preparedperishable", "prepared"], category: "produce" },
+  { label: "Produce",                       normalized: "Produce",                    matchKeys: ["produce"],                      category: "produce" }
+];
+
+function normKey(s: string | null): string {
+  return (s ?? "").toLowerCase().replace(/[^a-z]/g, "");
+}
+
+export function ensureRescueSkeleton(extraction: ExtractionResult): void {
+  if (extraction.supplier !== "food_lifeline") return;
+  if (!extraction.donor_org || !extraction.donor_org.trim()) return;
+
+  const items = extraction.line_items;
+  const output: typeof items = [];
+  const usedIndexes = new Set<number>();
+
+  for (const cat of RESCUE_CATEGORIES) {
+    let matchIndex = -1;
+    // Non-Meat Protein must beat Meat: check its exact match keys first.
+    const rawKey = normKey(cat.matchKeys[0]);
+    // Priority 1: exact normalized-key match against item_name_raw / _normalized.
+    for (let i = 0; i < items.length; i++) {
+      if (usedIndexes.has(i)) continue;
+      const li = items[i];
+      if (normKey(li.item_name_raw) === rawKey || normKey(li.item_name_normalized) === normKey(cat.normalized)) {
+        matchIndex = i; break;
+      }
+    }
+    // Priority 2: match any of the fuzzy keys (contains). Skip Meat's "meat"
+    // key from also matching a Non-Meat Protein row already claimed.
+    if (matchIndex === -1) {
+      for (let i = 0; i < items.length; i++) {
+        if (usedIndexes.has(i)) continue;
+        const li = items[i];
+        const raw = normKey(li.item_name_raw);
+        const norm = normKey(li.item_name_normalized);
+        if (cat.matchKeys.some((k) => raw === k || norm === k || raw.includes(k) || norm.includes(k))) {
+          // Guard: "meat" also appears in "nonmeatprotein" — don't let the Meat
+          // category eat a Non-Meat Protein row.
+          if (cat.label === "Meat" && (raw.includes("nonmeat") || norm.includes("nonmeat"))) continue;
+          matchIndex = i; break;
+        }
+      }
+    }
+    if (matchIndex !== -1) {
+      output.push(items[matchIndex]);
+      usedIndexes.add(matchIndex);
+    } else {
+      output.push({
+        item_code_raw: null,
+        item_name_raw: cat.label,
+        item_name_normalized: cat.normalized,
+        quantity_ordered: null,
+        quantity: null,
+        quantity_raw: null,
+        unit: "lb",
+        pack_size_raw: null,
+        approx_weight: null,
+        category: cat.category,
+        unit_cost: null,
+        line_total: null,
+        is_fee: false,
+        notes: "no value on form (auto-inserted skeleton)",
+        confidence: 0.95
+      });
+    }
+  }
+  // Preserve any extra rows the extractor produced that didn't map to a category.
+  for (let i = 0; i < items.length; i++) if (!usedIndexes.has(i)) output.push(items[i]);
+  extraction.line_items = output;
+}
+
 export async function transcribeAudio(audioBytes: Buffer, mimeType: string, filename: string): Promise<string> {
   if (!env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not set — voice memo transcription is unavailable.");

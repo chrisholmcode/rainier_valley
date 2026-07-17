@@ -48,6 +48,7 @@ import {
   guessSupplierFromFilename,
   classifyImage,
   extractFromWhiteboard,
+  ensureRescueSkeleton,
   getInvoiceSupplierPrompt,
   getInvoiceSystemPrompt
 } from "./extraction.js";
@@ -587,6 +588,12 @@ app.event("message", async ({ event, client, logger }) => {
           `destination_org not found on document — defaulted to Rainier Valley Food Bank`
         );
       }
+
+      // Grocery rescue slips always have a fixed set of 10 category rows on the
+      // paper form. Deterministically enforce that the extraction contains all
+      // 10 (skeleton-fill missing ones) so reviewers can correct blanks
+      // without needing to add a row by hand.
+      ensureRescueSkeleton(extraction);
 
       if (extraction.invoice_or_order_number && extraction.supplier !== "unknown") {
         const invoiceKey = `${extraction.supplier}:${extraction.invoice_or_order_number}`;
