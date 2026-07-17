@@ -723,8 +723,13 @@ export const EOD_SHEET_HEADERS = [
   "slack_message_ts",
   "recorded_by",
   "warnings_json",
-  "program_type"
+  "program_type",
+  "approved_at",
+  "approved_by",
+  "photo_url"
 ];
+
+const EOD_LAST_COL = String.fromCharCode(64 + EOD_SHEET_HEADERS.length); // A..Z single-letter only; safe up to 26 cols
 
 export async function ensureEodSheetHeader(): Promise<void> {
   await ensureHeader(env.EOD_WORKSHEET_NAME, EOD_SHEET_HEADERS);
@@ -736,11 +741,16 @@ export async function appendEodRows(params: {
   slackChannel: string;
   slackMessageTs: string;
   recordedBy: string;
+  photoUrl?: string | null;
+  autoApprove?: boolean;
 }): Promise<number> {
-  const { extraction, source, slackChannel, slackMessageTs, recordedBy } = params;
+  const { extraction, source, slackChannel, slackMessageTs, recordedBy, photoUrl, autoApprove } = params;
   const now = new Date().toISOString();
   const date = extraction.date ?? new Date().toISOString().slice(0, 10);
   const warningsJson = JSON.stringify(extraction.source_warnings);
+  const approvedAt = autoApprove ? now : "";
+  const approvedBy = autoApprove ? "auto-approved" : "";
+  const photo = photoUrl ?? "";
 
   const rows = extraction.line_items.map((item) => [
     now,
@@ -758,18 +768,21 @@ export async function appendEodRows(params: {
     slackMessageTs,
     recordedBy,
     warningsJson,
-    item.program_type ?? ""
+    item.program_type ?? "",
+    approvedAt,
+    approvedBy,
+    photo
   ]);
 
   if (!rows.length) {
-    rows.push([now, date, null, null, null, null, null, null, "No items extracted", null, source, slackChannel, slackMessageTs, recordedBy, warningsJson, ""]);
+    rows.push([now, date, null, null, null, null, null, null, "No items extracted", null, source, slackChannel, slackMessageTs, recordedBy, warningsJson, "", approvedAt, approvedBy, photo]);
   }
 
   const sheets = google.sheets({ version: "v4", auth });
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.EOD_WORKSHEET_NAME}!A:P`,
+    range: `${env.EOD_WORKSHEET_NAME}!A:${EOD_LAST_COL}`,
     valueInputOption: "USER_ENTERED",
     requestBody: { values: rows }
   });
@@ -801,7 +814,7 @@ function normalizeProgramType(v: unknown): ProgramType | null {
 export async function readEodRows(params: { date?: string; limit?: number }): Promise<EodSheetRow[]> {
   const { date, limit = 50 } = params;
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.EOD_WORKSHEET_NAME}!A:P` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: env.GOOGLE_SPREADSHEET_ID, range: `${env.EOD_WORKSHEET_NAME}!A:${EOD_LAST_COL}` });
   const rows = (res.data.values ?? []).slice(1);
   const mapped: EodSheetRow[] = rows.map((r, i) => ({
     rowIndex: i + 2,
@@ -820,7 +833,10 @@ export async function readEodRows(params: { date?: string; limit?: number }): Pr
     slack_message_ts: r[12] ?? null,
     recorded_by: r[13] ?? null,
     warnings_json: r[14] ?? null,
-    program_type: normalizeProgramType(r[15])
+    program_type: normalizeProgramType(r[15]),
+    approved_at: r[16] || null,
+    approved_by: r[17] || null,
+    photo_url: r[18] || null
   }));
   const filtered = date ? mapped.filter((r) => r.date === date) : mapped;
   return filtered.slice(-limit);
@@ -1201,6 +1217,119 @@ export async function stampSlipApproval(params: {
       data: rowIndexes.flatMap((rowIndex) => [
         { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[now]] },
         { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[approvedBy]] }
+      ])
+    }
+  });
+}
+
+export interface EodSlipSummary {
+  slipKey: string; // "<channel>:<messageTs>"
+  slackChannel: string;
+  slackMessageTs: string;
+  source: string; // whiteboard | text | voice
+  date: string | null;
+  program_type: string | null;
+  recorded_by: string | null;
+  recorded_at: string;
+  photo_url: string | null;
+  rowCount: number;
+  rowIndexes: number[];
+  minConfidence: number | null;
+  approved: boolean;
+  approvedAt: string | null;
+  approvedBy: string | null;
+}
+
+export function eodSlipKey(row: EodSheetRow): string | null {
+  if (!row.slack_channel || !row.slack_message_ts) return null;
+  return `${row.slack_channel}:${row.slack_message_ts}`;
+}
+
+export function groupEodSlips(rows: EodSheetRow[]): EodSlipSummary[] {
+  const byKey = new Map<string, EodSheetRow[]>();
+  for (const r of rows) {
+    const key = eodSlipKey(r);
+    if (!key) continue;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key)!.push(r);
+  }
+  const summaries: EodSlipSummary[] = [];
+  for (const [key, group] of byKey) {
+    const first = group[0];
+    let minConf: number | null = null;
+    let allApproved = true;
+    let approvedAt: string | null = null;
+    let approvedBy: string | null = null;
+    let photoUrl: string | null = null;
+    let programType: string | null = null;
+    for (const r of group) {
+      const c = r.confidence ? parseFloat(r.confidence) : NaN;
+      if (Number.isFinite(c)) {
+        if (minConf === null || c < minConf) minConf = c;
+      }
+      if (!r.approved_at) {
+        allApproved = false;
+      } else {
+        approvedAt = r.approved_at;
+        approvedBy = r.approved_by;
+      }
+      if (!photoUrl && r.photo_url) photoUrl = r.photo_url;
+      if (!programType && r.program_type) programType = r.program_type;
+    }
+    summaries.push({
+      slipKey: key,
+      slackChannel: first.slack_channel ?? "",
+      slackMessageTs: first.slack_message_ts ?? "",
+      source: first.source ?? "unknown",
+      date: first.date || null,
+      program_type: programType,
+      recorded_by: first.recorded_by,
+      recorded_at: first.recorded_at,
+      photo_url: photoUrl,
+      rowCount: group.length,
+      rowIndexes: group.map((r) => r.rowIndex),
+      minConfidence: minConf,
+      approved: allApproved && group.length > 0,
+      approvedAt,
+      approvedBy
+    });
+  }
+  summaries.sort((a, b) => (b.recorded_at ?? "").localeCompare(a.recorded_at ?? ""));
+  return summaries;
+}
+
+export async function stampEodApproval(params: {
+  rowIndexes: number[];
+  approvedBy: string;
+}): Promise<void> {
+  const { rowIndexes, approvedBy } = params;
+  const approvedAtCol = indexToColumn(EOD_SHEET_HEADERS.indexOf("approved_at"));
+  const approvedByCol = indexToColumn(EOD_SHEET_HEADERS.indexOf("approved_by"));
+  const now = new Date().toISOString();
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: rowIndexes.flatMap((rowIndex) => [
+        { range: `${env.EOD_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[now]] },
+        { range: `${env.EOD_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[approvedBy]] }
+      ])
+    }
+  });
+}
+
+export async function clearEodApproval(rowIndexes: number[]): Promise<void> {
+  const approvedAtCol = indexToColumn(EOD_SHEET_HEADERS.indexOf("approved_at"));
+  const approvedByCol = indexToColumn(EOD_SHEET_HEADERS.indexOf("approved_by"));
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: rowIndexes.flatMap((rowIndex) => [
+        { range: `${env.EOD_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[""]] },
+        { range: `${env.EOD_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[""]] }
       ])
     }
   });

@@ -1,5 +1,5 @@
-import type { DeliverySheetRow, PromptSuggestionRow } from "./types.js";
-import type { SlipSummary } from "./sheets.js";
+import type { DeliverySheetRow, EodSheetRow, PromptSuggestionRow } from "./types.js";
+import type { SlipSummary, EodSlipSummary } from "./sheets.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 
 function escapeHtml(s: string): string {
@@ -61,6 +61,11 @@ ${SHARED_CSS}
   outline:none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg);
 }
 .search-count { font-size:12px; font-variant-numeric: tabular-nums; }
+.source-chip { display:inline-flex; padding:2px 8px; border-radius: var(--radius-sm);
+               font-size:11px; font-weight:600; text-transform: uppercase; letter-spacing:0.05em; }
+.source-whiteboard { background: var(--primary-bg); color: var(--primary); }
+.source-text       { background: var(--warn-bg);    color: var(--warn); }
+.source-voice      { background: var(--ok-bg);      color: var(--ok); }
 .suggestion-item { padding:16px 20px; border-bottom:1px solid var(--border); }
 .suggestion-item:last-child { border-bottom:0; }
 .suggestion-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px; }
@@ -257,8 +262,9 @@ ${FONT_HEAD_LINKS}
     <div class="meta">${slips.length} slip${slips.length === 1 ? "" : "s"} · confidence threshold ${Math.round(threshold * 100)}% · ${escapeHtml(generated)} PT</div>
   </div>
   <div class="tabs">
-    <a class="${queueCls}" href="/review?tab=queue">Review Queue</a>
-    <a class="${historyCls}" href="/review?tab=history">All Slips</a>
+    <a class="${queueCls}" href="/review?tab=queue">Inbound Queue</a>
+    <a class="${historyCls}" href="/review?tab=history">Inbound History</a>
+    <a class="btn" href="/review?tab=outbound">Outbound</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -353,8 +359,9 @@ ${FONT_HEAD_LINKS}
     <div class="meta">${suggestions.length} total · ${pending.length} pending · ${escapeHtml(generated)} PT · ${currentEmail ? `signed in as ${escapeHtml(currentEmail)}` : "anonymous"}${isAdmin ? " · admin" : ""}</div>
   </div>
   <div class="tabs">
-    <a class="btn" href="/review?tab=queue">Review Queue</a>
-    <a class="btn" href="/review?tab=history">All Slips</a>
+    <a class="btn" href="/review?tab=queue">Inbound Queue</a>
+    <a class="btn" href="/review?tab=history">Inbound History</a>
+    <a class="btn" href="/review?tab=outbound">Outbound</a>
     <a class="btn active" href="/review?tab=suggestions">Prompt Suggestions${pendingCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -699,3 +706,316 @@ document.querySelectorAll('input,select,textarea').forEach((el) => {
 }
 
 export { EDITABLE_PER_SLIP, EDITABLE_PER_ROW };
+
+// ── Outbound (Outbound Delivery Log) review UI ──────────────────────────────
+
+const EOD_UNIT_OPTIONS = ["case", "bag", "pallet", "lb", "oz", "ct", "ea", "other"];
+const EOD_PROGRAM_OPTIONS = ["home_delivery", "in_person_shopping", "pre_made_bags", "unknown"];
+const EOD_SOURCE_OPTIONS = ["whiteboard", "text", "voice"];
+
+const EOD_EDITABLE_PER_SLIP = ["date"];
+const EOD_EDITABLE_PER_ROW = [
+  "item_name_raw",
+  "item_name_normalized",
+  "quantity",
+  "quantity_raw",
+  "unit",
+  "category",
+  "program_type",
+  "notes",
+  "confidence"
+];
+
+function eodStatusBadge(slip: EodSlipSummary): string {
+  if (slip.approved) {
+    const humanApproved = slip.approvedBy && slip.approvedBy !== "auto-approved";
+    return humanApproved
+      ? `<span class="badge badge-human" title="Manually approved by ${escapeHtml(slip.approvedBy ?? "")}">human approved</span>`
+      : `<span class="badge badge-approved">auto approved</span>`;
+  }
+  return `<span class="badge badge-pending">pending</span>`;
+}
+
+function sourceChip(source: string): string {
+  const label = escapeHtml(source);
+  return `<span class="source-chip source-${escapeHtml(source)}">${label}</span>`;
+}
+
+function renderEodSlipRow(s: EodSlipSummary, threshold: number): string {
+  const enc = encodeSlipKey(s.slipKey);
+  const recorded = s.recorded_at
+    ? escapeHtml(s.recorded_at.slice(0, 10))
+    : `<span class="muted">—</span>`;
+  const date = s.date ? escapeHtml(s.date) : `<span class="muted">—</span>`;
+  const program = s.program_type ? escapeHtml(s.program_type) : `<span class="muted">—</span>`;
+  const approvedOn = s.approvedAt
+    ? escapeHtml(s.approvedAt.slice(0, 10))
+    : `<span class="muted">—</span>`;
+  return `<tr>
+    <td>${eodStatusBadge(s)}</td>
+    <td>${recorded}</td>
+    <td>${date}</td>
+    <td>${sourceChip(s.source)}</td>
+    <td>${program}</td>
+    <td class="num">${s.rowCount}</td>
+    <td>${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td>${approvedOn}</td>
+    <td><a class="slip-link" href="/review/outbound/slip?slip=${enc}">Open ›</a></td>
+  </tr>`;
+}
+
+function renderEodSlipTable(slips: EodSlipSummary[], threshold: number): string {
+  const body = slips.map((s) => renderEodSlipRow(s, threshold)).join("");
+  return `<table>
+    <thead><tr>
+      <th>Status</th><th>Recorded</th><th>Date</th><th>Source</th><th>Program</th>
+      <th class="num">Rows</th><th>Min confidence</th><th>Approved</th><th></th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
+export function buildOutboundListHtml(params: {
+  slips: EodSlipSummary[];
+  threshold: number;
+  generatedAt: Date;
+  pendingSuggestionCount: number;
+}): string {
+  const { slips, threshold, generatedAt, pendingSuggestionCount } = params;
+  const needsReview = slips
+    .filter((s) => !s.approved && (s.minConfidence !== null && s.minConfidence < threshold))
+    .sort((a, b) => (a.minConfidence ?? 1) - (b.minConfidence ?? 1));
+  const completed = slips
+    .filter((s) => !(!s.approved && (s.minConfidence !== null && s.minConfidence < threshold)))
+    .sort((a, b) => (b.recorded_at ?? "").localeCompare(a.recorded_at ?? ""));
+
+  const generated = generatedAt.toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+
+  const body = `
+    <h2 class="section-title section-title-warn">
+      Needs review
+      <span class="section-count">${needsReview.length}</span>
+      <span class="section-sub muted">confidence &lt; ${Math.round(threshold * 100)}% · resolve these first</span>
+    </h2>
+    <div class="card">
+      ${needsReview.length === 0
+        ? `<p class="muted" style="padding:24px; text-align:center;">Nothing to review — every outbound slip is above ${Math.round(threshold * 100)}% or already approved. 🎉</p>`
+        : renderEodSlipTable(needsReview, threshold)}
+    </div>
+
+    <h2 class="section-title">
+      Completed
+      <span class="section-count">${completed.length}</span>
+      <span class="section-sub muted">approved or above threshold · most recent first</span>
+    </h2>
+    <div class="card">
+      ${completed.length === 0
+        ? `<p class="muted" style="padding:24px; text-align:center;">No completed outbound slips yet.</p>`
+        : renderEodSlipTable(completed, threshold)}
+    </div>`;
+
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><title>RVFB Outbound Review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${FONT_HEAD_LINKS}
+<style>${STYLE}</style>
+</head><body><div class="container">
+<header class="page">
+  <div>
+    <h1>Outbound Review</h1>
+    <div class="meta">${slips.length} slip${slips.length === 1 ? "" : "s"} · confidence threshold ${Math.round(threshold * 100)}% · ${escapeHtml(generated)} PT</div>
+  </div>
+  <div class="tabs">
+    <a class="btn" href="/review?tab=queue">Inbound Queue</a>
+    <a class="btn" href="/review?tab=history">Inbound History</a>
+    <a class="btn active" href="/review?tab=outbound">Outbound</a>
+    <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
+    <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
+  </div>
+</header>
+<div class="search-bar">
+  <input type="search" id="slip-search" placeholder="Search outbound slips — source, program, date…" autocomplete="off" oninput="filterSlips(this.value)">
+  <span class="muted search-count" id="search-count"></span>
+</div>
+${body}
+<footer>RVFB Inventory · Outbound Review · Whiteboard photos + EOD text/voice</footer>
+</div>
+<script>
+function filterSlips(q) {
+  const query = q.trim().toLowerCase();
+  const tables = document.querySelectorAll('.card table');
+  let totalVisible = 0;
+  tables.forEach((tbl) => {
+    const rows = tbl.querySelectorAll('tbody tr');
+    rows.forEach((tr) => {
+      const text = tr.textContent.toLowerCase();
+      const match = !query || text.includes(query);
+      tr.style.display = match ? '' : 'none';
+      if (match) totalVisible++;
+    });
+  });
+  const badge = document.getElementById('search-count');
+  badge.textContent = query ? totalVisible + ' match' + (totalVisible === 1 ? '' : 'es') : '';
+}
+</script>
+</body></html>`;
+}
+
+export function buildOutboundSlipDetailHtml(params: {
+  slip: EodSlipSummary;
+  rows: EodSheetRow[];
+}): string {
+  const { slip, rows } = params;
+  const slipMetaRowIndex = rows[0]?.rowIndex ?? 0;
+
+  const slipMeta = `<div class="slip-meta">
+    <h3 style="margin-top:0;">Slip-level fields</h3>
+    <dl>
+      <dt>source</dt><dd><span class="source-chip source-${escapeHtml(slip.source)}">${escapeHtml(slip.source)}</span></dd>
+      <dt>date</dt><dd>${textInput("date", slip.date, slipMetaRowIndex)}</dd>
+      <dt>recorded_by</dt><dd class="muted">${escapeHtml(slip.recorded_by ?? "—")}</dd>
+      <dt>recorded_at</dt><dd class="muted">${escapeHtml(slip.recorded_at.slice(0, 16).replace("T", " "))}</dd>
+      <dt>rows</dt><dd>${slip.rowCount}</dd>
+    </dl>
+    <p class="muted" style="margin-top:12px; font-size:12px;">Editing date updates every row of this slip.</p>
+  </div>`;
+
+  const lineRows = rows.map((r) => {
+    return `<tr>
+      <td>${textInput("item_name_raw", r.item_name_raw, r.rowIndex)}</td>
+      <td>${textInput("item_name_normalized", r.item_name_normalized, r.rowIndex)}</td>
+      <td>${textInput("quantity", r.quantity, r.rowIndex, "number")}</td>
+      <td>${textInput("quantity_raw", r.quantity_raw, r.rowIndex)}</td>
+      <td>${selectInput("unit", r.unit, r.rowIndex, EOD_UNIT_OPTIONS)}</td>
+      <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
+      <td>${selectInput("program_type", r.program_type, r.rowIndex, EOD_PROGRAM_OPTIONS)}</td>
+      <td>${textInput("confidence", r.confidence, r.rowIndex, "number")}</td>
+      <td>${textInput("notes", r.notes, r.rowIndex)}</td>
+    </tr>`;
+  }).join("");
+
+  const slipKeyEnc = encodeSlipKey(slip.slipKey);
+  const isWhiteboard = slip.source === "whiteboard";
+  const hasPhoto = isWhiteboard && slip.photo_url;
+  // Photo proxy is keyed on the base64url-encoded photo_url so the existing
+  // /review/photo handler works unchanged. slipKey here is channel:ts so we
+  // send the actual photo URL instead.
+  const photoEnc = hasPhoto ? encodeSlipKey(slip.photo_url!) : "";
+  const photoBlock = hasPhoto
+    ? `<img src="/review/photo?slip=${photoEnc}" alt="whiteboard photo" onerror="this.style.display='none'">
+       <p class="muted" style="font-size:12px; margin-top:8px;">
+         Proxied through the bot using the Slack token.
+         <a href="/review/photo?slip=${photoEnc}" target="_blank" rel="noopener">Open in new tab</a>
+       </p>`
+    : isWhiteboard
+      ? `<p class="muted">No photo URL saved for this whiteboard (pre-dates the photo_url column).</p>`
+      : `<p class="muted">${escapeHtml(slip.source)} slip — no photo. Original transcript lives in Slack (channel: <code>${escapeHtml(slip.slackChannel)}</code>, ts: <code>${escapeHtml(slip.slackMessageTs)}</code>).</p>`;
+
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><title>RVFB Outbound Review · ${escapeHtml(slip.source)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${FONT_HEAD_LINKS}
+<style>${STYLE}</style>
+</head><body><div class="container">
+<header class="page">
+  <div>
+    <h1>${escapeHtml(slip.source)}${slip.date ? ` <span class="muted">${escapeHtml(slip.date)}</span>` : ""}</h1>
+    <div class="meta">${slip.rowCount} row${slip.rowCount === 1 ? "" : "s"} · ${eodStatusBadge(slip)}</div>
+  </div>
+  <div class="tabs">
+    <a class="btn" href="/review?tab=outbound">← Back to Outbound</a>
+    <button class="btn btn-primary" onclick="approveSlip()">${slip.approved ? "Re-approve" : "Approve slip"}</button>
+  </div>
+</header>
+
+<div class="layout-detail">
+  <div>
+    ${slipMeta}
+    <div class="card line-items-card">
+      <h3 style="margin-top:0;">Line items</h3>
+      <table class="line-items">
+        <thead><tr>
+          <th>Raw name</th><th>Normalized</th>
+          <th>Qty</th><th>Qty raw</th>
+          <th>Unit</th><th>Category</th><th>Program</th>
+          <th>Conf</th><th>Notes</th>
+        </tr></thead>
+        <tbody>${lineRows}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="photo-pane card">
+    <h3 style="margin-top:0;">${isWhiteboard ? "Whiteboard photo" : "Source"}</h3>
+    ${photoBlock}
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>Edits write directly to the Outbound Delivery Log and append to Corrections Log. Editing any field re-opens the slip for re-approval.</footer>
+</div>
+<script>
+const SLIP_KEY_B64 = ${JSON.stringify(slipKeyEnc)};
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { t.className = 'toast' + (isError ? ' error' : ''); }, 2000);
+}
+
+function markEdit(el) {
+  el.classList.add('dirty');
+  const original = el.dataset.original ?? el.defaultValue ?? '';
+  if (el.value === original) {
+    el.classList.remove('dirty');
+    return;
+  }
+  clearTimeout(el._t);
+  el._t = setTimeout(() => saveEdit(el), 600);
+}
+
+async function saveEdit(el) {
+  const row_index = parseInt(el.dataset.row, 10);
+  const field = el.dataset.field;
+  const new_value = el.value;
+  try {
+    const res = await fetch('/api/review/outbound/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slip: SLIP_KEY_B64, row_index, field, new_value })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    el.classList.remove('dirty');
+    el.dataset.original = new_value;
+    showToast('Saved: ' + field);
+  } catch (e) {
+    showToast('Save failed: ' + e.message, true);
+  }
+}
+
+async function approveSlip() {
+  try {
+    const res = await fetch('/api/review/outbound/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slip: SLIP_KEY_B64 })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    showToast('Slip approved');
+    setTimeout(() => { window.location.href = '/review?tab=outbound'; }, 800);
+  } catch (e) {
+    showToast('Approve failed: ' + e.message, true);
+  }
+}
+
+document.querySelectorAll('input,select,textarea').forEach((el) => {
+  el.dataset.original = el.value;
+});
+</script>
+</body></html>`;
+}
+
+export { EOD_EDITABLE_PER_SLIP, EOD_EDITABLE_PER_ROW };

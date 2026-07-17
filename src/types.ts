@@ -56,6 +56,9 @@ export interface EodSheetRow {
   recorded_by: string | null;
   warnings_json: string | null;
   program_type: ProgramType | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  photo_url: string | null;
 }
 
 export interface DeliverySheetRow {

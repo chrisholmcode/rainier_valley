@@ -21,8 +21,11 @@ import {
   ensureExtractionTracesHeader,
   appendCorrectionRow,
   groupSlips,
+  groupEodSlips,
   stampSlipApproval,
+  stampEodApproval,
   clearSlipApproval,
+  clearEodApproval,
   recomputeSummaryForSlip,
   appendExtractionTrace,
   appendPromptSuggestion,
@@ -31,10 +34,11 @@ import {
   ensurePromptSuggestionsHeader,
   readRescueDedupeKeys,
   rescueDedupeKey,
-  SHEET_HEADERS
+  SHEET_HEADERS,
+  EOD_SHEET_HEADERS
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
-import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
+import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, buildOutboundListHtml, buildOutboundSlipDetailHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
 import { buildLandingHtml } from "./landing.js";
 import { buildDonateHtml, parseDonateFormBody } from "./donate.js";
 import {
@@ -411,12 +415,19 @@ async function processWhiteboardBatch(params: {
     await ensureEodSheetHeader();
     let totalRows = 0;
     for (const file of whiteboardFiles) {
+      const confidences = file.extraction.line_items
+        .map((li) => li.confidence)
+        .filter((c): c is number => typeof c === "number" && Number.isFinite(c));
+      const minConf = confidences.length ? Math.min(...confidences) : null;
+      const autoApprove = minConf !== null && minConf >= env.REVIEW_CONFIDENCE_THRESHOLD;
       const rowsAdded = await appendEodRows({
         extraction: file.extraction,
         source: "whiteboard",
         slackChannel: channel,
         slackMessageTs: messageTs,
-        recordedBy: uploadedBy
+        recordedBy: uploadedBy,
+        photoUrl: file.photoUrl,
+        autoApprove
       });
       totalRows += rowsAdded;
     }
@@ -1176,6 +1187,22 @@ async function handleReviewListRequest(req: IncomingMessage, res: ServerResponse
       return;
     }
 
+    if (tab === "outbound") {
+      await ensureEodSheetHeader();
+      const eodRows = await readEodRows({ limit: 5000 });
+      const eodSlips = groupEodSlips(eodRows);
+      const pendingSuggestions = await readPromptSuggestions({ status: "pending", limit: 200 });
+      const html = buildOutboundListHtml({
+        slips: eodSlips,
+        threshold: env.REVIEW_CONFIDENCE_THRESHOLD,
+        generatedAt: new Date(),
+        pendingSuggestionCount: pendingSuggestions.length
+      });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(html);
+      return;
+    }
+
     const pendingOnly = tab !== "history";
     const rows = await readDeliveryRows({ limit: 5000 });
     const slips = groupSlips(rows);
@@ -1554,6 +1581,182 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
   }
 }
 
+// ── Outbound review handlers ────────────────────────────────────────────────
+
+const EOD_SLIP_LEVEL_FIELDS = new Set(["date"]);
+const EOD_ROW_LEVEL_FIELDS = new Set([
+  "item_name_raw",
+  "item_name_normalized",
+  "quantity",
+  "quantity_raw",
+  "unit",
+  "category",
+  "program_type",
+  "notes",
+  "confidence"
+]);
+
+async function handleOutboundSlipDetailRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+  const slipParam = url.searchParams.get("slip") ?? "";
+  let slipKey = "";
+  try {
+    slipKey = decodeSlipKey(slipParam);
+  } catch {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Invalid slip key");
+    return;
+  }
+  const [channel, ts] = slipKey.split(":", 2);
+  if (!channel || !ts) {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Malformed outbound slip key");
+    return;
+  }
+
+  try {
+    await ensureEodSheetHeader();
+    const rows = await readEodRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.slack_channel === channel && r.slack_message_ts === ts);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+    const [slip] = groupEodSlips(slipRows);
+    const html = buildOutboundSlipDetailHtml({ slip, rows: slipRows });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Outbound slip detail error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
+async function handleOutboundEditRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+
+  try {
+    const body = (await readJsonBody(req)) as { slip?: string; row_index?: number; field?: string; new_value?: string; reason?: string };
+    const slipEnc = body.slip ?? "";
+    const rowIndex = Number(body.row_index);
+    const field = body.field ?? "";
+    const newValue = body.new_value ?? "";
+    const reason = body.reason ?? null;
+
+    if (!slipEnc || !Number.isInteger(rowIndex) || !field) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Missing slip/row_index/field");
+      return;
+    }
+    if (!EOD_SHEET_HEADERS.includes(field)) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end(`Unknown field: ${field}`);
+      return;
+    }
+    const isSlipLevel = EOD_SLIP_LEVEL_FIELDS.has(field);
+    if (!isSlipLevel && !EOD_ROW_LEVEL_FIELDS.has(field)) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end(`Field not editable: ${field}`);
+      return;
+    }
+
+    await ensureEodSheetHeader();
+    const slipKey = decodeSlipKey(slipEnc);
+    const [channel, ts] = slipKey.split(":", 2);
+    if (!channel || !ts) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Malformed outbound slip key");
+      return;
+    }
+    const rows = await readEodRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.slack_channel === channel && r.slack_message_ts === ts);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+    const targets = isSlipLevel ? slipRows : slipRows.filter((r) => r.rowIndex === rowIndex);
+    if (targets.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Row not found in slip");
+      return;
+    }
+    const user = (req.headers["x-review-user"] as string) || "review-ui";
+    for (const target of targets) {
+      const oldValue = (target as unknown as Record<string, string | null>)[field];
+      if (oldValue === newValue) continue;
+      await updateSheetCell({
+        worksheetName: env.EOD_WORKSHEET_NAME,
+        rowIndex: target.rowIndex,
+        columnName: field,
+        newValue: newValue === "" ? null : newValue
+      });
+      await appendCorrectionRow({
+        user,
+        slipKey,
+        sheet: env.EOD_WORKSHEET_NAME,
+        rowIndex: target.rowIndex,
+        field,
+        oldValue,
+        newValue,
+        reason
+      });
+    }
+    await clearEodApproval(slipRows.map((r) => r.rowIndex));
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Outbound edit error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
+}
+
+async function handleOutboundApproveRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+  try {
+    const body = (await readJsonBody(req)) as { slip?: string };
+    const slipEnc = body.slip ?? "";
+    if (!slipEnc) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Missing slip");
+      return;
+    }
+    await ensureEodSheetHeader();
+    const slipKey = decodeSlipKey(slipEnc);
+    const [channel, ts] = slipKey.split(":", 2);
+    if (!channel || !ts) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Malformed outbound slip key");
+      return;
+    }
+    const rows = await readEodRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.slack_channel === channel && r.slack_message_ts === ts);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+    const user = (req.headers["x-review-user"] as string) || "review-ui";
+    await stampEodApproval({
+      rowIndexes: slipRows.map((r) => r.rowIndex),
+      approvedBy: user
+    });
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  } catch (err) {
+    console.error("Outbound approve error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
+}
+
 async function handleDonateGetRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = await authRequest(req, res);
   if (!url) return;
@@ -1641,6 +1844,11 @@ function startHttpServer(): void {
       return;
     }
 
+    if (req.method === "GET" && path === "/review/outbound/slip") {
+      await handleOutboundSlipDetailRequest(req, res);
+      return;
+    }
+
     if (req.method === "POST" && path === "/api/review/edit") {
       await handleReviewEditRequest(req, res);
       return;
@@ -1648,6 +1856,16 @@ function startHttpServer(): void {
 
     if (req.method === "POST" && path === "/api/review/approve") {
       await handleReviewApproveRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/outbound/edit") {
+      await handleOutboundEditRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/outbound/approve") {
+      await handleOutboundApproveRequest(req, res);
       return;
     }
 
