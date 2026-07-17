@@ -141,6 +141,9 @@ function renderSlipRow(s: SlipSummary, threshold: number): string {
     : `<span class="muted">—</span>`;
   const date = s.delivery_date || `<span class="muted">${escapeHtml(s.created_at.slice(0, 10))}</span>`;
   const invoice = s.invoice_or_order_number ? escapeHtml(s.invoice_or_order_number) : `<span class="muted">—</span>`;
+  const approvedOn = s.approvedAt
+    ? escapeHtml(s.approvedAt.slice(0, 10))
+    : `<span class="muted">—</span>`;
   return `<tr>
     <td>${statusBadge(s)}</td>
     <td>${uploaded}</td>
@@ -149,6 +152,7 @@ function renderSlipRow(s: SlipSummary, threshold: number): string {
     <td>${invoice}</td>
     <td class="num">${s.rowCount}</td>
     <td>${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td>${approvedOn}</td>
     <td><a class="slip-link" href="/review/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
@@ -158,7 +162,7 @@ function renderSlipTable(slips: SlipSummary[], threshold: number): string {
   return `<table>
     <thead><tr>
       <th>Status</th><th>Uploaded</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
-      <th class="num">Rows</th><th>Min confidence</th><th></th>
+      <th class="num">Rows</th><th>Min confidence</th><th>Approved</th><th></th>
     </tr></thead>
     <tbody>${body}</tbody>
   </table>`;
