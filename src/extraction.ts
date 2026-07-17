@@ -662,7 +662,7 @@ function normKey(s: string | null): string {
 // output goes through normalizeRescueDonor() before any dedupe / write so that
 // even if the LLM emits a variant (or an older canonical from a stale prompt),
 // downstream code sees exactly one of these 5 strings.
-const RESCUE_DONOR_CANONICAL = ["QFC-MI", "QFC-BWY", "SWY-RB", "SWY-GEN", "Homegrown"] as const;
+export const RESCUE_DONOR_CANONICAL = ["QFC-MI", "QFC-BWY", "SWY-RB", "SWY-GEN", "Homegrown"] as const;
 
 function normDonorKey(s: string): string {
   return s.toLowerCase().replace(/[^a-z]/g, "");
