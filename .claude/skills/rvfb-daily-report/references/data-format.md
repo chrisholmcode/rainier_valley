@@ -2,15 +2,18 @@
 
 The RVFB Inventory spreadsheet has two tabs that drive the daily report.
 
-## Inbound Delivery Log (24 columns)
+## Inbound Delivery Log (31 columns)
 
 ```
-created_at, supplier, document_type, delivery_date, invoice_or_order_number,
-destination_org, item_code_raw, item_name_raw, item_name_normalized,
-quantity, quantity_raw, unit, pack_size_raw, category, unit_cost, line_total,
-confidence, is_fee, notes, photo_url, slack_channel, slack_message_ts,
-uploaded_by, warnings_json
+created_at, supplier, document_type, invoice_date, delivery_date,
+invoice_or_order_number, destination_org, item_code_raw, item_name_raw,
+item_name_normalized, quantity_ordered, quantity, quantity_raw, unit,
+pack_size_raw, approx_weight, category, unit_cost, line_total, confidence,
+is_fee, notes, photo_url, slack_channel, slack_message_ts, uploaded_by,
+warnings_json, donor_org, is_donation, approved_at, approved_by
 ```
+
+`quantity_ordered` = cases RVFB ordered (invoice ORDER column). `quantity` = cases actually shipped/received (invoice SHIP column) and is the authoritative inventory number — all aggregations use `quantity`, not `quantity_ordered`. `approx_weight` is the invoice's APPROX.WT. value (pounds); informational only, not aggregated. `invoice_date` = when the invoice/document was issued (often distinct from ship date); `delivery_date` = when goods actually shipped/arrived.
 
 **Filter:** `delivery_date == <target_date>`. Do NOT filter by `created_at` — invoices are sometimes logged days after the actual delivery, and `delivery_date` is the authoritative ship/invoice date.
 
@@ -28,6 +31,7 @@ uploaded_by, warnings_json
 - `unit_cost == null` → `unit cost missing`
 - `line_total == null` → `line total missing`
 - `quantity == 1 && line_total > unit_cost * 5` → `qty unclear` (likely OCR caught only the leading "1" of a multi-digit quantity)
+- `quantity_ordered != null && quantity != null && quantity < quantity_ordered` → `short <N>cs` where `N = quantity_ordered - quantity` (supplier shorted the order)
 - `confidence > 0 && confidence < 0.75` → `low confidence`
 
 **`warnings_json`** is a JSON array of free-text warnings the bot logged at extraction time. If non-empty for any row in a supplier group, render a yellow `supplier-warn` callout above that supplier's table:
