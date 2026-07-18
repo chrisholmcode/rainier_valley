@@ -1,6 +1,6 @@
 import type { DeliverySheetRow, EodSheetRow, PromptSuggestionRow } from "./types.js";
 import type { SlipSummary, EodSlipSummary } from "./sheets.js";
-import { RESCUE_CATEGORIES } from "./extraction.js";
+import { RESCUE_CATEGORIES, RESCUE_DONOR_CANONICAL } from "./extraction.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 
 function escapeHtml(s: string): string {
@@ -491,7 +491,9 @@ export function buildSlipDetailHtml(params: {
       <dt>delivery_date</dt><dd>${textInput("delivery_date", slip.delivery_date, slipMetaRowIndex)}</dd>
       <dt>invoice_or_order_number</dt><dd>${textInput("invoice_or_order_number", slip.invoice_or_order_number, slipMetaRowIndex)}</dd>
       <dt>destination_org</dt><dd>${textInput("destination_org", slip.destination_org, slipMetaRowIndex)}</dd>
-      <dt>donor_org</dt><dd>${textInput("donor_org", slip.donor_org, slipMetaRowIndex)}</dd>
+      <dt>donor_org</dt><dd>${slip.supplier === "food_lifeline"
+        ? selectInput("donor_org", slip.donor_org, slipMetaRowIndex, [...RESCUE_DONOR_CANONICAL])
+        : textInput("donor_org", slip.donor_org, slipMetaRowIndex)}</dd>
       <dt>is_donation</dt><dd>${boolInput("is_donation", slip.is_donation, slipMetaRowIndex)}</dd>
     </dl>
     <p class="muted" style="margin-top:12px; font-size:12px;">Editing a slip-level field updates every row of this slip.</p>
