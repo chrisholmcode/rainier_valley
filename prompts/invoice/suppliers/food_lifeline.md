@@ -39,6 +39,9 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
 - delivery_date and invoice_date: The handwritten Date (see swap note above). Convert to YYYY-MM-DD. If only two digits are given for the year, assume 20YY. If no year is written at all (bare M/D like "7/1"), use the year from `Today's date` in the user message — these forms are filled the day of pickup, so year-boundary edge cases (e.g., a bare "12/28" seen in early January) should use the previous year. Populate BOTH `invoice_date` and `delivery_date` with the resolved value.
+  - **Format is always M/D (month first, then day) — never D/M.** If the two numeric parts could be read either way (e.g., "7/8" — both ≤ 12), always treat the **first** as the month and the **second** as the day. Do NOT swap. Example: "7/7" → `2026-07-07`, NOT `2026-08-07`.
+  - **Single-digit month legibility warning:** if the handwritten month digit is ambiguous (could be "7" or "8", ink smudged, only partially legible), do NOT silently pick one — emit your best reading, set confidence ≤ 0.7, and add a `source_warning`: `"delivery_date month digit unclear: read as <your reading> but may be different — please verify against slip"`.
+  - Sanity check: if the extracted month is "08" but the filename or upload context (`Today's date`) suggests July, re-examine the source — you have likely transposed month and day. When in doubt, prefer the reading consistent with the upload date.
 - destination_org: The Agency field if filled in with a legible organization name; otherwise default to "Rainier Valley Food Bank" (the receiving food bank is implicit on rescue forms). Only use a different value if the Agency field clearly names another organization.
 - invoice_or_order_number: synthesize a shipment ID as `<donor_org>-<delivery_date>` (e.g. `QFC-MI-2026-07-13`, `SWY-GEN-2026-07-01`). This is the unique key for one grocery rescue pickup — only one shipment per store per day, so the store+date combination is guaranteed unique. If either donor_org or delivery_date is unresolved (null), leave invoice_or_order_number null and let a reviewer fill it in.
 - **Pick Up Temp (F) and Drop Off Temp (F) columns are NOT USED — ignore them entirely.** The RVFB team never fills these consistently and does not track them downstream. Do not extract, do not warn, do not derive anything from these two columns. Only the Product/Description column (row label) and the Pounds (lb) column matter.
@@ -65,9 +68,10 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
-  - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below.
-  - quantity = same value as approx_weight (on grocery rescue forms the Pounds cell IS both the weight and the billed quantity — mirror it into both fields).
-  - quantity_raw = verbatim contents of the Pounds cell (all visible numbers as one string, e.g., "151 123 108 40" — preserve so the human can audit).
+  > ⚠️ **All three of `approx_weight`, `quantity`, and `quantity_raw` are REQUIRED and must be non-null on any row where any numeral is legible in the Pounds cell.** These are the three most-corrected fields in production. If you can read even one number, extract it — never leave them blank. `quantity` must always equal `approx_weight` on rescue forms.
+  - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below. **NEVER leave `approx_weight` blank when any numeral is legible.** If the number is hard to read, extract your best guess, lower `confidence` to ≤ 0.6, and add a `source_warning`. Only set `approx_weight = null` when the cell contains **absolutely no writing**.
+  - quantity = **REQUIRED — always set equal to `approx_weight` whenever `approx_weight` is non-null.** The Pounds cell is both the weight and the billed quantity. Example: Pounds cell reads "17" → `approx_weight = 17`, `quantity = 17`.
+  - quantity_raw = **REQUIRED — never leave blank for a non-empty cell.** Copy every visible digit/number from the Pounds cell exactly as written, preserving all numbers including crossed-out ones and earlier tally values (e.g., a cell showing "70 79" → `quantity_raw = "70 79"`; a clean single value "24" → `quantity_raw = "24"`). Even a lone clean number must be emitted here.
   - notes = brief description (e.g., "running tally 151→123→108→40, taking 40 as last value" or "two weighings summed: 144+27=171").
   - confidence = lower (0.6–0.8) when the cell has crossed-out / overwritten numbers, higher (0.9+) when it's a single clean number.
 - **Rows with an empty Pounds cell (blank, no writing):**
@@ -80,6 +84,9 @@ Supplier: Food Lifeline. **Two distinct document subtypes — pick the matching 
   - confidence = 0.95.
 
 ### Running-tally rule for the Pounds column
+
+> **Digit-boundary caution — read BEFORE applying any pattern below.**
+> Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
