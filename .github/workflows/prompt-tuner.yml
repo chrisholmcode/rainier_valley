@@ -1,0 +1,112 @@
+name: prompt-tuner
+
+# Level-2 agentic loop: nightly the tuner reads the Corrections Log, clusters
+# recent human edits by supplier × field, asks Claude for a minimal per-supplier
+# prompt fix, applies it, and opens a PR against main for Chris to review.
+#
+# Also files a Prompt Suggestion (agent-tuner) and DMs Slack ADMIN_SLACK_USER_ID
+# per existing --write-suggestions behavior.
+#
+# Manual trigger available via `workflow_dispatch` for ad-hoc runs.
+#
+# ── Required repo secrets ────────────────────────────────────────────────────
+#   ANTHROPIC_API_KEY               — Claude API key with tool-use access
+#   GOOGLE_SERVICE_ACCOUNT_JSON     — JSON blob for the RVFB service account
+#   GOOGLE_SPREADSHEET_ID           — RVFB Inventory sheet ID
+#   CORRECTIONS_LOG_WORKSHEET_NAME  — e.g. "Corrections Log"
+#   EXTRACTION_TRACES_WORKSHEET_NAME — e.g. "Extraction Traces"
+#   PROMPT_SUGGESTIONS_WORKSHEET_NAME — e.g. "Prompt Suggestions"
+#   ANTHROPIC_MODEL                 — e.g. "claude-opus-4-8"
+#
+# Optional (for Slack DM + admin scoping):
+#   SLACK_BOT_TOKEN
+#   ADMIN_SLACK_USER_ID
+#   ADMIN_EMAIL
+#   CF_ACCESS_TEAM_DOMAIN
+#
+# GITHUB_TOKEN is provided automatically by Actions; the default token has
+# permission to open PRs from within the same repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      supplier:
+        description: "Restrict to one supplier slug (blank = all)"
+        required: false
+        default: ""
+      min_cluster:
+        description: "Minimum cluster size to consider"
+        required: false
+        default: "3"
+      max_prs:
+        description: "Max PRs to open in this run"
+        required: false
+        default: "3"
+      dry_run:
+        description: "Skip push + gh pr create (just log what would happen)"
+        required: false
+        type: boolean
+        default: false
+  # Nightly 10:00 UTC = 3:00 AM PT. Comment/uncomment to arm.
+  # schedule:
+  #   - cron: "0 10 * * *"
+
+jobs:
+  tune:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          # Use the default GITHUB_TOKEN so pushes and PRs are attributed to
+          # the actions bot.
+          persist-credentials: true
+
+      - name: Configure git identity
+        run: |
+          git config user.email "prompt-tuner-bot@users.noreply.github.com"
+          git config user.name  "prompt-tuner-bot"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run tuner (write suggestions + open PRs)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+          GOOGLE_WORKSHEET_NAME: ${{ secrets.GOOGLE_WORKSHEET_NAME }}
+          EOD_WORKSHEET_NAME: ${{ secrets.EOD_WORKSHEET_NAME }}
+          SUMMARY_WORKSHEET_NAME: ${{ secrets.SUMMARY_WORKSHEET_NAME }}
+          CORRECTIONS_LOG_WORKSHEET_NAME: ${{ secrets.CORRECTIONS_LOG_WORKSHEET_NAME }}
+          EXTRACTION_TRACES_WORKSHEET_NAME: ${{ secrets.EXTRACTION_TRACES_WORKSHEET_NAME }}
+          PROMPT_SUGGESTIONS_WORKSHEET_NAME: ${{ secrets.PROMPT_SUGGESTIONS_WORKSHEET_NAME }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          ADMIN_SLACK_USER_ID: ${{ secrets.ADMIN_SLACK_USER_ID }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          CF_ACCESS_TEAM_DOMAIN: ${{ secrets.CF_ACCESS_TEAM_DOMAIN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ARGS=(--write-suggestions --open-pr --min-cluster "${{ inputs.min_cluster || '3' }}" --max-prs "${{ inputs.max_prs || '3' }}")
+          if [ -n "${{ inputs.supplier }}" ]; then
+            ARGS+=(--supplier "${{ inputs.supplier }}")
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS+=(--pr-dry-run)
+          fi
+          echo "Running: npm run tune:prompts -- ${ARGS[*]}"
+          npm run tune:prompts -- "${ARGS[@]}"
