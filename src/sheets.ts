@@ -1062,7 +1062,7 @@ export async function updatePromptSuggestionStatus(params: {
   });
 }
 
-export async function appendCorrectionRow(params: {
+export interface CorrectionEntry {
   user: string;
   slipKey: string;
   sheet: string;
@@ -1071,26 +1071,35 @@ export async function appendCorrectionRow(params: {
   oldValue: string | number | boolean | null;
   newValue: string | number | boolean | null;
   reason: string | null;
-}): Promise<void> {
+}
+
+export async function appendCorrectionRow(entry: CorrectionEntry): Promise<void> {
+  await appendCorrectionRows([entry]);
+}
+
+// Batched corrections append — one Sheets API write for N entries. Keeps
+// slip-level edits under the write-per-minute quota.
+export async function appendCorrectionRows(entries: CorrectionEntry[]): Promise<void> {
+  if (entries.length === 0) return;
   await ensureCorrectionsLogHeader();
+  const now = new Date().toISOString();
+  const values = entries.map((e) => [
+    now,
+    e.user,
+    e.slipKey,
+    e.sheet,
+    e.rowIndex,
+    e.field,
+    e.oldValue == null ? "" : String(e.oldValue),
+    e.newValue == null ? "" : String(e.newValue),
+    e.reason ?? ""
+  ]);
   const sheets = google.sheets({ version: "v4", auth });
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.CORRECTIONS_LOG_WORKSHEET_NAME}!A:I`,
     valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [[
-        new Date().toISOString(),
-        params.user,
-        params.slipKey,
-        params.sheet,
-        params.rowIndex,
-        params.field,
-        params.oldValue == null ? "" : String(params.oldValue),
-        params.newValue == null ? "" : String(params.newValue),
-        params.reason ?? ""
-      ]]
-    }
+    requestBody: { values }
   });
 }
 
@@ -1478,19 +1487,38 @@ export async function updateSheetCell(params: {
   columnName: string;
   newValue: string | number | boolean | null;
 }): Promise<void> {
-  const { worksheetName, rowIndex, columnName, newValue } = params;
+  await updateSheetCells({ worksheetName: params.worksheetName, updates: [{
+    rowIndex: params.rowIndex,
+    columnName: params.columnName,
+    newValue: params.newValue
+  }]});
+}
+
+// Batched single-cell update — one Sheets API write for N cells on the same
+// worksheet. Prevents "Write requests per minute per user" quota errors when a
+// slip-level edit fans out across many rows.
+export async function updateSheetCells(params: {
+  worksheetName: string;
+  updates: Array<{ rowIndex: number; columnName: string; newValue: string | number | boolean | null }>;
+}): Promise<void> {
+  const { worksheetName, updates } = params;
+  if (updates.length === 0) return;
   const headers = worksheetName === env.EOD_WORKSHEET_NAME ? EOD_SHEET_HEADERS : SHEET_HEADERS;
-  const colIndex = headers.indexOf(columnName);
-  if (colIndex === -1) throw new Error(`Unknown column: ${columnName}`);
-  const colLetter = indexToColumn(colIndex);
-  const writeValue = columnName === "item_code_raw" && typeof newValue === "string"
-    ? asSheetCode(newValue)
-    : newValue;
+  const data = updates.map(({ rowIndex, columnName, newValue }) => {
+    const colIndex = headers.indexOf(columnName);
+    if (colIndex === -1) throw new Error(`Unknown column: ${columnName}`);
+    const colLetter = indexToColumn(colIndex);
+    const writeValue = columnName === "item_code_raw" && typeof newValue === "string"
+      ? asSheetCode(newValue)
+      : newValue;
+    return {
+      range: `${worksheetName}!${colLetter}${rowIndex}`,
+      values: [[writeValue]]
+    };
+  });
   const sheets = google.sheets({ version: "v4", auth });
-  await sheets.spreadsheets.values.update({
+  await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${worksheetName}!${colLetter}${rowIndex}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [[writeValue]] }
+    requestBody: { valueInputOption: "USER_ENTERED", data }
   });
 }
