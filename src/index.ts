@@ -13,6 +13,7 @@ import {
   appendEodRows,
   ensureEodSheetHeader,
   updateSheetCell,
+  updateSheetCells,
   readDeliveryRows,
   readEodRows,
   appendSummaryRow,
@@ -20,6 +21,8 @@ import {
   ensureCorrectionsLogHeader,
   ensureExtractionTracesHeader,
   appendCorrectionRow,
+  appendCorrectionRows,
+  type CorrectionEntry,
   groupSlips,
   groupEodSlips,
   stampSlipApproval,
@@ -1396,17 +1399,21 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
     } else {
       fanout = [{ field, value: newValue }];
     }
+    // Collect all cell writes + correction-log rows and batch them into two
+    // Sheets API calls. A slip-level edit on a 30-row slip would otherwise
+    // burn 60+ writes and trip the 60/min quota.
+    const cellUpdates: Array<{ rowIndex: number; columnName: string; newValue: string | null }> = [];
+    const corrections: CorrectionEntry[] = [];
     for (const target of targets) {
       for (const f of fanout) {
         const oldValue = (target as unknown as Record<string, string | null>)[f.field];
         if (oldValue === f.value) continue;
-        await updateSheetCell({
-          worksheetName: env.GOOGLE_WORKSHEET_NAME,
+        cellUpdates.push({
           rowIndex: target.rowIndex,
           columnName: f.field,
           newValue: f.value === "" ? null : f.value
         });
-        await appendCorrectionRow({
+        corrections.push({
           user,
           slipKey,
           sheet: env.GOOGLE_WORKSHEET_NAME,
@@ -1417,6 +1424,10 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
           reason
         });
       }
+    }
+    if (cellUpdates.length > 0) {
+      await updateSheetCells({ worksheetName: env.GOOGLE_WORKSHEET_NAME, updates: cellUpdates });
+      await appendCorrectionRows(corrections);
     }
 
     await clearSlipApproval(slipRows.map((r) => r.rowIndex));
@@ -1732,16 +1743,17 @@ async function handleOutboundEditRequest(req: IncomingMessage, res: ServerRespon
       return;
     }
     const user = (req.headers["x-review-user"] as string) || "review-ui";
+    const cellUpdates: Array<{ rowIndex: number; columnName: string; newValue: string | null }> = [];
+    const corrections: CorrectionEntry[] = [];
     for (const target of targets) {
       const oldValue = (target as unknown as Record<string, string | null>)[field];
       if (oldValue === newValue) continue;
-      await updateSheetCell({
-        worksheetName: env.EOD_WORKSHEET_NAME,
+      cellUpdates.push({
         rowIndex: target.rowIndex,
         columnName: field,
         newValue: newValue === "" ? null : newValue
       });
-      await appendCorrectionRow({
+      corrections.push({
         user,
         slipKey,
         sheet: env.EOD_WORKSHEET_NAME,
@@ -1751,6 +1763,10 @@ async function handleOutboundEditRequest(req: IncomingMessage, res: ServerRespon
         newValue,
         reason
       });
+    }
+    if (cellUpdates.length > 0) {
+      await updateSheetCells({ worksheetName: env.EOD_WORKSHEET_NAME, updates: cellUpdates });
+      await appendCorrectionRows(corrections);
     }
     await clearEodApproval(slipRows.map((r) => r.rowIndex));
 
