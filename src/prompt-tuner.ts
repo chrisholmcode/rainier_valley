@@ -155,14 +155,14 @@ function clusterBySupplierField(corrections: Correction[], minCluster: number, s
   const groups = new Map<string, Correction[]>();
   for (const c of corrections) {
     if (supplierFilter && c.supplier !== supplierFilter) continue;
-    const key = `${c.supplier} ${c.field}`;
+    const key = `${c.supplier}::${c.field}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(c);
   }
   const clusters: Cluster[] = [];
   for (const [key, cs] of groups) {
     if (cs.length < minCluster) continue;
-    const [supplier, field] = key.split(" ");
+    const [supplier, field] = key.split("::");
     clusters.push({ supplier, field, corrections: cs });
   }
   // Hottest clusters first — most corrections = highest tuning leverage.
@@ -276,7 +276,7 @@ async function loadPendingAgentSignatures(): Promise<Set<string>> {
     if ((r[P.submitted_by] ?? "") !== SUGGESTED_BY) continue;
     if ((r[P.status] ?? "") !== "pending") continue;
     const text = r[P.suggestion_text] ?? "";
-    const m = text.match(/<!-- signature:\s*([^\s-]+)\s*-->/);
+    const m = text.match(/<!-- signature:\s*(\S+?)\s*-->/);
     if (m) sigs.add(m[1]);
   }
   return sigs;
