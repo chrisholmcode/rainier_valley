@@ -20,7 +20,8 @@ import { GoogleAuth } from "google-auth-library";
 const {
   GOOGLE_SERVICE_ACCOUNT_JSON,
   GOOGLE_SPREADSHEET_ID,
-  EOD_WORKSHEET_NAME = "Outbound Delivery Log"
+  EOD_WORKSHEET_NAME = "Outbound Delivery Log",
+  GOOGLE_WORKSHEET_NAME = "Inbound Delivery Log"
 } = process.env;
 if (!GOOGLE_SPREADSHEET_ID) {
   // Self-skip when unconfigured. This is the "workflow armed but repo
@@ -35,8 +36,9 @@ const RECENT_DAYS = 7;
 // Grandfather clauses — rows written before each fix landed are exempt from
 // the invariant that fix enforces. Bumps to these are one-line edits; each
 // corresponds to the merge time of the PR that established the invariant.
-const PHOTO_URL_FIX_AT = "2026-07-17T18:16:38Z"; // PR #19 (e5419db)
-const TS_TEXT_FIX_AT   = "2026-07-22T03:52:32Z"; // PR #33 (84a9657)
+const PHOTO_URL_FIX_AT     = "2026-07-17T18:16:38Z"; // PR #19 (e5419db)
+const TS_TEXT_FIX_AT       = "2026-07-22T03:52:32Z"; // PR #33 (84a9657)
+const RESCUE_SKELETON_FIX_AT = "2026-07-22T23:19:09Z"; // PR #52 (45f8617) + runtime invariant in this PR
 
 async function main(): Promise<void> {
   const auth = GOOGLE_SERVICE_ACCOUNT_JSON
@@ -101,12 +103,60 @@ async function main(): Promise<void> {
     failures.push(`${numericTs.length} rows since ${tsCutoff} with numeric slack_message_ts (regression from PR #33 — should be text)`);
   }
 
+  // Invariant 3 (regression guard for grocery_rescue skeleton): every
+  // grocery_rescue slip written after the invariant fix must carry all 10
+  // category rows. Runs against the Inbound Delivery Log — separate Sheets
+  // read since smoke previously only touched the Outbound tab.
+  const inboundHeaderRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SPREADSHEET_ID,
+    range: `${GOOGLE_WORKSHEET_NAME}!1:1`
+  });
+  const inboundHeaders = (inboundHeaderRes.data.values?.[0] ?? []) as string[];
+  const inboundDataRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SPREADSHEET_ID,
+    range: `${GOOGLE_WORKSHEET_NAME}!A2:AZ`,
+    valueRenderOption: "UNFORMATTED_VALUE"
+  });
+  const inboundRows = inboundDataRes.data.values ?? [];
+  const inIdx = new Map(inboundHeaders.map((h, i) => [h, i]));
+  for (const col of ["supplier", "invoice_or_order_number", "created_at"] as const) {
+    if (!inIdx.has(col)) {
+      console.error(`smoke: column "${col}" not found in ${GOOGLE_WORKSHEET_NAME} header — schema drift?`);
+      process.exit(1);
+    }
+  }
+  const supIdx = inIdx.get("supplier")!;
+  const invIdx = inIdx.get("invoice_or_order_number")!;
+  const createdIdx = inIdx.get("created_at")!;
+  const rescueCutoff = recentCutoff > RESCUE_SKELETON_FIX_AT ? recentCutoff : RESCUE_SKELETON_FIX_AT;
+  interface RescueSlip { earliest: string; count: number; }
+  const rescueBySlip = new Map<string, RescueSlip>();
+  for (const r of inboundRows) {
+    if (String(r[supIdx] ?? "") !== "grocery_rescue") continue;
+    const inv = String(r[invIdx] ?? "").trim();
+    if (!inv) continue;
+    const created = String(r[createdIdx] ?? "");
+    const existing = rescueBySlip.get(inv);
+    if (existing) {
+      existing.count++;
+      if (created < existing.earliest) existing.earliest = created;
+    } else {
+      rescueBySlip.set(inv, { earliest: created, count: 1 });
+    }
+  }
+  const shortSlips = [...rescueBySlip.entries()]
+    .filter(([, s]) => s.count < 10 && s.earliest >= rescueCutoff);
+  if (shortSlips.length) {
+    const list = shortSlips.slice(0, 5).map(([inv, s]) => `${inv}(${s.count})`).join(", ");
+    failures.push(`${shortSlips.length} grocery_rescue slip(s) since ${rescueCutoff} with < 10 category rows: ${list}${shortSlips.length > 5 ? " …" : ""}`);
+  }
+
   if (failures.length) {
     console.error("SMOKE FAIL:");
     for (const f of failures) console.error(`  - ${f}`);
     process.exit(1);
   }
-  console.log(`SMOKE OK: all invariants pass over the last ${RECENT_DAYS} days (${rows.length} rows scanned)`);
+  console.log(`SMOKE OK: all invariants pass over the last ${RECENT_DAYS} days (${rows.length} outbound + ${inboundRows.length} inbound rows scanned)`);
 }
 
 main().catch((err) => { console.error("smoke check failed:", err); process.exit(1); });
