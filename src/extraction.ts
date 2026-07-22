@@ -14,7 +14,7 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
-  supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"]),
+  supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"]),
   invoice_date: z.string().nullable(),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
@@ -62,6 +62,7 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   costco: loadPrompt("invoice/suppliers/costco.md"),
   food_lifeline: loadPrompt("invoice/suppliers/food_lifeline.md"),
   grand_central: loadPrompt("invoice/suppliers/grand_central.md"),
+  grocery_rescue: loadPrompt("invoice/suppliers/grocery_rescue.md"),
   in_kind: loadPrompt("invoice/suppliers/unknown.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
@@ -90,7 +91,7 @@ const EXTRACTION_INPUT_SCHEMA = {
   type: "object" as const,
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
-    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"] },
     invoice_date: { type: ["string", "null"], description: "The date printed on the invoice/document (labels vary: 'Invoice date', 'Order date', 'Date'). Format YYYY-MM-DD. When the document shows both an invoice date and a distinct ship/delivery date, they go in separate columns. When the document shows only one date, populate BOTH invoice_date and delivery_date with that same value — do not leave either null." },
     delivery_date: { type: ["string", "null"], description: "The date the goods physically shipped or arrived (labels vary: 'Ship date', 'Shipped on', 'Delivered', 'Received'). Format YYYY-MM-DD. When the document shows only one date, populate BOTH invoice_date and delivery_date with that same value." },
     invoice_or_order_number: { type: ["string", "null"] },
@@ -221,7 +222,13 @@ export function guessSupplierFromFilename(filename: string): Supplier {
   if (f.includes("charlie")) return "charlies";
   if (f.includes("costco")) return "costco";
   if (f.includes("grand_central") || f.includes("grand-central") || f.includes("grandcentral") || f.includes("gcb")) return "grand_central";
-  if (f.includes("food lifeline") || f.includes("food_lifeline") || f.includes("foodlifeline") || f.includes("lifeline")) return "food_lifeline";
+  // Food Lifeline umbrella covers two very different subtypes: printed
+  // agency-order manifests (supplier="food_lifeline") vs handwritten grocery
+  // rescue slips (supplier="grocery_rescue"). Filename alone can't distinguish
+  // them — route to "unknown" and let the extraction prompt classify off the
+  // image.
+  if (f.includes("food lifeline") || f.includes("food_lifeline") || f.includes("foodlifeline") || f.includes("lifeline")) return "unknown";
+  if (f.includes("grocery_rescue") || f.includes("grocery-rescue") || f.includes("grocery rescue") || f.includes("rescue")) return "grocery_rescue";
   if (f.includes("harvest") || f.includes("nw")) return "nw_harvest";
   if (f.includes("pacific") || f.includes("pfd")) return "pacific";
   if (f.includes("terrebonne") || f.includes("truck_patch") || f.includes("truck-patch") || f.includes("truckpatch") || f.includes("ttp")) return "terrebonne";
@@ -696,7 +703,7 @@ export function normalizeRescueDonor(raw: string | null): string | null {
 // ingest path so downstream code (dedupe, review UI, backfill) sees canonical
 // donor names regardless of what the LLM emitted.
 export function normalizeRescueSlip(extraction: ExtractionResult): void {
-  if (extraction.supplier !== "food_lifeline") return;
+  if (extraction.supplier !== "grocery_rescue") return;
   if (!extraction.donor_org) return;
   const canonical = normalizeRescueDonor(extraction.donor_org);
   if (!canonical) {
@@ -719,7 +726,7 @@ export function normalizeRescueSlip(extraction: ExtractionResult): void {
 }
 
 export function ensureRescueSkeleton(extraction: ExtractionResult): void {
-  if (extraction.supplier !== "food_lifeline") return;
+  if (extraction.supplier !== "grocery_rescue") return;
   if (!extraction.donor_org || !extraction.donor_org.trim()) return;
 
   const items = extraction.line_items;

@@ -19,7 +19,7 @@ const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
   : new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
 
-const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline"]);
+const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline", "grocery_rescue"]);
 const PURCHASED_SUPPLIERS = new Set<string>(["carusos", "charlies", "costco", "pacific", "terrebonne", "weigelt"]);
 
 function deriveIsDonation(supplier: string, destinationOrg: string | null): boolean | null {

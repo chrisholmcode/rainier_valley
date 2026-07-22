@@ -1,4 +1,4 @@
-export type Supplier = "carusos" | "charlies" | "costco" | "food_lifeline" | "grand_central" | "in_kind" | "nw_harvest" | "pacific" | "terrebonne" | "weigelt" | "unknown";
+export type Supplier = "carusos" | "charlies" | "costco" | "food_lifeline" | "grand_central" | "grocery_rescue" | "in_kind" | "nw_harvest" | "pacific" | "terrebonne" | "weigelt" | "unknown";
 
 export type ProgramType = "home_delivery" | "in_person_shopping" | "pre_made_bags" | "unknown";
 
