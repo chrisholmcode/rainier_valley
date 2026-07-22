@@ -147,9 +147,9 @@ const FIXTURES: FixtureCase[] = [
   },
   {
     file: "tests/fixtures/food_lifeline_rescue_qfc_IMG_4047.jpg",
-    supplierHint: "food_lifeline",
+    supplierHint: "grocery_rescue",
     expect: {
-      supplier: "food_lifeline",
+      supplier: "grocery_rescue",
       document_type: "manifest",
       minLineItems: 4,
       feesCount: 0,
@@ -160,9 +160,9 @@ const FIXTURES: FixtureCase[] = [
   },
   {
     file: "tests/fixtures/food_lifeline_rescue_safeway_IMG_4046.jpg",
-    supplierHint: "food_lifeline",
+    supplierHint: "grocery_rescue",
     expect: {
-      supplier: "food_lifeline",
+      supplier: "grocery_rescue",
       document_type: "manifest",
       minLineItems: 4,
       feesCount: 0,

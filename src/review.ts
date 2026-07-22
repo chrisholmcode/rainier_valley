@@ -38,11 +38,15 @@ function confidenceBadge(min: number | null, threshold: number): string {
   return `<span class="conf conf-${cls}">${pct}%</span>`;
 }
 
+function supplierDisplay(s: string): string {
+  return s === "grocery_rescue" ? "grocery rescue" : s;
+}
+
 function donorOrSupplier(slip: SlipSummary): string {
   if (slip.donor_org && slip.donor_org.trim()) {
-    return `${escapeHtml(slip.donor_org)} <span class="muted">via ${escapeHtml(slip.supplier)}</span>`;
+    return `${escapeHtml(slip.donor_org)} <span class="muted">via ${escapeHtml(supplierDisplay(slip.supplier))}</span>`;
   }
-  return escapeHtml(slip.supplier);
+  return escapeHtml(supplierDisplay(slip.supplier));
 }
 
 const STYLE = `
@@ -531,7 +535,10 @@ function boolInput(name: string, value: string | null, rowIndex: number): string
 }
 
 function isGroceryRescue(slip: SlipSummary): boolean {
-  // Food Lifeline has two subtypes; grocery rescue is the one with a donor_org.
+  // Grocery rescue is its own supplier now (previously conflated with
+  // food_lifeline). Legacy food_lifeline-with-donor rows still count until
+  // the backfill flips their supplier.
+  if (slip.supplier === "grocery_rescue") return true;
   return slip.supplier === "food_lifeline" && !!(slip.donor_org && slip.donor_org.trim());
 }
 
@@ -554,7 +561,7 @@ export function buildSlipDetailHtml(params: {
       <dt>delivery_date</dt><dd>${textInput("delivery_date", slip.delivery_date, slipMetaRowIndex)}</dd>
       <dt>invoice_or_order_number</dt><dd>${textInput("invoice_or_order_number", slip.invoice_or_order_number, slipMetaRowIndex)}</dd>
       <dt>destination_org</dt><dd>${textInput("destination_org", slip.destination_org, slipMetaRowIndex)}</dd>
-      <dt>donor_org</dt><dd>${slip.supplier === "food_lifeline"
+      <dt>donor_org</dt><dd>${isGroceryRescue(slip)
         ? selectInput("donor_org", slip.donor_org, slipMetaRowIndex, [...RESCUE_DONOR_CANONICAL])
         : textInput("donor_org", slip.donor_org, slipMetaRowIndex)}</dd>
       <dt>is_donation</dt><dd>${boolInput("is_donation", slip.is_donation, slipMetaRowIndex)}</dd>

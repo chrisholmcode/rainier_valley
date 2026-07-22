@@ -32,10 +32,12 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Weight column is TOTAL weight. Class Code = storage (AMBIENT/CHILL). Filter out Grand Totals row.
 - If only a pallet label (no line items), add warning to source_warnings.
 
-**Food Lifeline** (set supplier: "food_lifeline") — TWO subtypes
-- AGENCY ORDER (printed): "FOOD LIFELINE" logo + "AGENCY ORDER" header. Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight. document_type = "manifest". donor_org = null. Quantity => quantity, Gross Weight => approx_weight. Item No. suffix `-TEFA` / `-CITY` => capture in notes. Populate BOTH invoice_date and delivery_date from Ship Date. invoice_or_order_number from Agency Order No. Totals are $0 (preserve as 0).
-- GROCERY RESCUE (handwritten): "FOOD LIFELINE" logo + form fields Donor / Address / Agency / Date. Per-category Pounds (lb) column. document_type = "manifest". donor_org = the Donor field (e.g., "QFC-MI", "Safeway-RB"). Populate BOTH invoice_date and delivery_date from the Date field (Donor/Date may be swapped — disambiguate by shape). One line item per non-empty Pounds row using the row label as item_name_raw, unit = "lb", approx_weight = parsed pounds. Apply the running-tally rule (see supplier prompt). Totals null. fees[] empty.
-- Both subtypes: is_donation = true. supplier = "food_lifeline".
+**Food Lifeline AGENCY ORDER** (set supplier: "food_lifeline")
+- Printed manifest. "FOOD LIFELINE" logo + "AGENCY ORDER" header. Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight. document_type = "manifest". donor_org = null. Quantity => quantity, Gross Weight => approx_weight. Item No. suffix `-TEFA` / `-CITY` => capture in notes. Populate BOTH invoice_date and delivery_date from Ship Date. invoice_or_order_number from Agency Order No. Totals are $0 (preserve as 0). is_donation = true.
+
+**Grocery Rescue** (set supplier: "grocery_rescue")
+- Handwritten Food Lifeline rescue slip. "FOOD LIFELINE" logo + form fields Donor / Address / Agency / Date. Per-category Pounds (lb) column. document_type = "manifest". donor_org = the Donor field mapped to one of QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / Homegrown. Populate BOTH invoice_date and delivery_date from the Date field (Donor/Date may be swapped — disambiguate by shape). One line item per non-empty Pounds row using the row label as item_name_raw, unit = "lb", approx_weight = parsed pounds. Apply the running-tally rule (see supplier prompt). Totals null. fees[] empty. is_donation = true.
+- Also `supplier = "grocery_rescue"` when a printed invoice arrives from a rescue partner (QFC / Safeway / Homegrown) with per-line SKUs and prices — same donor bucket, printed layout.
 
 **Costco Business Delivery** (set supplier: "costco")
 - Header has the Costco / Costco Business Center logo and title "Invoice"

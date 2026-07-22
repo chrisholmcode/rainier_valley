@@ -21,8 +21,9 @@ Vendor-specific extraction rules live in `prompts/invoice/suppliers/`. Each supp
 | `carusos` | Caruso's Produce (Canby, OR) | purchased |
 | `charlies` | Charlie's Produce (Seattle, WA) | purchased |
 | `costco` | Costco Business Delivery (Fife, WA) | purchased |
-| `food_lifeline` | Food Lifeline — AGENCY ORDER + GROCERY RESCUE pickups | donation |
+| `food_lifeline` | Food Lifeline AGENCY ORDER (printed manifest) | donation |
 | `grand_central` | Grand Central Bakery (Seattle, WA) | per-invoice (Customer suffix `- Donation` / `- Purchased`) |
+| `grocery_rescue` | Food Lifeline grocery rescue pickups (QFC, Safeway, Homegrown) — donor store captured in `donor_org` | donation |
 | `nw_harvest` | Northwest Harvest (Auburn warehouse) | donation |
 | `pacific` | Pacific Food Distributors | purchased |
 | `terrebonne` | Terrebonne Truck Patch (North Bend, WA) | purchased |

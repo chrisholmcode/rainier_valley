@@ -580,7 +580,7 @@ export const SUMMARY_SHEET_HEADERS = [
   "photo_url"
 ];
 
-const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline"]);
+const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline", "grocery_rescue"]);
 
 interface SummaryRollup {
   weight_lb: number | null;
@@ -1154,10 +1154,12 @@ export interface SlipSummary {
 
 export function rescueDedupeKey(supplier: string | null, donorOrg: string | null, deliveryDate: string | null): string | null {
   if (!supplier || !donorOrg || !deliveryDate) return null;
-  if (supplier !== "food_lifeline") return null;
+  // Accept both the new supplier slug and the legacy value so historical rows
+  // still contribute to the in-memory dedupe set until the backfill lands.
+  if (supplier !== "grocery_rescue" && supplier !== "food_lifeline") return null;
   const donor = donorOrg.trim().toLowerCase().replace(/\s+/g, " ");
   if (!donor) return null;
-  return `food_lifeline:${donor}:${deliveryDate}`;
+  return `grocery_rescue:${donor}:${deliveryDate}`;
 }
 
 export async function readRescueDedupeKeys(): Promise<Set<string>> {

@@ -49,7 +49,7 @@ import { env } from "./config.js";
 // deliberately does not import from the CODEOWNERS-gated modules.
 const INVOICE_SUPPLIERS = [
   "carusos", "charlies", "costco", "food_lifeline", "grand_central",
-  "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"
+  "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"
 ] as const;
 
 const PROMPTS_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "prompts");

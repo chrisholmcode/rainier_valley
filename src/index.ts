@@ -622,7 +622,7 @@ app.event("message", async ({ event, client, logger }) => {
       if (rescueKey && processedRescueKeys.has(rescueKey)) {
         flagPossibleDuplicate = true;
         extraction.source_warnings.push(
-          `possible duplicate — an existing food_lifeline rescue slip for ${extraction.donor_org} on ${extraction.delivery_date} was already logged`
+          `possible duplicate — an existing grocery rescue slip for ${extraction.donor_org} on ${extraction.delivery_date} was already logged`
         );
         await client.chat.postMessage({
           channel: message.channel,
@@ -1398,14 +1398,18 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
       ];
     } else {
       fanout = [{ field, value: newValue }];
-      // Food-lifeline grocery-rescue slips synthesize invoice_or_order_number
-      // as `<donor_org>-<delivery_date>` at ingest. When a reviewer edits
+      // Grocery-rescue slips synthesize invoice_or_order_number as
+      // `<donor_org>-<delivery_date>` at ingest. When a reviewer edits
       // either component, cascade the re-derive so the shipment ID stays in
       // sync with its two source fields. Skip if the sibling value is empty.
+      // Legacy `food_lifeline`-with-donor rows fall into the same bucket until
+      // the backfill flips their supplier to grocery_rescue.
       if ((field === "donor_org" || field === "delivery_date") && newValue.trim()) {
         const first = slipRows[0];
         const isDonation = String(first.is_donation ?? "").toLowerCase() === "true";
-        if (first.supplier === "food_lifeline" && isDonation) {
+        const isRescue = first.supplier === "grocery_rescue"
+          || (first.supplier === "food_lifeline" && !!(first.donor_org ?? "").trim());
+        if (isRescue && isDonation) {
           const donor = (field === "donor_org" ? newValue : first.donor_org ?? "").trim();
           const date  = (field === "delivery_date" ? newValue : first.delivery_date ?? "").trim();
           if (donor && date) {
@@ -2026,7 +2030,7 @@ async function start(): Promise<void> {
   try {
     const rescueKeys = await readRescueDedupeKeys();
     for (const k of rescueKeys) processedRescueKeys.add(k);
-    console.log(`Loaded ${rescueKeys.size} existing food_lifeline rescue dedupe key(s).`);
+    console.log(`Loaded ${rescueKeys.size} existing grocery rescue dedupe key(s).`);
   } catch (err) {
     console.warn(`readRescueDedupeKeys failed at boot: ${(err as Error).message}`);
   }

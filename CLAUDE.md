@@ -37,7 +37,7 @@ src/
 prompts/
   classify/             Whiteboard-vs-invoice classifier prompt
   invoice/system.md     Shared invoice extraction prompt
-  invoice/suppliers/*.md  Per-supplier extraction rules (carusos, charlies, costco, food_lifeline, grand_central, nw_harvest, pacific, terrebonne, weigelt, unknown)
+  invoice/suppliers/*.md  Per-supplier extraction rules (carusos, charlies, costco, food_lifeline, grand_central, grocery_rescue, nw_harvest, pacific, terrebonne, weigelt, unknown)
   whiteboard/           Whiteboard extraction prompt
   eod/                  EOD text/voice extraction prompt
 
