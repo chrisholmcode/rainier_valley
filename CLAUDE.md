@@ -117,6 +117,8 @@ Every prompt is a markdown file in `prompts/`. Vendor-specific extraction rules 
 ## Things that will bite you
 
 - **`SHEET_HEADERS` order is load-bearing.** `readDeliveryRows` parses by column position. Inserting in the middle, not at the end, will silently misread historical rows.
+- **Adding a column ≠ populating it.** New columns appear as empty cells on every existing row until you backfill. The Review UI treats "empty" as "missing," which is often invisible until a reviewer opens an old slip and asks *"why is this blank?"* (See PR #19 → #32 for the four-day gap on `photo_url`.) When you add to `SHEET_HEADERS` / `EOD_SHEET_HEADERS`, either ship a `src/backfill-*.ts` in the same PR **or** leave a `// TODO backfill(column_name): reason` comment on the line you added — one grep-able marker is enough to keep the followup honest.
+- **Sheets `USER_ENTERED` will coerce numeric-looking strings.** Any column that holds a numeric-looking identifier (Slack ts, item codes, invoice numbers with all-digit values) must be written through `asSheetText()` — otherwise Sheets stores it as a float, display-truncates, and breaks round-trip. See PR #33 for the `slack_message_ts` fix; extend the same treatment to any new identifier column.
 - **Slack `url_private_download`** requires `Authorization: Bearer SLACK_BOT_TOKEN`. The Review UI's `/review/photo` proxy is the only sanctioned way to render slip photos in a browser.
 - **In-memory dedupe** does not survive a Railway restart. If you're debugging a "why did it ingest twice" bug after a deploy, that's why.
 - **Anthropic credit exhaustion** surfaces as a Slack error via `friendlyErrorMessage`. The bot does not auto-retry. Slips dropped during an outage have to be re-uploaded.
