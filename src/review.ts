@@ -239,9 +239,18 @@ export function buildReviewListHtml(params: {
       if (a.flaggedForReview !== b.flaggedForReview) return a.flaggedForReview ? -1 : 1;
       return (a.minConfidence ?? 1) - (b.minConfidence ?? 1);
     });
+  // Sort by approvedAt desc so the most recently signed-off slip is on top.
+  // Any completed-but-unapproved slip (above threshold, never manually
+  // approved) has null approvedAt — those fall to the bottom, then break
+  // ties on created_at desc.
   const completed = slips
     .filter((s) => !(!s.approved && (s.flaggedForReview || (s.minConfidence !== null && s.minConfidence < threshold))))
-    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    .sort((a, b) => {
+      const ax = a.approvedAt ?? "";
+      const bx = b.approvedAt ?? "";
+      if (ax !== bx) return bx.localeCompare(ax);
+      return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+    });
 
   const queueCls = pendingOnly ? "btn active" : "btn";
   const historyCls = pendingOnly ? "btn" : "btn active";
@@ -263,7 +272,7 @@ export function buildReviewListHtml(params: {
       <h2 class="section-title">
         Completed
         <span class="section-count">${completed.length}</span>
-        <span class="section-sub muted">approved or above threshold · most recent first</span>
+        <span class="section-sub muted">approved or above threshold · most recently approved first</span>
       </h2>
       <div class="card">
         ${completed.length === 0
@@ -923,7 +932,12 @@ export function buildOutboundListHtml(params: {
     .sort((a, b) => (a.minConfidence ?? 1) - (b.minConfidence ?? 1));
   const completed = slips
     .filter((s) => !(!s.approved && (s.minConfidence !== null && s.minConfidence < threshold)))
-    .sort((a, b) => (b.recorded_at ?? "").localeCompare(a.recorded_at ?? ""));
+    .sort((a, b) => {
+      const ax = a.approvedAt ?? "";
+      const bx = b.approvedAt ?? "";
+      if (ax !== bx) return bx.localeCompare(ax);
+      return (b.recorded_at ?? "").localeCompare(a.recorded_at ?? "");
+    });
 
   const generated = generatedAt.toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
 
@@ -942,7 +956,7 @@ export function buildOutboundListHtml(params: {
     <h2 class="section-title">
       Completed
       <span class="section-count">${completed.length}</span>
-      <span class="section-sub muted">approved or above threshold · most recent first</span>
+      <span class="section-sub muted">approved or above threshold · most recently approved first</span>
     </h2>
     <div class="card">
       ${completed.length === 0
