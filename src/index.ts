@@ -595,7 +595,7 @@ app.event("message", async ({ event, client, logger }) => {
       }
 
       // Grocery rescue slips: normalize donor_org onto one of the 5 canonicals
-      // (QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / Homegrown) and resynthesize
+      // (QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / HG) and resynthesize
       // invoice_or_order_number so downstream dedupe + reporting see a single
       // canonical form regardless of what the LLM emitted.
       normalizeRescueSlip(extraction);
