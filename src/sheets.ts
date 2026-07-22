@@ -2,6 +2,7 @@ import { GoogleAuth } from "google-auth-library";
 import { google } from "googleapis";
 import { env } from "./config.js";
 import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType, ExtractionTrace, PromptSuggestionRow, PromptSuggestionStatus } from "./types.js";
+import { ensureRescueSkeleton, normalizeRescueSlip } from "./extraction.js";
 
 const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
@@ -278,6 +279,15 @@ export async function appendExtractionRows(params: {
   skipAutoApprove?: boolean;
 }): Promise<number> {
   const { extraction, photoUrl, slackChannel, slackMessageTs, uploadedBy, skipAutoApprove } = params;
+
+  // Defense-in-depth invariant enforcement. index.ts runs both of these
+  // in the Slack file-upload path, but reextract-one.ts and any future
+  // caller could bypass them. Both helpers are idempotent — calling here
+  // even after index.ts ran is a no-op. Guarantees every grocery_rescue
+  // slip landing in the sheet has: (a) canonical donor_org + synthesized
+  // shipment ID, (b) all 10 category skeleton rows.
+  normalizeRescueSlip(extraction);
+  ensureRescueSkeleton(extraction);
 
   // Auto-approve on write if the slip's min line-item confidence meets the
   // review threshold. Reviewers can still un-approve via the /review UI (any
