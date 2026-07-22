@@ -11,7 +11,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | `QFC-BWY`, `QFC-B`, `QFC-BW`, `QFC Brdwy`, `QFC Broadway`, `QFC-Broadway` | `QFC-BWY` |
   | `SWY-RB`, `Safeway-RB`, `Safeway RB`, `RB-Safeway`, `Safeway Rainier Beach`, `Safeway-Rainier` | `SWY-RB` |
   | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
-  | `Homegrown`, `HomeGrown`, `Home Grown`, `HG` | `Homegrown` |
+  | `HG`, `Homegrown`, `HomeGrown`, `Home Grown` | `HG` |
 
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 

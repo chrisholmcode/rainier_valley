@@ -1,9 +1,9 @@
 /**
  * One-off: normalize donor_org on historical grocery_rescue rows to one of
  * the 5 canonical short codes (QFC-MI / QFC-BWY / SWY-RB / SWY-GEN /
- * Homegrown). Pre-normalization variants (e.g. "Safeway-Gen", "MI-QFC",
- * "QFC Brdwy") pre-date the ingest-time normalizer and still linger on
- * older rows.
+ * HG). Pre-normalization variants (e.g. "Safeway-Gen", "MI-QFC",
+ * "QFC Brdwy", "Homegrown") pre-date the ingest-time normalizer and
+ * still linger on older rows.
  *
  * Also re-synthesizes invoice_or_order_number = <donor>-<delivery_date>
  * for any row it touches, since that shipment ID is derived from donor_org.

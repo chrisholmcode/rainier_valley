@@ -669,7 +669,7 @@ function normKey(s: string | null): string {
 // output goes through normalizeRescueDonor() before any dedupe / write so that
 // even if the LLM emits a variant (or an older canonical from a stale prompt),
 // downstream code sees exactly one of these 5 strings.
-export const RESCUE_DONOR_CANONICAL = ["QFC-MI", "QFC-BWY", "SWY-RB", "SWY-GEN", "Homegrown"] as const;
+export const RESCUE_DONOR_CANONICAL = ["QFC-MI", "QFC-BWY", "SWY-RB", "SWY-GEN", "HG"] as const;
 
 function normDonorKey(s: string): string {
   return s.toLowerCase().replace(/[^a-z]/g, "");
@@ -683,7 +683,7 @@ const RESCUE_DONOR_ALIASES: Array<{ canonical: typeof RESCUE_DONOR_CANONICAL[num
   { canonical: "QFC-BWY",  keys: ["qfcbwy", "qfcb", "qfcbw", "qfcbrdwy", "qfcbroadway"] },
   { canonical: "SWY-RB",   keys: ["swyrb", "safewayrb", "safewayrainierbeach", "safewayrainier", "rbsafeway"] },
   { canonical: "SWY-GEN",  keys: ["swygen", "safewayg", "safewaygen", "safewaygenesee", "gensafeway"] },
-  { canonical: "Homegrown", keys: ["homegrown", "homegrown", "hg"] }
+  { canonical: "HG",       keys: ["hg", "homegrown", "homegrwn", "hmegrown"] }
 ];
 
 export function normalizeRescueDonor(raw: string | null): string | null {
@@ -708,7 +708,7 @@ export function normalizeRescueSlip(extraction: ExtractionResult): void {
   const canonical = normalizeRescueDonor(extraction.donor_org);
   if (!canonical) {
     extraction.source_warnings.push(
-      `donor_org unrecognized: "${extraction.donor_org}" — expected one of QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / Homegrown`
+      `donor_org unrecognized: "${extraction.donor_org}" — expected one of QFC-MI / QFC-BWY / SWY-RB / SWY-GEN / HG`
     );
     extraction.donor_org = null;
     extraction.invoice_or_order_number = null;
