@@ -155,6 +155,14 @@ table.line-items col.col-conf       { width:  80px; }
 table.line-items col.col-notes      { width: 180px; }
 table.line-items input, table.line-items select { min-width: 0; padding: 6px 8px; }
 
+/* Sortable table headers */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable::after { content: '\\2195'; display: inline-block; margin-left: 6px;
+                    font-size: 10px; opacity: 0.3; font-variant-numeric: tabular-nums; }
+th.sortable.asc::after { content: '\\25B2'; opacity: 1; color: var(--primary); }
+th.sortable.desc::after { content: '\\25BC'; opacity: 1; color: var(--primary); }
+th.sortable:hover { color: var(--primary); }
+
 /* Toast */
 .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px;
          border-radius: var(--radius-md);
@@ -168,27 +176,28 @@ table.line-items input, table.line-items select { min-width: 0; padding: 6px 8px
 
 function renderSlipRow(s: SlipSummary, threshold: number): string {
   const enc = encodeSlipKey(s.slipKey);
-  const uploaded = s.created_at
-    ? escapeHtml(s.created_at.slice(0, 10))
-    : `<span class="muted">—</span>`;
+  const uploadedIso = s.created_at ? s.created_at.slice(0, 10) : "";
+  const uploaded = uploadedIso ? escapeHtml(uploadedIso) : `<span class="muted">—</span>`;
+  const deliveryIso = s.delivery_date || (s.created_at ? s.created_at.slice(0, 10) : "");
   const date = s.delivery_date || `<span class="muted">${escapeHtml(s.created_at.slice(0, 10))}</span>`;
   const invoice = s.invoice_or_order_number ? escapeHtml(s.invoice_or_order_number) : `<span class="muted">—</span>`;
-  const approvedOn = s.approvedAt
-    ? escapeHtml(s.approvedAt.slice(0, 10))
+  const approvedIso = s.approvedAt ? s.approvedAt.slice(0, 10) : "";
+  const approvedOn = approvedIso ? escapeHtml(approvedIso) : `<span class="muted">—</span>`;
+  const poundsRaw = s.totalPounds !== null && s.totalPounds > 0 ? Math.round(s.totalPounds) : null;
+  const pounds = poundsRaw !== null
+    ? escapeHtml(poundsRaw.toLocaleString())
     : `<span class="muted">—</span>`;
-  const pounds = s.totalPounds !== null && s.totalPounds > 0
-    ? escapeHtml(Math.round(s.totalPounds).toLocaleString())
-    : `<span class="muted">—</span>`;
+  const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
   return `<tr>
     <td>${statusBadge(s)}</td>
-    <td>${uploaded}</td>
-    <td>${date}</td>
+    <td data-sort="${escapeHtml(uploadedIso)}">${uploaded}</td>
+    <td data-sort="${escapeHtml(deliveryIso)}">${date}</td>
     <td>${donorOrSupplier(s)}</td>
     <td>${invoice}</td>
     <td class="num">${s.rowCount}</td>
-    <td class="num">${pounds}</td>
-    <td>${confidenceBadge(s.minConfidence, threshold)}</td>
-    <td>${approvedOn}</td>
+    <td class="num" data-sort="${poundsRaw ?? ""}">${pounds}</td>
+    <td data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td><a class="slip-link" href="/review/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
@@ -197,8 +206,16 @@ function renderSlipTable(slips: SlipSummary[], threshold: number): string {
   const body = slips.map((s) => renderSlipRow(s, threshold)).join("");
   return `<table>
     <thead><tr>
-      <th>Status</th><th>Uploaded</th><th>Delivery date</th><th>Donor / Supplier</th><th>Invoice #</th>
-      <th class="num">Rows</th><th class="num">Pounds</th><th>Min confidence</th><th>Approved</th><th></th>
+      <th data-sort-type="text">Status</th>
+      <th data-sort-type="date">Uploaded</th>
+      <th data-sort-type="date">Delivery date</th>
+      <th data-sort-type="text">Donor / Supplier</th>
+      <th data-sort-type="text">Invoice #</th>
+      <th class="num" data-sort-type="num">Rows</th>
+      <th class="num" data-sort-type="num">Pounds</th>
+      <th data-sort-type="num">Min confidence</th>
+      <th data-sort-type="date">Approved</th>
+      <th></th>
     </tr></thead>
     <tbody>${body}</tbody>
   </table>`;
@@ -303,6 +320,43 @@ function filterSlips(q) {
   const badge = document.getElementById('search-count');
   badge.textContent = query ? totalVisible + ' match' + (totalVisible === 1 ? '' : 'es') : '';
 }
+
+function sortTable(table, colIdx, type, dir) {
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const mult = dir === 'asc' ? 1 : -1;
+  rows.sort((a, b) => {
+    const aCell = a.children[colIdx];
+    const bCell = b.children[colIdx];
+    const aRaw = aCell.dataset.sort != null ? aCell.dataset.sort : aCell.textContent.trim();
+    const bRaw = bCell.dataset.sort != null ? bCell.dataset.sort : bCell.textContent.trim();
+    const aEmpty = aRaw === '' || aRaw === '—';
+    const bEmpty = bRaw === '' || bRaw === '—';
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;
+    if (bEmpty) return -1;
+    if (type === 'num') return mult * (parseFloat(aRaw) - parseFloat(bRaw));
+    return mult * aRaw.localeCompare(bRaw, undefined, { numeric: true });
+  });
+  rows.forEach((r) => tbody.appendChild(r));
+}
+
+function makeSortable(table) {
+  const ths = table.querySelectorAll('thead th');
+  ths.forEach((th, colIdx) => {
+    const type = th.dataset.sortType;
+    if (!type) return;
+    th.classList.add('sortable');
+    th.addEventListener('click', () => {
+      const dir = th.classList.contains('asc') ? 'desc' : 'asc';
+      ths.forEach((o) => o.classList.remove('asc', 'desc'));
+      th.classList.add(dir);
+      sortTable(table, colIdx, type, dir);
+    });
+  });
+}
+
+document.querySelectorAll('.card table').forEach(makeSortable);
 </script>
 </body></html>`;
 }
@@ -818,23 +872,23 @@ function sourceChip(source: string): string {
 
 function renderEodSlipRow(s: EodSlipSummary, threshold: number): string {
   const enc = encodeSlipKey(s.slipKey);
-  const recorded = s.recorded_at
-    ? escapeHtml(s.recorded_at.slice(0, 10))
-    : `<span class="muted">—</span>`;
+  const recordedIso = s.recorded_at ? s.recorded_at.slice(0, 10) : "";
+  const recorded = recordedIso ? escapeHtml(recordedIso) : `<span class="muted">—</span>`;
+  const dateIso = s.date || "";
   const date = s.date ? escapeHtml(s.date) : `<span class="muted">—</span>`;
   const program = s.program_type ? escapeHtml(s.program_type) : `<span class="muted">—</span>`;
-  const approvedOn = s.approvedAt
-    ? escapeHtml(s.approvedAt.slice(0, 10))
-    : `<span class="muted">—</span>`;
+  const approvedIso = s.approvedAt ? s.approvedAt.slice(0, 10) : "";
+  const approvedOn = approvedIso ? escapeHtml(approvedIso) : `<span class="muted">—</span>`;
+  const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
   return `<tr>
     <td>${eodStatusBadge(s)}</td>
-    <td>${recorded}</td>
-    <td>${date}</td>
-    <td>${sourceChip(s.source)}</td>
+    <td data-sort="${escapeHtml(recordedIso)}">${recorded}</td>
+    <td data-sort="${escapeHtml(dateIso)}">${date}</td>
+    <td data-sort="${escapeHtml(s.source ?? "")}">${sourceChip(s.source)}</td>
     <td>${program}</td>
     <td class="num">${s.rowCount}</td>
-    <td>${confidenceBadge(s.minConfidence, threshold)}</td>
-    <td>${approvedOn}</td>
+    <td data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td><a class="slip-link" href="/review/outbound/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
@@ -843,8 +897,15 @@ function renderEodSlipTable(slips: EodSlipSummary[], threshold: number): string 
   const body = slips.map((s) => renderEodSlipRow(s, threshold)).join("");
   return `<table>
     <thead><tr>
-      <th>Status</th><th>Recorded</th><th>Date</th><th>Source</th><th>Program</th>
-      <th class="num">Rows</th><th>Min confidence</th><th>Approved</th><th></th>
+      <th data-sort-type="text">Status</th>
+      <th data-sort-type="date">Recorded</th>
+      <th data-sort-type="date">Date</th>
+      <th data-sort-type="text">Source</th>
+      <th data-sort-type="text">Program</th>
+      <th class="num" data-sort-type="num">Rows</th>
+      <th data-sort-type="num">Min confidence</th>
+      <th data-sort-type="date">Approved</th>
+      <th></th>
     </tr></thead>
     <tbody>${body}</tbody>
   </table>`;
@@ -933,6 +994,43 @@ function filterSlips(q) {
   const badge = document.getElementById('search-count');
   badge.textContent = query ? totalVisible + ' match' + (totalVisible === 1 ? '' : 'es') : '';
 }
+
+function sortTable(table, colIdx, type, dir) {
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const mult = dir === 'asc' ? 1 : -1;
+  rows.sort((a, b) => {
+    const aCell = a.children[colIdx];
+    const bCell = b.children[colIdx];
+    const aRaw = aCell.dataset.sort != null ? aCell.dataset.sort : aCell.textContent.trim();
+    const bRaw = bCell.dataset.sort != null ? bCell.dataset.sort : bCell.textContent.trim();
+    const aEmpty = aRaw === '' || aRaw === '—';
+    const bEmpty = bRaw === '' || bRaw === '—';
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;
+    if (bEmpty) return -1;
+    if (type === 'num') return mult * (parseFloat(aRaw) - parseFloat(bRaw));
+    return mult * aRaw.localeCompare(bRaw, undefined, { numeric: true });
+  });
+  rows.forEach((r) => tbody.appendChild(r));
+}
+
+function makeSortable(table) {
+  const ths = table.querySelectorAll('thead th');
+  ths.forEach((th, colIdx) => {
+    const type = th.dataset.sortType;
+    if (!type) return;
+    th.classList.add('sortable');
+    th.addEventListener('click', () => {
+      const dir = th.classList.contains('asc') ? 'desc' : 'asc';
+      ths.forEach((o) => o.classList.remove('asc', 'desc'));
+      th.classList.add(dir);
+      sortTable(table, colIdx, type, dir);
+    });
+  });
+}
+
+document.querySelectorAll('.card table').forEach(makeSortable);
 </script>
 </body></html>`;
 }
