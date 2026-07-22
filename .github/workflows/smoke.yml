@@ -15,8 +15,8 @@ name: smoke
 # any violation.
 #
 # Required repo secrets: GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_SPREADSHEET_ID,
-# GOOGLE_WORKSHEET_NAME, EOD_WORKSHEET_NAME, SUMMARY_WORKSHEET_NAME (+ any
-# others config.ts loads at import time).
+# EOD_WORKSHEET_NAME. Smoke reads process.env directly (not through config.ts)
+# so it doesn't need the app's full Slack/Anthropic env schema.
 
 on:
   push:
@@ -42,10 +42,5 @@ jobs:
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
-          GOOGLE_WORKSHEET_NAME: ${{ secrets.GOOGLE_WORKSHEET_NAME }}
           EOD_WORKSHEET_NAME: ${{ secrets.EOD_WORKSHEET_NAME }}
-          SUMMARY_WORKSHEET_NAME: ${{ secrets.SUMMARY_WORKSHEET_NAME }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
         run: npm run smoke

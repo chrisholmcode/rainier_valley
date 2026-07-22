@@ -10,10 +10,22 @@
  * Usage:
  *   npm run smoke
  */
+import "dotenv/config";
 import { google } from "googleapis";
 import { GoogleAuth } from "google-auth-library";
-import { env } from "./config.js";
-import { EOD_SHEET_HEADERS } from "./sheets.js";
+
+// Read env directly rather than through config.ts — config.ts strict-parses
+// the whole app schema (Slack tokens, Anthropic key, etc.) at import time,
+// and smoke needs to run in CI with just the three Sheets vars.
+const {
+  GOOGLE_SERVICE_ACCOUNT_JSON,
+  GOOGLE_SPREADSHEET_ID,
+  EOD_WORKSHEET_NAME = "Outbound Delivery Log"
+} = process.env;
+if (!GOOGLE_SPREADSHEET_ID) {
+  console.error("smoke: GOOGLE_SPREADSHEET_ID is required");
+  process.exit(1);
+}
 
 const RECENT_DAYS = 7;
 
@@ -24,17 +36,32 @@ const PHOTO_URL_FIX_AT = "2026-07-17T18:16:38Z"; // PR #19 (e5419db)
 const TS_TEXT_FIX_AT   = "2026-07-22T03:52:32Z"; // PR #33 (84a9657)
 
 async function main(): Promise<void> {
-  const auth = env.GOOGLE_SERVICE_ACCOUNT_JSON
-    ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"] })
+  const auth = GOOGLE_SERVICE_ACCOUNT_JSON
+    ? new GoogleAuth({ credentials: JSON.parse(GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"] })
     : new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"] });
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    range: `${env.EOD_WORKSHEET_NAME}!A:S`,
+  // Fetch the header row + data separately so column indices resolve by name
+  // (resistant to any future EOD_SHEET_HEADERS reorder) without pulling the
+  // whole app's env-dependent import graph in.
+  const headerRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SPREADSHEET_ID,
+    range: `${EOD_WORKSHEET_NAME}!1:1`
+  });
+  const headers = (headerRes.data.values?.[0] ?? []) as string[];
+  const dataRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SPREADSHEET_ID,
+    range: `${EOD_WORKSHEET_NAME}!A2:AZ`,
     valueRenderOption: "UNFORMATTED_VALUE"
   });
-  const rows = (res.data.values ?? []).slice(1);
-  const idx = new Map(EOD_SHEET_HEADERS.map((h, i) => [h, i]));
+  const rows = dataRes.data.values ?? [];
+  const idx = new Map(headers.map((h, i) => [h, i]));
+  const required = ["source", "recorded_at", "photo_url", "slack_message_ts"] as const;
+  for (const col of required) {
+    if (!idx.has(col)) {
+      console.error(`smoke: column "${col}" not found in ${EOD_WORKSHEET_NAME} header — schema drift?`);
+      process.exit(1);
+    }
+  }
   const sourceIdx = idx.get("source")!;
   const recordedAtIdx = idx.get("recorded_at")!;
   const photoIdx = idx.get("photo_url")!;
