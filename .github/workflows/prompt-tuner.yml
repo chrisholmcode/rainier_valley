@@ -17,6 +17,9 @@ name: prompt-tuner
 #   EXTRACTION_TRACES_WORKSHEET_NAME — e.g. "Extraction Traces"
 #   PROMPT_SUGGESTIONS_WORKSHEET_NAME — e.g. "Prompt Suggestions"
 #   ANTHROPIC_MODEL                 — e.g. "claude-opus-4-8"
+#   SLACK_SIGNING_SECRET            — not used by the tuner, but src/config.ts
+#                                     validates the whole app env at import
+#                                     time and rejects it if missing.
 #
 # Optional (for Slack DM + admin scoping):
 #   SLACK_BOT_TOKEN
@@ -95,6 +98,7 @@ jobs:
           CORRECTIONS_LOG_WORKSHEET_NAME: ${{ secrets.CORRECTIONS_LOG_WORKSHEET_NAME }}
           EXTRACTION_TRACES_WORKSHEET_NAME: ${{ secrets.EXTRACTION_TRACES_WORKSHEET_NAME }}
           PROMPT_SUGGESTIONS_WORKSHEET_NAME: ${{ secrets.PROMPT_SUGGESTIONS_WORKSHEET_NAME }}
+          SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           ADMIN_SLACK_USER_ID: ${{ secrets.ADMIN_SLACK_USER_ID }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
