@@ -150,7 +150,7 @@ async function main(): Promise<void> {
   if (updates.length) {
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-      requestBody: { valueInputOption: "USER_ENTERED", data: updates }
+      requestBody: { valueInputOption: "RAW", data: updates }
     });
   }
   console.log(`Wrote approx_weight to ${lineUpdates} Inbound Delivery Log rows.`);
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
     await sheets.spreadsheets.values.update({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
       range: `${env.SUMMARY_WORKSHEET_NAME}!${colA1}${summaryRowNumber}`,
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       requestBody: { values: [[newWeight]] }
     });
     console.log(`Updated Inventory Summary row ${summaryRowNumber}: weight_lb=${newWeight}`);

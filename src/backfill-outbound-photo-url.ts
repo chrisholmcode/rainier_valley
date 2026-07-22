@@ -181,7 +181,7 @@ async function main(): Promise<void> {
     const chunk = updates.slice(i, i + CHUNK);
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-      requestBody: { valueInputOption: "USER_ENTERED", data: chunk }
+      requestBody: { valueInputOption: "RAW", data: chunk }
     });
     console.log(`  wrote ${Math.min(i + CHUNK, updates.length)}/${updates.length} cell updates`);
   }

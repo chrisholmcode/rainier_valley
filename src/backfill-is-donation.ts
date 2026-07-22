@@ -111,7 +111,7 @@ async function main(): Promise<void> {
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
       requestBody: {
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: "RAW",
         data: slice
       }
     });

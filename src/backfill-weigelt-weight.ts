@@ -163,7 +163,7 @@ async function main(): Promise<void> {
   }
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    requestBody: { valueInputOption: "USER_ENTERED", data: updates }
+    requestBody: { valueInputOption: "RAW", data: updates }
   });
   console.log(`\nWrote ${updates.length} cell update(s) to ${env.GOOGLE_WORKSHEET_NAME}.`);
 
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
   if (summaryUpdates.length) {
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-      requestBody: { valueInputOption: "USER_ENTERED", data: summaryUpdates }
+      requestBody: { valueInputOption: "RAW", data: summaryUpdates }
     });
     console.log(`Wrote ${summaryUpdates.length} cell update(s) to ${env.SUMMARY_WORKSHEET_NAME}.`);
   }
