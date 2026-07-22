@@ -249,7 +249,7 @@ const NUMERIC_COLUMNS = new Set([
 const BOOLEAN_COLUMNS = new Set([
   "is_fee", "is_donation", "donor_anonymous", "send_receipt", "is_food_drive", "is_food"
 ]);
-function coerceForColumn(
+export function coerceForColumn(
   columnName: string,
   value: string | number | boolean | null
 ): string | number | boolean | null {
