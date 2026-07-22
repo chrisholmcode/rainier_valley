@@ -23,8 +23,11 @@ const {
   EOD_WORKSHEET_NAME = "Outbound Delivery Log"
 } = process.env;
 if (!GOOGLE_SPREADSHEET_ID) {
-  console.error("smoke: GOOGLE_SPREADSHEET_ID is required");
-  process.exit(1);
+  // Self-skip when unconfigured. This is the "workflow armed but repo
+  // secrets not yet set" state — exit 0 so we don't spam failure emails.
+  // Once secrets land, the real invariant checks kick in automatically.
+  console.log("smoke: SKIP (GOOGLE_SPREADSHEET_ID not set — set repo secrets to arm)");
+  process.exit(0);
 }
 
 const RECENT_DAYS = 7;
