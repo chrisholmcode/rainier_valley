@@ -679,10 +679,10 @@ function normDonorKey(s: string): string {
 // Order matters: longer / more specific matches first so "swyrb" doesn't match
 // "safeway" before "rb".
 const RESCUE_DONOR_ALIASES: Array<{ canonical: typeof RESCUE_DONOR_CANONICAL[number]; keys: string[] }> = [
-  { canonical: "QFC-MI",   keys: ["qfcmi", "miqfc", "qfcmercerisland", "qfcmercer"] },
-  { canonical: "QFC-BWY",  keys: ["qfcbwy", "qfcb", "qfcbw", "qfcbrdwy", "qfcbroadway"] },
-  { canonical: "SWY-RB",   keys: ["swyrb", "safewayrb", "safewayrainierbeach", "safewayrainier", "rbsafeway"] },
-  { canonical: "SWY-GEN",  keys: ["swygen", "safewayg", "safewaygen", "safewaygenesee", "gensafeway"] },
+  { canonical: "QFC-MI",   keys: ["qfcmi", "miqfc", "qfcmercerisland", "qfcmercer", "mercerqfc", "mercerislandqfc"] },
+  { canonical: "QFC-BWY",  keys: ["qfcbwy", "qfcb", "qfcbw", "qfcbrdwy", "qfcbroadway", "broadwayqfc", "brdwyqfc", "bwyqfc"] },
+  { canonical: "SWY-RB",   keys: ["swyrb", "safewayrb", "safewayrainierbeach", "safewayrainier", "rbsafeway", "swyrainier", "swyrainierbeach", "rainiersafeway", "rainierbeachsafeway"] },
+  { canonical: "SWY-GEN",  keys: ["swygen", "safewayg", "safewaygen", "safewaygenesee", "gensafeway", "swygenesee", "geneseesafeway"] },
   { canonical: "HG",       keys: ["hg", "homegrown", "homegrwn", "hmegrown"] }
 ];
 
