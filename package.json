@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx tests/extraction.spec.ts",
+    "test:unit": "SLACK_BOT_TOKEN=test SLACK_SIGNING_SECRET=test ANTHROPIC_API_KEY=test GOOGLE_SPREADSHEET_ID=test node --import tsx --test tests/unit/*.test.ts",
     "backfill:is-donation": "tsx src/backfill-is-donation.ts",
     "tune:prompts": "tsx src/prompt-tuner.ts",
     "smoke": "tsx src/smoke-review-invariants.ts"
