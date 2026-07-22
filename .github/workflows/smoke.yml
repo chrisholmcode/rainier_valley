@@ -1,0 +1,51 @@
+name: smoke
+
+# Sheets-level smoke check for the Review UI. Runs on every push to main
+# (immediately after Railway auto-deploys) and nightly at 09:00 UTC (2 AM PT)
+# to catch runtime write regressions that happen between deploys.
+#
+# What it checks (src/smoke-review-invariants.ts):
+#   1. every recent (≤7d) whiteboard row in Outbound Delivery Log has a
+#      non-empty photo_url → catches the class of bug where PR #19 added
+#      the column and populated it only on new writes.
+#   2. every recent row's slack_message_ts is stored as text, not a number
+#      → catches regressions from PR #33's apostrophe-prefix escape.
+#
+# Fails the job (and pings via the normal GH Actions notification path) on
+# any violation.
+#
+# Required repo secrets: GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_SPREADSHEET_ID,
+# GOOGLE_WORKSHEET_NAME, EOD_WORKSHEET_NAME, SUMMARY_WORKSHEET_NAME (+ any
+# others config.ts loads at import time).
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Run smoke check
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+          GOOGLE_WORKSHEET_NAME: ${{ secrets.GOOGLE_WORKSHEET_NAME }}
+          EOD_WORKSHEET_NAME: ${{ secrets.EOD_WORKSHEET_NAME }}
+          SUMMARY_WORKSHEET_NAME: ${{ secrets.SUMMARY_WORKSHEET_NAME }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+        run: npm run smoke
