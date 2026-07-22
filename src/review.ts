@@ -511,6 +511,10 @@ const EDITABLE_PER_ROW = [
 const CATEGORY_OPTIONS = ["produce", "meat_protein", "dairy", "shelf_stable", "frozen", "non_food", "unknown"];
 const UNIT_OPTIONS = ["case", "ct", "lb", "oz", "ea", "bushel", "other"];
 const DOC_TYPE_OPTIONS = ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"];
+// Alphabetical so reviewers can scan; keeps the extraction enum as source
+// of truth for the actual valid set (mirrored here to avoid pulling
+// extraction.ts into review's import graph).
+const SUPPLIER_OPTIONS = ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"];
 
 function selectInput(name: string, value: string | null, rowIndex: number, options: string[]): string {
   const opts = options.map((o) => `<option value="${escapeHtml(o)}"${value === o ? " selected" : ""}>${escapeHtml(o)}</option>`).join("");
@@ -555,15 +559,13 @@ export function buildSlipDetailHtml(params: {
   const slipMeta = `<div class="slip-meta">
     <h3 style="margin-top:0;">Slip-level fields</h3>
     <dl>
-      <dt>supplier</dt><dd>${textInput("supplier", slip.supplier, slipMetaRowIndex)}</dd>
+      <dt>supplier</dt><dd>${selectInput("supplier", slip.supplier, slipMetaRowIndex, SUPPLIER_OPTIONS)}</dd>
       <dt>document_type</dt><dd>${selectInput("document_type", slip.document_type, slipMetaRowIndex, DOC_TYPE_OPTIONS)}</dd>
       <dt>invoice_date</dt><dd>${textInput("invoice_date", slip.invoice_date, slipMetaRowIndex)}</dd>
       <dt>delivery_date</dt><dd>${textInput("delivery_date", slip.delivery_date, slipMetaRowIndex)}</dd>
       <dt>invoice_or_order_number</dt><dd>${textInput("invoice_or_order_number", slip.invoice_or_order_number, slipMetaRowIndex)}</dd>
       <dt>destination_org</dt><dd>${textInput("destination_org", slip.destination_org, slipMetaRowIndex)}</dd>
-      <dt>donor_org</dt><dd>${isGroceryRescue(slip)
-        ? selectInput("donor_org", slip.donor_org, slipMetaRowIndex, [...RESCUE_DONOR_CANONICAL])
-        : textInput("donor_org", slip.donor_org, slipMetaRowIndex)}</dd>
+      <dt>donor_org</dt><dd>${selectInput("donor_org", slip.donor_org, slipMetaRowIndex, [...RESCUE_DONOR_CANONICAL])}</dd>
       <dt>is_donation</dt><dd>${boolInput("is_donation", slip.is_donation, slipMetaRowIndex)}</dd>
     </dl>
     <p class="muted" style="margin-top:12px; font-size:12px;">Editing a slip-level field updates every row of this slip.</p>
