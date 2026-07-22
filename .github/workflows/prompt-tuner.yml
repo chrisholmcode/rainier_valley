@@ -47,9 +47,10 @@ on:
         required: false
         type: boolean
         default: false
-  # Nightly 10:00 UTC = 3:00 AM PT. Comment/uncomment to arm.
-  # schedule:
-  #   - cron: "0 10 * * *"
+  # Daily 13:00 UTC = 6:00 AM PDT (5:00 AM PST after DST ends in November;
+  # bump to 14:00 UTC if you want to hold at 6 AM year-round).
+  schedule:
+    - cron: "0 13 * * *"
 
 jobs:
   tune:
