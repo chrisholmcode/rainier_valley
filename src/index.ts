@@ -1398,6 +1398,21 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
       ];
     } else {
       fanout = [{ field, value: newValue }];
+      // Food-lifeline grocery-rescue slips synthesize invoice_or_order_number
+      // as `<donor_org>-<delivery_date>` at ingest. When a reviewer edits
+      // either component, cascade the re-derive so the shipment ID stays in
+      // sync with its two source fields. Skip if the sibling value is empty.
+      if ((field === "donor_org" || field === "delivery_date") && newValue.trim()) {
+        const first = slipRows[0];
+        const isDonation = String(first.is_donation ?? "").toLowerCase() === "true";
+        if (first.supplier === "food_lifeline" && isDonation) {
+          const donor = (field === "donor_org" ? newValue : first.donor_org ?? "").trim();
+          const date  = (field === "delivery_date" ? newValue : first.delivery_date ?? "").trim();
+          if (donor && date) {
+            fanout.push({ field: "invoice_or_order_number", value: `${donor}-${date}` });
+          }
+        }
+      }
     }
     // Collect all cell writes + correction-log rows and batch them into two
     // Sheets API calls. A slip-level edit on a 30-row slip would otherwise
@@ -1418,7 +1433,7 @@ async function handleReviewEditRequest(req: IncomingMessage, res: ServerResponse
           slipKey,
           sheet: env.GOOGLE_WORKSHEET_NAME,
           rowIndex: target.rowIndex,
-          field: isVirtual ? `${field}→${f.field}` : f.field,
+          field: f.field === field ? f.field : `${field}→${f.field}`,
           oldValue,
           newValue: f.value,
           reason
