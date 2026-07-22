@@ -190,6 +190,7 @@ function renderSlipRow(s: SlipSummary, threshold: number): string {
   const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
   return `<tr>
     <td>${statusBadge(s)}</td>
+    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td data-sort="${escapeHtml(uploadedIso)}">${uploaded}</td>
     <td data-sort="${escapeHtml(deliveryIso)}">${date}</td>
     <td>${donorOrSupplier(s)}</td>
@@ -197,7 +198,6 @@ function renderSlipRow(s: SlipSummary, threshold: number): string {
     <td class="num">${s.rowCount}</td>
     <td class="num" data-sort="${poundsRaw ?? ""}">${pounds}</td>
     <td data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
-    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td><a class="slip-link" href="/review/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
@@ -207,6 +207,7 @@ function renderSlipTable(slips: SlipSummary[], threshold: number): string {
   return `<table>
     <thead><tr>
       <th data-sort-type="text">Status</th>
+      <th data-sort-type="date">Approved</th>
       <th data-sort-type="date">Uploaded</th>
       <th data-sort-type="date">Delivery date</th>
       <th data-sort-type="text">Donor / Supplier</th>
@@ -214,7 +215,6 @@ function renderSlipTable(slips: SlipSummary[], threshold: number): string {
       <th class="num" data-sort-type="num">Rows</th>
       <th class="num" data-sort-type="num">Pounds</th>
       <th data-sort-type="num">Min confidence</th>
-      <th data-sort-type="date">Approved</th>
       <th></th>
     </tr></thead>
     <tbody>${body}</tbody>
@@ -891,13 +891,13 @@ function renderEodSlipRow(s: EodSlipSummary, threshold: number): string {
   const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
   return `<tr>
     <td>${eodStatusBadge(s)}</td>
+    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td data-sort="${escapeHtml(recordedIso)}">${recorded}</td>
     <td data-sort="${escapeHtml(dateIso)}">${date}</td>
     <td data-sort="${escapeHtml(s.source ?? "")}">${sourceChip(s.source)}</td>
     <td>${program}</td>
     <td class="num">${s.rowCount}</td>
     <td data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
-    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td><a class="slip-link" href="/review/outbound/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
@@ -907,13 +907,13 @@ function renderEodSlipTable(slips: EodSlipSummary[], threshold: number): string 
   return `<table>
     <thead><tr>
       <th data-sort-type="text">Status</th>
+      <th data-sort-type="date">Approved</th>
       <th data-sort-type="date">Recorded</th>
       <th data-sort-type="date">Date</th>
       <th data-sort-type="text">Source</th>
       <th data-sort-type="text">Program</th>
       <th class="num" data-sort-type="num">Rows</th>
       <th data-sort-type="num">Min confidence</th>
-      <th data-sort-type="date">Approved</th>
       <th></th>
     </tr></thead>
     <tbody>${body}</tbody>
