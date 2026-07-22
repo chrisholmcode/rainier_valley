@@ -224,7 +224,10 @@ Diagnose the root cause of this recurring error and propose a MINIMAL, LOCALIZED
 
   const response = await client.messages.create({
     model: env.ANTHROPIC_MODEL,
-    max_tokens: 1500,
+    // First real run (2026-07-22) truncated at 1500 — Claude's diagnoses on
+    // 50+-correction clusters routinely need 2–3k tokens. Bumped so required
+    // schema fields (regression_risk, confidence) aren't silently dropped.
+    max_tokens: 4000,
     tools: [{ name: DIAGNOSE_TOOL, description: "Submit the prompt-tuning diagnosis and proposed edit.", input_schema: DIAGNOSE_SCHEMA as never }],
     tool_choice: { type: "tool", name: DIAGNOSE_TOOL },
     messages: [{ role: "user", content: userPrompt }]
@@ -232,7 +235,14 @@ Diagnose the root cause of this recurring error and propose a MINIMAL, LOCALIZED
 
   const toolUse = response.content.find((b) => b.type === "tool_use");
   if (!toolUse || toolUse.type !== "tool_use") return null;
-  return toolUse.input as Diagnosis;
+  const input = toolUse.input as Partial<Diagnosis>;
+  // If truncation still drops a required field, treat the diagnosis as
+  // invalid — better to skip the cluster than open a PR from a stub.
+  const required: Array<keyof Diagnosis> = ["root_cause", "target_section", "proposed_edit", "regression_risk", "confidence"];
+  for (const key of required) {
+    if (typeof input[key] !== "string" || (input[key] as string).length === 0) return null;
+  }
+  return input as Diagnosis;
 }
 
 // ── Prompt Suggestions write path (opt-in, --write-suggestions) ─────────────
