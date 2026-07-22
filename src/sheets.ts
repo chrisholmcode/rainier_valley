@@ -216,10 +216,6 @@ export async function appendExtractionTrace(params: {
   });
 }
 
-// Sheets' USER_ENTERED input parses numeric-looking strings as numbers, which
-// silently strips leading zeros from item SKUs (e.g. Caruso "00683" -> 683).
-// Prefixing with an apostrophe forces text storage; the apostrophe itself is
-// stripped from the displayed value.
 // True for food subcategories, false for non_food, null for unknown/other.
 // Fees are always non-food (see appendExtractionRows fee path).
 function categoryIsFood(category: string | null | undefined): boolean | null {
@@ -237,18 +233,40 @@ function categoryIsFood(category: string | null | undefined): boolean | null {
   }
 }
 
-// Force Sheets to treat the cell as text, not auto-parse as a number.
-// Sheets recognizes a leading apostrophe and hides it in display. Needed
-// for values that look numeric but must not be coerced — e.g. item codes
-// with leading zeros, or Slack message ts values (`1774402424.988810`,
-// which USER_ENTERED otherwise stores as float64 and display-truncates to
-// the integer seconds, breaking round-trip lookups to Slack).
-function asSheetText(v: string | null): string | null {
-  if (v == null) return null;
-  const s = String(v).trim();
-  if (!s) return s;
-  if (s.startsWith("'")) return s;
-  return `'${s}`;
+// All Sheets writes go out with valueInputOption: "RAW" — JS types round-trip
+// verbatim (numbers stay numbers, booleans stay booleans, strings stay
+// strings). This eliminates the class of bug where Sheets' USER_ENTERED
+// coerces numeric-looking identifiers (Slack ts, item codes, invoice #s)
+// into floats and display-truncates them.
+//
+// Bot-append paths pass JS-typed values directly, so no coercion needed.
+// The Review-UI edit path (updateSheetCells) receives JSON strings from
+// the browser, so we coerce here based on column name.
+const NUMERIC_COLUMNS = new Set([
+  "quantity_ordered", "quantity", "approx_weight", "unit_cost", "line_total", "confidence"
+]);
+const BOOLEAN_COLUMNS = new Set([
+  "is_fee", "is_donation", "donor_anonymous", "send_receipt", "is_food_drive", "is_food"
+]);
+function coerceForColumn(
+  columnName: string,
+  value: string | number | boolean | null
+): string | number | boolean | null {
+  if (value == null) return null;
+  if (typeof value !== "string") return value;
+  const s = value.trim();
+  if (s === "") return null;
+  if (NUMERIC_COLUMNS.has(columnName)) {
+    const n = Number(s);
+    return Number.isFinite(n) ? n : s;
+  }
+  if (BOOLEAN_COLUMNS.has(columnName)) {
+    const lower = s.toLowerCase();
+    if (lower === "true" || lower === "1" || lower === "yes") return true;
+    if (lower === "false" || lower === "0" || lower === "no") return false;
+    return s;
+  }
+  return s;
 }
 
 export async function appendExtractionRows(params: {
@@ -259,8 +277,7 @@ export async function appendExtractionRows(params: {
   uploadedBy: string;
   skipAutoApprove?: boolean;
 }): Promise<number> {
-  const { extraction, photoUrl, slackChannel, slackMessageTs: slackMessageTsRaw, uploadedBy, skipAutoApprove } = params;
-  const slackMessageTs = asSheetText(slackMessageTsRaw) ?? "";
+  const { extraction, photoUrl, slackChannel, slackMessageTs, uploadedBy, skipAutoApprove } = params;
 
   // Auto-approve on write if the slip's min line-item confidence meets the
   // review threshold. Reviewers can still un-approve via the /review UI (any
@@ -283,7 +300,7 @@ export async function appendExtractionRows(params: {
     extraction.delivery_date,
     extraction.invoice_or_order_number,
     extraction.destination_org,
-    asSheetText(item.item_code_raw),
+    item.item_code_raw,
     item.item_name_raw,
     item.item_name_normalized,
     item.quantity_ordered,
@@ -436,7 +453,7 @@ export async function appendExtractionRows(params: {
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.GOOGLE_WORKSHEET_NAME}!A:${indexToColumnLetter(SHEET_HEADERS.length - 1)}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: {
       values: allRows
     }
@@ -515,7 +532,7 @@ export async function appendInKindDonationRow(sub: InKindDonationSubmission): Pr
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.GOOGLE_WORKSHEET_NAME}!A:${indexToColumnLetter(SHEET_HEADERS.length - 1)}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: [row] }
   });
 }
@@ -541,7 +558,7 @@ export async function appendInKindSummaryRow(sub: InKindDonationSubmission): Pro
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.SUMMARY_WORKSHEET_NAME}!A:${indexToColumnLetter(SUMMARY_SHEET_HEADERS.length - 1)}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: [row] }
   });
 }
@@ -698,7 +715,7 @@ export async function appendSummaryRow(params: {
     await sheets.spreadsheets.values.update({
       spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
       range: `${env.SUMMARY_WORKSHEET_NAME}!A${matchRowIndex}:${lastCol}${matchRowIndex}`,
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       requestBody: { values: [row] }
     });
     return;
@@ -707,7 +724,7 @@ export async function appendSummaryRow(params: {
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: summaryRange,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: [row] }
   });
 }
@@ -751,8 +768,7 @@ export async function appendEodRows(params: {
   photoUrl?: string | null;
   autoApprove?: boolean;
 }): Promise<number> {
-  const { extraction, source, slackChannel, slackMessageTs: slackMessageTsRaw, recordedBy, photoUrl, autoApprove } = params;
-  const slackMessageTs = asSheetText(slackMessageTsRaw) ?? "";
+  const { extraction, source, slackChannel, slackMessageTs, recordedBy, photoUrl, autoApprove } = params;
   const now = new Date().toISOString();
   const date = extraction.date ?? new Date().toISOString().slice(0, 10);
   const warningsJson = JSON.stringify(extraction.source_warnings);
@@ -791,7 +807,7 @@ export async function appendEodRows(params: {
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.EOD_WORKSHEET_NAME}!A:${EOD_LAST_COL}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: rows }
   });
 
@@ -1106,7 +1122,7 @@ export async function appendCorrectionRows(entries: CorrectionEntry[]): Promise<
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.CORRECTIONS_LOG_WORKSHEET_NAME}!A:I`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values }
   });
 }
@@ -1235,7 +1251,7 @@ export async function stampSlipApproval(params: {
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: {
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       data: rowIndexes.flatMap((rowIndex) => [
         { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[now]] },
         { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[approvedBy]] }
@@ -1332,7 +1348,7 @@ export async function stampEodApproval(params: {
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: {
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       data: rowIndexes.flatMap((rowIndex) => [
         { range: `${env.EOD_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[now]] },
         { range: `${env.EOD_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[approvedBy]] }
@@ -1348,7 +1364,7 @@ export async function clearEodApproval(rowIndexes: number[]): Promise<void> {
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: {
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       data: rowIndexes.flatMap((rowIndex) => [
         { range: `${env.EOD_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[""]] },
         { range: `${env.EOD_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[""]] }
@@ -1364,7 +1380,7 @@ export async function clearSlipApproval(rowIndexes: number[]): Promise<void> {
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: {
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       data: rowIndexes.flatMap((rowIndex) => [
         { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedAtCol}${rowIndex}`, values: [[""]] },
         { range: `${env.GOOGLE_WORKSHEET_NAME}!${approvedByCol}${rowIndex}`, values: [[""]] }
@@ -1443,7 +1459,7 @@ export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Pro
   await sheets.spreadsheets.values.update({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     range: `${env.SUMMARY_WORKSHEET_NAME}!A${matchRowIndex}:${lastSumCol}${matchRowIndex}`,
-    valueInputOption: "USER_ENTERED",
+    valueInputOption: "RAW",
     requestBody: { values: [row] }
   });
 }
@@ -1516,17 +1532,14 @@ export async function updateSheetCells(params: {
     const colIndex = headers.indexOf(columnName);
     if (colIndex === -1) throw new Error(`Unknown column: ${columnName}`);
     const colLetter = indexToColumn(colIndex);
-    const writeValue = columnName === "item_code_raw" && typeof newValue === "string"
-      ? asSheetText(newValue)
-      : newValue;
     return {
       range: `${worksheetName}!${colLetter}${rowIndex}`,
-      values: [[writeValue]]
+      values: [[coerceForColumn(columnName, newValue)]]
     };
   });
   const sheets = google.sheets({ version: "v4", auth });
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
-    requestBody: { valueInputOption: "USER_ENTERED", data }
+    requestBody: { valueInputOption: "RAW", data }
   });
 }
