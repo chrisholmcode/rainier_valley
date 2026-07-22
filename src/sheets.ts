@@ -237,7 +237,13 @@ function categoryIsFood(category: string | null | undefined): boolean | null {
   }
 }
 
-function asSheetCode(v: string | null): string | null {
+// Force Sheets to treat the cell as text, not auto-parse as a number.
+// Sheets recognizes a leading apostrophe and hides it in display. Needed
+// for values that look numeric but must not be coerced — e.g. item codes
+// with leading zeros, or Slack message ts values (`1774402424.988810`,
+// which USER_ENTERED otherwise stores as float64 and display-truncates to
+// the integer seconds, breaking round-trip lookups to Slack).
+function asSheetText(v: string | null): string | null {
   if (v == null) return null;
   const s = String(v).trim();
   if (!s) return s;
@@ -253,7 +259,8 @@ export async function appendExtractionRows(params: {
   uploadedBy: string;
   skipAutoApprove?: boolean;
 }): Promise<number> {
-  const { extraction, photoUrl, slackChannel, slackMessageTs, uploadedBy, skipAutoApprove } = params;
+  const { extraction, photoUrl, slackChannel, slackMessageTs: slackMessageTsRaw, uploadedBy, skipAutoApprove } = params;
+  const slackMessageTs = asSheetText(slackMessageTsRaw) ?? "";
 
   // Auto-approve on write if the slip's min line-item confidence meets the
   // review threshold. Reviewers can still un-approve via the /review UI (any
@@ -276,7 +283,7 @@ export async function appendExtractionRows(params: {
     extraction.delivery_date,
     extraction.invoice_or_order_number,
     extraction.destination_org,
-    asSheetCode(item.item_code_raw),
+    asSheetText(item.item_code_raw),
     item.item_name_raw,
     item.item_name_normalized,
     item.quantity_ordered,
@@ -744,7 +751,8 @@ export async function appendEodRows(params: {
   photoUrl?: string | null;
   autoApprove?: boolean;
 }): Promise<number> {
-  const { extraction, source, slackChannel, slackMessageTs, recordedBy, photoUrl, autoApprove } = params;
+  const { extraction, source, slackChannel, slackMessageTs: slackMessageTsRaw, recordedBy, photoUrl, autoApprove } = params;
+  const slackMessageTs = asSheetText(slackMessageTsRaw) ?? "";
   const now = new Date().toISOString();
   const date = extraction.date ?? new Date().toISOString().slice(0, 10);
   const warningsJson = JSON.stringify(extraction.source_warnings);
@@ -1509,7 +1517,7 @@ export async function updateSheetCells(params: {
     if (colIndex === -1) throw new Error(`Unknown column: ${columnName}`);
     const colLetter = indexToColumn(colIndex);
     const writeValue = columnName === "item_code_raw" && typeof newValue === "string"
-      ? asSheetCode(newValue)
+      ? asSheetText(newValue)
       : newValue;
     return {
       range: `${worksheetName}!${colLetter}${rowIndex}`,
