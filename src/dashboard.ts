@@ -14,8 +14,10 @@ export interface Bucket {
   key: string;
   startDate: string;
   endDate: string;
-  inboundCases: number;
+  inboundPounds: number;
   outboundCases: number;
+  inboundWeighedRows: number;
+  inboundUnweighedRows: number;
   vendors: string[];
   topInbound: Array<{ name: string; qty: number }>;
   topOutbound: Array<{ name: string; qty: number }>;
@@ -100,6 +102,21 @@ function isFee(v: string | null | undefined): boolean {
   return s === "true" || s === "1" || s === "yes" || s === "y";
 }
 
+// Pounds for an inbound row. Prefer approx_weight (line-total pounds populated
+// by the extractor). Fall back to quantity when the unit is already "lb"
+// (grocery rescue + Weigelt convention). Returns null when we can't infer a
+// weight — the caller decides whether to count the row as "unweighed".
+function inboundPoundsFor(r: DeliverySheetRow): number | null {
+  const aw = toNumber(r.approx_weight);
+  if (aw > 0) return aw;
+  const unit = (r.unit ?? "").trim().toLowerCase();
+  if (unit === "lb" || unit === "lbs" || unit === "pound" || unit === "pounds") {
+    const q = toNumber(r.quantity);
+    if (q > 0) return q;
+  }
+  return null;
+}
+
 function topN(map: Map<string, number>, n: number): Array<{ name: string; qty: number }> {
   return Array.from(map.entries())
     .filter(([name]) => name && name.trim() !== "")
@@ -121,8 +138,10 @@ export function aggregate(
       key: r.key,
       startDate: r.startDate,
       endDate: r.endDate,
-      inboundCases: 0,
+      inboundPounds: 0,
       outboundCases: 0,
+      inboundWeighedRows: 0,
+      inboundUnweighedRows: 0,
       vendors: [],
       topInbound: [],
       topOutbound: [],
@@ -141,9 +160,15 @@ export function aggregate(
     const key = bucketKeyFor(r.delivery_date, view);
     if (!key || !buckets.has(key)) continue;
     if (isFee(r.is_fee)) continue;
-    const qty = toNumber(r.quantity);
     const bucket = buckets.get(key)!;
-    bucket.inboundCases += qty;
+
+    const lbs = inboundPoundsFor(r);
+    if (lbs != null) {
+      bucket.inboundPounds += lbs;
+      bucket.inboundWeighedRows += 1;
+    } else {
+      bucket.inboundUnweighedRows += 1;
+    }
 
     if (r.supplier && r.supplier.trim()) {
       let vs = vendorSets.get(key);
@@ -158,10 +183,10 @@ export function aggregate(
     }
 
     const name = (r.item_name_normalized || r.item_name_raw || "").trim();
-    if (name && qty > 0) {
+    if (name && lbs != null && lbs > 0) {
       let im = inboundItems.get(key);
       if (!im) inboundItems.set(key, (im = new Map()));
-      im.set(name, (im.get(name) ?? 0) + qty);
+      im.set(name, (im.get(name) ?? 0) + lbs);
     }
   }
 
@@ -254,9 +279,16 @@ function formatNum(n: number): string {
   return n.toFixed(1);
 }
 
-function casesCell(n: number, kind: "in" | "out"): string {
+function metricCell(n: number, kind: "in" | "out"): string {
   if (n === 0) return `<span class="muted">0</span>`;
   return `<span class="num-${kind}">${formatNum(n)}</span>`;
+}
+
+function coverageCell(bucket: Bucket): string {
+  const total = bucket.inboundWeighedRows + bucket.inboundUnweighedRows;
+  if (total === 0) return `<span class="muted">—</span>`;
+  if (bucket.inboundUnweighedRows === 0) return `<span class="muted">${total}/${total}</span>`;
+  return `<span class="num-out">${bucket.inboundWeighedRows}/${total}</span>`;
 }
 
 export type Range = "1w" | "4w";
@@ -301,6 +333,7 @@ export function buildCsvExport(params: {
     item: string;
     quantity: number;
     unit: string;
+    pounds: number | null;
     supplier: string;
     reference: string;
     category: string;
@@ -317,6 +350,7 @@ export function buildCsvExport(params: {
       item: (r.item_name_normalized || r.item_name_raw || "").trim(),
       quantity: toNumber(r.quantity),
       unit: (r.unit ?? "").trim(),
+      pounds: inboundPoundsFor(r),
       supplier: (r.supplier ?? "").trim(),
       reference: (r.invoice_or_order_number ?? "").trim(),
       category: (r.category ?? "").trim(),
@@ -333,6 +367,7 @@ export function buildCsvExport(params: {
       item: (r.item_name_normalized || r.item_name_raw || "").trim(),
       quantity: toNumber(r.quantity),
       unit: (r.unit ?? "").trim(),
+      pounds: null,
       supplier: "",
       reference: r.slack_message_ts ?? "",
       category: (r.category ?? "").trim(),
@@ -346,7 +381,7 @@ export function buildCsvExport(params: {
     return a.item.localeCompare(b.item);
   });
 
-  const header = ["date", "direction", "item", "quantity", "unit", "supplier", "reference", "category", "program_type"];
+  const header = ["date", "direction", "item", "quantity", "unit", "pounds", "supplier", "reference", "category", "program_type"];
   const lines = [header.join(",")];
   for (const r of rows) {
     lines.push([
@@ -355,6 +390,7 @@ export function buildCsvExport(params: {
       csvField(r.item),
       csvField(formatNum(r.quantity)),
       csvField(r.unit),
+      csvField(r.pounds == null ? "" : formatNum(r.pounds)),
       csvField(r.supplier),
       csvField(r.reference),
       csvField(r.category),
@@ -437,8 +473,9 @@ export function buildDashboardHtml(params: {
 
   const colHeaderFn = view === "daily" ? dailyColHeader : weeklyColHeader;
   const headerCells = buckets.map((b) => `<th>${colHeaderFn(b)}</th>`).join("");
-  const inboundCasesRow = buckets.map((b) => `<td class="num">${casesCell(b.inboundCases, "in")}</td>`).join("");
-  const outboundCasesRow = buckets.map((b) => `<td class="num">${casesCell(b.outboundCases, "out")}</td>`).join("");
+  const inboundPoundsRow = buckets.map((b) => `<td class="num">${metricCell(b.inboundPounds, "in")}</td>`).join("");
+  const outboundCasesRow = buckets.map((b) => `<td class="num">${metricCell(b.outboundCases, "out")}</td>`).join("");
+  const coverageRow = buckets.map((b) => `<td class="num">${coverageCell(b)}</td>`).join("");
   const vendorsRow = buckets.map((b) => `<td>${vendorsCell(b.vendors)}</td>`).join("");
   const topInRow = buckets.map((b) => `<td>${itemsCell(b.topInbound)}</td>`).join("");
   const topOutRow = buckets.map((b) => `<td>${itemsCell(b.topOutbound)}</td>`).join("");
@@ -446,16 +483,19 @@ export function buildDashboardHtml(params: {
   const sessionsRow = buckets.map((b) => `<td class="num">${b.sessionCount || `<span class="muted">0</span>`}</td>`).join("");
 
   const chartLabels = JSON.stringify(buckets.map((b) => chartLabel(b, view)));
-  const inboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.inboundCases * 10) / 10));
+  const inboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.inboundPounds * 10) / 10));
   const outboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.outboundCases * 10) / 10));
 
-  const totalInbound = buckets.reduce((s, b) => s + b.inboundCases, 0);
+  const totalInboundPounds = buckets.reduce((s, b) => s + b.inboundPounds, 0);
   const totalOutbound = buckets.reduce((s, b) => s + b.outboundCases, 0);
+  const totalWeighed = buckets.reduce((s, b) => s + b.inboundWeighedRows, 0);
+  const totalUnweighed = buckets.reduce((s, b) => s + b.inboundUnweighedRows, 0);
+  const totalInboundRows = totalWeighed + totalUnweighed;
 
   const active: ViewOption = { view, range };
   const periodWord = view === "daily" ? (periods === 1 ? "day" : "days") : (periods === 1 ? "week" : "weeks");
   const bucketWord = view === "daily" ? "day" : "week";
-  const inboundCasesLabel = view === "daily" ? "Inbound — cases" : "Inbound — cases (week)";
+  const inboundPoundsLabel = view === "daily" ? "Inbound — pounds" : "Inbound — pounds (week)";
   const outboundCasesLabel = view === "daily" ? "Outbound — cases" : "Outbound — cases (week)";
 
   return `<!DOCTYPE html>
@@ -497,8 +537,13 @@ thead th:first-child { text-align: left; }
 
 <div class="summary-row">
   <div class="summary-pill in">
-    <div class="label">Inbound · total cases</div>
-    <div class="value">${formatNum(totalInbound)}</div>
+    <div class="label">Inbound · total pounds</div>
+    <div class="value">${formatNum(totalInboundPounds)}</div>
+    ${totalUnweighed > 0
+      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">from ${totalWeighed} of ${totalInboundRows} rows (${totalUnweighed} missing weight)</div>`
+      : totalInboundRows > 0
+        ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">from ${totalInboundRows} rows</div>`
+        : ""}
   </div>
   <div class="summary-pill out">
     <div class="label">${program ? `Outbound · ${escapeHtml(PROGRAM_LABEL[program])} cases` : "Outbound · total cases"}</div>
@@ -506,10 +551,10 @@ thead th:first-child { text-align: left; }
   </div>
   ${program
     ? `<div class="summary-pill"><div class="label">Showing</div><div class="value" style="font-size: 14px; line-height: 1.4;">Outbound for ${escapeHtml(PROGRAM_LABEL[program])}<br><span class="muted" style="font-size: 12px; font-weight: 400;">inbound is org-wide</span></div></div>`
-    : `<div class="summary-pill"><div class="label">Net (in − out)</div><div class="value">${formatNum(totalInbound - totalOutbound)}</div></div>`}
+    : ""}
 </div>
 
-<h2>Cases by ${bucketWord}</h2>
+<h2>Inbound pounds &amp; outbound cases by ${bucketWord}</h2>
 <div class="card">
   <div class="chart-wrap"><canvas id="casesChart"></canvas></div>
 </div>
@@ -524,10 +569,11 @@ thead th:first-child { text-align: left; }
       </tr>
     </thead>
     <tbody>
-      <tr><th>${inboundCasesLabel}</th>${inboundCasesRow}</tr>
+      <tr><th>${inboundPoundsLabel}</th>${inboundPoundsRow}</tr>
       <tr><th>${outboundCasesLabel}</th>${outboundCasesRow}</tr>
+      <tr><th>Weight coverage</th>${coverageRow}</tr>
       <tr><th>Vendors</th>${vendorsRow}</tr>
-      <tr><th>Top inbound items</th>${topInRow}</tr>
+      <tr><th>Top inbound items (lbs)</th>${topInRow}</tr>
       <tr><th>Top outbound items</th>${topOutRow}</tr>
       <tr><th>Inbound invoices</th>${invoicesRow}</tr>
       <tr><th>Outbound sessions</th>${sessionsRow}</tr>
@@ -547,14 +593,15 @@ thead th:first-child { text-align: left; }
       labels: ${chartLabels},
       datasets: [
         {
-          label: 'Inbound cases',
+          label: 'Inbound pounds',
           data: ${inboundSeries},
           borderColor: '#047857',
           backgroundColor: 'rgba(4, 120, 87, 0.1)',
           tension: 0.25,
           fill: true,
           pointRadius: 4,
-          pointHoverRadius: 6
+          pointHoverRadius: 6,
+          yAxisID: 'yLbs'
         },
         {
           label: 'Outbound cases',
@@ -564,7 +611,8 @@ thead th:first-child { text-align: left; }
           tension: 0.25,
           fill: true,
           pointRadius: 4,
-          pointHoverRadius: 6
+          pointHoverRadius: 6,
+          yAxisID: 'yCases'
         }
       ]
     },
@@ -574,10 +622,11 @@ thead th:first-child { text-align: left; }
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { boxWidth: 12, font: { size: 13 } } },
-        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + ' cases' } }
+        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + (c.dataset.yAxisID === 'yLbs' ? ' lbs' : ' cases') } }
       },
       scales: {
-        y: { beginAtZero: true, title: { display: true, text: 'Cases' } },
+        yLbs:   { position: 'left',  beginAtZero: true, title: { display: true, text: 'Pounds (inbound)' }, grid: { drawOnChartArea: true } },
+        yCases: { position: 'right', beginAtZero: true, title: { display: true, text: 'Cases (outbound)' }, grid: { drawOnChartArea: false } },
         x: { grid: { display: false } }
       }
     }
