@@ -54,9 +54,9 @@ export function lookupCarusoBySku(sku: string | null | undefined): CarusoCatalog
 }
 
 // Post-extraction reconciliation: when the supplier is Caruso and a line item's
-// SKU hits the catalog, overwrite approx_weight with the catalog value (it's
-// authoritative for stable pack sizes and RVFB has ~50% catalog hit rate on
-// historical invoices). Extracted weight is preserved in the notes column so
+// SKU hits the catalog, overwrite approx_weight with `catalog_per_case *
+// quantity` (approx_weight is line-total pounds by definition; catalog carries
+// per-case weight). Extracted weight is preserved in the notes column so
 // reviewers can see what changed. No-op for non-Caruso extractions.
 export function reconcileWithCarusoCatalog(extraction: ExtractionResult): {
   hits: number;
@@ -70,11 +70,15 @@ export function reconcileWithCarusoCatalog(extraction: ExtractionResult): {
     if (!cat) continue;
     hits++;
     if (cat.weightLb == null) continue;
-    if (item.approx_weight !== cat.weightLb) {
+    const qty = typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
+      ? item.quantity
+      : 1;
+    const lineWeight = Number((cat.weightLb * qty).toFixed(2));
+    if (item.approx_weight !== lineWeight) {
       const prevNote = item.notes ? `${item.notes} ` : "";
       const prevWeight = item.approx_weight != null ? `${item.approx_weight}` : "null";
-      item.notes = `${prevNote}[catalog: weight ${prevWeight}→${cat.weightLb} lb; sku ${cat.sku} ${cat.name}]`;
-      item.approx_weight = cat.weightLb;
+      item.notes = `${prevNote}[catalog: weight ${prevWeight}→${lineWeight} lb (${cat.weightLb}×${qty}); sku ${cat.sku} ${cat.name}]`;
+      item.approx_weight = lineWeight;
       overwrites++;
     }
   }
