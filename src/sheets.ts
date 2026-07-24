@@ -600,6 +600,19 @@ interface SummaryRollup {
   donation: boolean;
 }
 
+// Same rule as inboundPoundsFor in src/dashboard.ts — keep in sync.
+// Prefer approx_weight (line-total pounds); fall back to quantity when the row
+// is priced by weight (unit=lb, grocery-rescue + Weigelt + occasional carusos
+// weigh-priced items). Returns null when neither signal exists.
+function itemPounds(item: ExtractionResult["line_items"][number]): number | null {
+  const aw = typeof item.approx_weight === "number" && Number.isFinite(item.approx_weight) ? item.approx_weight : 0;
+  if (aw > 0) return aw;
+  if (item.unit === "lb" && typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0) {
+    return item.quantity;
+  }
+  return null;
+}
+
 function rollupExtraction(extraction: ExtractionResult): SummaryRollup {
   const nonFeeItems = extraction.line_items.filter((item) => !item.is_fee);
 
@@ -609,8 +622,8 @@ function rollupExtraction(extraction: ExtractionResult): SummaryRollup {
   const categoryOrder: string[] = [];
 
   for (const item of nonFeeItems) {
-    const w = typeof item.approx_weight === "number" ? item.approx_weight : null;
-    if (w != null && Number.isFinite(w)) {
+    const w = itemPounds(item);
+    if (w != null) {
       totalWeight += w;
       hasWeight = true;
       if (item.category) {
