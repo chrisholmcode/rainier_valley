@@ -12,9 +12,12 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
 | `{{INBOUND_CARD}}`           | Weekly inbound summary card (snippet below)                                  |
 | `{{OUTBOUND_CARD}}`          | Weekly outbound summary card (snippet below)                                 |
 | `{{DAY_BY_DAY_TABLE}}`       | 7-row Sun–Sat table (snippet below)                                          |
-| `{{SUPPLIER_TABLE}}`         | One row per supplier-invoice, sorted by cases desc (snippet below)           |
+| `{{SUPPLIER_TABLE}}`         | One row per supplier-invoice, sorted by pounds desc (snippet below)          |
 | `{{ALL_OUTBOUND_TABLE}}`     | All outbound items, sorted by cases desc (snippet below)                     |
-| `{{ALL_INBOUND_TABLE}}`      | All inbound items, sorted by cases desc (snippet below)                      |
+| `{{ALL_INBOUND_TABLE}}`      | All inbound items, sorted by pounds desc (snippet below)                     |
+| `{{INBOUND_TOTAL_POUNDS}}`   | Sum of `row_pounds` for non-fee inbound rows (see data-format.md).           |
+| `{{INBOUND_WEIGHT_COVERAGE_NOTE}}` | Small `<div class="note">…</div>` under the headline when unweighed > 0. |
+| `{{DAY_INBOUND_POUNDS}}` / `{{DAY_OUTBOUND_CASES}}` | Per-day rollups for the day-by-day table.       |
 | `{{DATA_QUALITY_FOOTER}}`    | Low-confidence % and missing-financials count (snippet below)                |
 
 ## Full HTML
@@ -128,9 +131,8 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
         <tr>
           <th>Date</th>
           <th>Day</th>
-          <th class="num"><span class="badge in">In</span> cases</th>
+          <th class="num"><span class="badge in">In</span> lbs</th>
           <th class="num"><span class="badge out">Out</span> cases</th>
-          <th class="num">Net</th>
         </tr>
       </thead>
       <tbody>
@@ -150,6 +152,7 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
           <th>Invoice #</th>
           <th class="num">Deliveries</th>
           <th class="num">Line items</th>
+          <th class="num">Pounds</th>
           <th class="num">Cases</th>
           <th class="num">Invoice value</th>
         </tr>
@@ -189,6 +192,7 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
           <th>Item</th>
           <th>Category</th>
           <th>Supplier(s)</th>
+          <th class="num">Pounds</th>
           <th class="num">Cases</th>
           <th class="num">Days appeared</th>
         </tr>
@@ -216,7 +220,8 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
 ```html
 <div class="card in">
   <h3><span class="badge in">Inbound</span> Deliveries Received</h3>
-  <div class="big-number in">{{INBOUND_TOTAL_CASES}} cases{{PARTIAL_WEEK_NOTE_IF_ANY}}</div>
+  <div class="big-number in">{{INBOUND_TOTAL_POUNDS}} lbs{{PARTIAL_WEEK_NOTE_IF_ANY}}</div>
+  {{INBOUND_WEIGHT_COVERAGE_NOTE}}
   <div class="stat"><span class="stat-label">Line items</span><span class="stat-value">{{INBOUND_LINE_ITEMS}}</span></div>
   <div class="stat"><span class="stat-label">Suppliers</span><span class="stat-value">{{INBOUND_SUPPLIER_COUNT}} ({{INBOUND_SUPPLIER_NAMES}})</span></div>
   <div class="stat"><span class="stat-label">Days with deliveries</span><span class="stat-value">{{DAYS_WITH_INBOUND}}</span></div>
@@ -227,6 +232,8 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
   </div>
 </div>
 ```
+
+`{{INBOUND_WEIGHT_COVERAGE_NOTE}}` = `<div class="note" style="margin: -4px 0 8px;">from {{INBOUND_WEIGHED_ROWS}} of {{INBOUND_TOTAL_ROWS}} rows weighed</div>` when `INBOUND_UNWEIGHED_ROWS > 0`, otherwise empty string.
 
 ## Snippet — Outbound card (data present)
 
@@ -248,12 +255,12 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
 
 ## Snippet — Empty card variants
 
-Use the same empty-state cards as the daily template, with `0 cases` and an italic empty-state line.
+Use the same empty-state cards as the daily template. Inbound empty-state big-number is `0 lbs`; outbound stays as `0 cases`.
 
 ## Snippet — Day-by-day row
 
 ```html
-<tr><td>{{ISO_DATE}}</td><td>{{WEEKDAY_LABEL}}</td><td class="num">{{DAY_INBOUND}}</td><td class="num">{{DAY_OUTBOUND}}</td><td class="num">{{DAY_NET}}</td></tr>
+<tr><td>{{ISO_DATE}}</td><td>{{WEEKDAY_LABEL}}</td><td class="num">{{DAY_INBOUND_POUNDS}}</td><td class="num">{{DAY_OUTBOUND_CASES}}</td></tr>
 ```
 
 Highlight the row with the highest single-day outbound by adding `class="peak-day"` to the `<tr>`.
@@ -261,13 +268,15 @@ Highlight the row with the highest single-day outbound by adding `class="peak-da
 ## Snippet — Supplier row
 
 ```html
-<tr><td>{{SUPPLIER_LABEL}}</td><td>{{INVOICE_NUMBER_OR_LABEL}}</td><td class="num">{{DELIVERIES}}</td><td class="num">{{LINE_ITEMS}}</td><td class="num">{{CASES}}</td><td class="num">{{INVOICE_VALUE}}{{PARTIAL_NOTE_IF_ANY}}</td></tr>
+<tr><td>{{SUPPLIER_LABEL}}</td><td>{{INVOICE_NUMBER_OR_LABEL}}</td><td class="num">{{DELIVERIES}}</td><td class="num">{{LINE_ITEMS}}</td><td class="num">{{POUNDS}}{{SUPPLIER_WEIGHT_COVERAGE_NOTE}}</td><td class="num">{{CASES}}</td><td class="num">{{INVOICE_VALUE}}{{PARTIAL_NOTE_IF_ANY}}</td></tr>
 ```
+
+`{{SUPPLIER_WEIGHT_COVERAGE_NOTE}}` = ` <span class="note">(N of M weighed)</span>` when the supplier has unweighed rows, else empty.
 
 After all supplier rows, append a total row:
 
 ```html
-<tr class="total-row"><td colspan="3">All suppliers</td><td class="num">{{TOTAL_LINE_ITEMS}}</td><td class="num">{{TOTAL_CASES}}</td><td class="num">${{TOTAL_INVOICE_VALUE}}{{PARTIAL_NOTE_IF_ANY}}</td></tr>
+<tr class="total-row"><td colspan="3">All suppliers</td><td class="num">{{TOTAL_LINE_ITEMS}}</td><td class="num">{{TOTAL_POUNDS}}{{TOTAL_WEIGHT_COVERAGE_NOTE}}</td><td class="num">{{TOTAL_CASES}}</td><td class="num">${{TOTAL_INVOICE_VALUE}}{{PARTIAL_NOTE_IF_ANY}}</td></tr>
 ```
 
 ## Snippet — Outbound item row
@@ -279,10 +288,10 @@ After all supplier rows, append a total row:
 ## Snippet — Inbound item row
 
 ```html
-<tr><td>{{ITEM_NAME}}{{FLAG_BADGES_IF_ANY}}</td><td>{{CATEGORY_LABEL}}</td><td>{{SUPPLIERS}}</td><td class="num">{{CASES}}</td><td class="num">{{DAYS_APPEARED}}</td></tr>
+<tr><td>{{ITEM_NAME}}{{FLAG_BADGES_IF_ANY}}</td><td>{{CATEGORY_LABEL}}</td><td>{{SUPPLIERS}}</td><td class="num">{{POUNDS}}</td><td class="num">{{CASES}}</td><td class="num">{{DAYS_APPEARED}}</td></tr>
 ```
 
-For both: group rows by `item_name_normalized` (fall back to `item_name_raw`), sum `quantity`, sort desc by cases. No row limit — list every distinct item that appeared in the week. For the inbound `SUPPLIERS` cell, render the supplier first-words (`Caruso's, Charlie's`) joined by `, ` and sorted alphabetically.
+Group rows by `item_name_normalized` (fall back to `item_name_raw`). For the outbound table, sum `quantity` and sort desc by cases. For the inbound table, sum `row_pounds` (skip nulls) and sort desc by pounds; when pounds is unknown for every row of an item, render `—` in the pounds cell. Both tables list every distinct item that appeared in the week, no row limit. For the inbound `SUPPLIERS` cell, render the supplier first-words (`Caruso's, Charlie's`) joined by `, ` and sorted alphabetically.
 
 ## Snippet — Data quality footer
 

@@ -13,13 +13,18 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
 | `{{OUTBOUND_CARD}}`      | Outbound summary card (see "Outbound card" snippet below)              |
 | `{{INBOUND_SECTION}}`    | One supplier card per group (see "Supplier section" snippet below), or the empty-state card if there are no inbound rows |
 | `{{OUTBOUND_SECTION}}`   | The whiteboard distribution card with table rows, or the empty-state card |
+| `{{INBOUND_TOTAL_POUNDS}}` | Sum of `row_pounds` across all non-fee inbound rows (see data-format.md).       |
+| `{{INBOUND_WEIGHT_COVERAGE_NOTE}}` | The `<div class="note">…</div>` snippet when unweighed rows > 0, else empty. |
+| `{{SUPPLIER_POUNDS}}`    | Per-supplier `pounds_total`. Rendered inline with `{{UNIT_COUNT}}` in the subtotal row. |
+| `{{SUPPLIER_WEIGHT_COVERAGE_NOTE}}` | Inline ` <span class="note">(N of M weighed)</span>` when incomplete, else empty. |
 
 ## Snippet — Inbound card (data present)
 
 ```html
 <div class="card in">
   <h3><span class="badge in">Inbound</span> Deliveries Received</h3>
-  <div class="big-number in">{{INBOUND_TOTAL_CASES}} cases</div>
+  <div class="big-number in">{{INBOUND_TOTAL_POUNDS}} lbs</div>
+  {{INBOUND_WEIGHT_COVERAGE_NOTE}}
   <div class="stat"><span class="stat-label">Line items</span><span class="stat-value">{{INBOUND_LINE_ITEMS}}</span></div>
   <div class="stat"><span class="stat-label">Suppliers</span><span class="stat-value">{{INBOUND_SUPPLIER_COUNT}} ({{INBOUND_SUPPLIER_NAMES}})</span></div>
   <div class="stat"><span class="stat-label">Combined invoice value</span><span class="stat-value">${{INBOUND_INVOICE_VALUE}}{{PARTIAL_NOTE_IF_ANY}}</span></div>
@@ -30,12 +35,14 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
 </div>
 ```
 
+`{{INBOUND_WEIGHT_COVERAGE_NOTE}}` = `<div class="note" style="margin: -4px 0 8px;">from {{WEIGHED_ROWS}} of {{TOTAL_INBOUND_ROWS}} rows weighed</div>` when `unweighed_rows > 0`, otherwise empty string.
+
 ## Snippet — Inbound card (empty)
 
 ```html
 <div class="card in">
   <h3><span class="badge in">Inbound</span> Deliveries Received</h3>
-  <div class="big-number in">0 cases</div>
+  <div class="big-number in">0 lbs</div>
   <div class="stat"><span class="stat-label">Line items</span><span class="stat-value">0</span></div>
   <div class="stat"><span class="stat-label">Suppliers</span><span class="stat-value">—</span></div>
   <div class="stat"><span class="stat-label">Combined invoice value</span><span class="stat-value">$0.00</span></div>
@@ -85,7 +92,7 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
     <tbody>
       {{LINE_ITEM_ROWS}}
       {{FEE_ROWS}}
-      <tr class="total-row"><td colspan="2">{{SUPPLIER_SHORT}} subtotal</td><td class="num">{{UNIT_COUNT}} units</td><td></td><td></td><td class="num">{{SUBTOTAL}}{{PARTIAL_NOTE_IF_ANY}}</td></tr>
+      <tr class="total-row"><td colspan="2">{{SUPPLIER_SHORT}} subtotal</td><td class="num">{{UNIT_COUNT}} units · {{SUPPLIER_POUNDS}} lbs{{SUPPLIER_WEIGHT_COVERAGE_NOTE}}</td><td></td><td></td><td class="num">{{SUBTOTAL}}{{PARTIAL_NOTE_IF_ANY}}</td></tr>
     </tbody>
   </table>
 </div>

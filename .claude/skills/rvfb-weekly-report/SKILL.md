@@ -57,27 +57,29 @@ The JSON shape is `{ from, to, inbound: [...], outbound: [...] }`. Each row is t
 All daily aggregation rules apply per row (fees, badge flags, missing financials, low confidence). On top of those, compute **weekly rollups**:
 
 **Headline metrics (both cards):**
-- `INBOUND_TOTAL_CASES` = sum of non-fee `quantity` across the entire week.
+- `INBOUND_TOTAL_POUNDS` = sum of `row_pounds` across all non-fee inbound rows (see data-format.md for the pounds-derivation rule). This replaces `INBOUND_TOTAL_CASES` on the headline card.
+- `INBOUND_WEIGHED_ROWS` / `INBOUND_TOTAL_ROWS` = weight-coverage counts. When `unweighed > 0`, render a small "from N of M rows weighed" note under the big number.
 - `OUTBOUND_TOTAL_CASES` = sum of `quantity` across the entire week.
 - `INBOUND_LINE_ITEMS` = count of non-fee inbound rows.
 - `OUTBOUND_LINE_ITEMS` = count of outbound rows.
 - `INBOUND_INVOICE_VALUE` = sum of `line_total` across all inbound rows (fees included); flag `(partial)` if any non-fee row has a null financial.
-- `INBOUND_SUPPLIER_NAMES` = first-word labels (Caruso's, Charlie's, …) sorted by total cases desc.
+- `INBOUND_SUPPLIER_NAMES` = first-word labels (Caruso's, Charlie's, …) sorted by total pounds desc.
 - `INBOUND_SUPPLIER_COUNT` = distinct suppliers with ≥1 non-fee row.
 - `OUTBOUND_CATEGORIES` = humanized category labels present, sorted by case volume desc.
 - `DAYS_WITH_INBOUND` / `DAYS_WITH_OUTBOUND` = count of distinct dates with ≥1 row.
 - `PRE_MADE_BAGS_CASES` = sum of `quantity` for outbound rows where `program_type == "pre_made_bags"`. Shown as a dedicated stat on the outbound card (renders as `0 cases` when none).
 
 **Top-items lists (both cards):**
-- Group rows by `item_name_normalized` (fall back to `item_name_raw`); sum `quantity`. Take top 10 per side, sort by qty desc. Format same as daily: `Potatoes (78), Onions (54), …` with each `(qty)` wrapped in `<span class="qty">…</span>`.
+- Inbound: group by `item_name_normalized` (fall back to `item_name_raw`); sum `row_pounds` (skip rows where it's null). Take top 10, sort by pounds desc. Format: `Potatoes (312 lbs), Onions (240 lbs), …` with each `(N lbs)` wrapped in `<span class="qty">…</span>`.
+- Outbound: unchanged — group by item, sum `quantity`, take top 10 by cases desc, format `Item (qty)`.
 
 **Day-by-day breakdown (weekly-specific section):**
 
-A 7-row table (Sun–Sat) with: date, weekday, inbound cases, outbound cases, net. Days with no activity render with `0` (not empty) so the week shape is visible. Highlight the row with the highest single-day outbound in muted bold.
+A 7-row table (Sun–Sat) with: date, weekday, inbound pounds, outbound cases. Days with no activity render with `0` (not empty) so the week shape is visible. Highlight the row with the highest single-day outbound in muted bold. (Net-of-in-minus-out is dropped — mixing lbs and cases isn't meaningful.)
 
 **Top suppliers table:**
 
-One row per supplier with non-fee inbound that week. Columns: supplier label, deliveries (distinct invoice numbers, treat empty as one bucket), cases, line items, combined invoice value (with `(partial)` flag if applicable). Sort by cases desc.
+One row per supplier with non-fee inbound that week. Columns: supplier label, deliveries (distinct invoice numbers, treat empty as one bucket), pounds, cases, line items, combined invoice value (with `(partial)` flag if applicable). Sort by pounds desc. When any of a supplier's rows are unweighed, append ` <span class="note">(N of M weighed)</span>` inline in the pounds cell.
 
 **All outbound items table:**
 
@@ -85,7 +87,7 @@ Every distinct outbound item from the week, no row limit. Columns: item, categor
 
 **All inbound items table:**
 
-Every distinct inbound item from the week (non-fee rows only), no row limit. Columns: item, category (humanized), supplier(s) — comma-joined first-word labels sorted alphabetically (e.g. `Caruso's, Charlie's`) — cases, days appeared. Sort by cases desc. Group rows by `item_name_normalized` (fall back to `item_name_raw`).
+Every distinct inbound item from the week (non-fee rows only), no row limit. Columns: item, category (humanized), supplier(s) — comma-joined first-word labels sorted alphabetically (e.g. `Caruso's, Charlie's`) — pounds, cases, days appeared. Sort by pounds desc (rows with null pounds fall to the bottom, sorted by cases). Group rows by `item_name_normalized` (fall back to `item_name_raw`).
 
 **Data-quality footer:**
 - `low_confidence_inbound_pct` = `low_confidence_inbound_rows / total_inbound_rows`. Same for outbound (threshold 0.85 outbound, 0.75 inbound — same as daily skill).
@@ -113,7 +115,7 @@ Same Chrome command as the daily skill (see `../rvfb-daily-report/references/ren
 
 `ls -la ~/Downloads/rvfb_weekly_summary_*` to confirm both files. Spot-check page 1 with `Read pages: "1-2"`. Then summarize for the user:
 
-- Headline: total cases inbound, total cases outbound, net.
+- Headline: total pounds inbound (with weight-coverage note if incomplete), total cases outbound.
 - Days with activity, busiest single day.
 - Supplier mix (top 2–3 by volume).
 - Top 3 inbound items, top 3 outbound items.
