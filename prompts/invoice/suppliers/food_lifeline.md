@@ -1,4 +1,6 @@
-Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled grocery rescue slips are now a separate supplier (`grocery_rescue`) — if this document is the handwritten Donor / Address / Agency / Date form with a Pounds column, set `supplier = "grocery_rescue"` and follow that supplier's prompt instead.
+Supplier: Food Lifeline (AGENCY ORDER — printed manifest).
+
+STOP-FIRST CHECK (do this before extracting any field): If the document has a handwritten **Pounds** column (numeric weights like 14, 17, 70, 79 written by hand next to categories, on a Donor / Address / Agency / Date form) rather than the printed 8-column table (Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight), then this is NOT this supplier. Do NOT copy the Pounds value into `quantity` / `quantity_raw` or any other field here. Set `supplier = "grocery_rescue"` and follow that supplier's prompt instead. The printed AGENCY ORDER manifest has a **Quantity** column (case/each counts) and never a handwritten Pounds column.
 
 ## Subtype: AGENCY ORDER (printed manifest)
 
