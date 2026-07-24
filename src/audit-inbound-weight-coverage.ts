@@ -38,6 +38,15 @@ function isFee(v: string | null | undefined): boolean {
   return s === "true" || s === "1" || s === "yes" || s === "y";
 }
 
+// Skeleton rows are auto-inserted placeholders on grocery rescue slips for
+// categories the form left blank. They have no real inventory to weigh, so
+// they don't belong in coverage math. Keep in sync with src/dashboard.ts.
+function isEmptySkeletonRow(r: DeliverySheetRow): boolean {
+  if (!r.notes || !r.notes.includes("auto-inserted skeleton")) return false;
+  const q = (r.quantity ?? "").trim();
+  return q === "" || q === "0" || toNumber(r.quantity) === 0;
+}
+
 // Same rule as src/dashboard.ts inboundPoundsFor — keep in sync.
 function rowPounds(r: DeliverySheetRow): number | null {
   const aw = toNumber(r.approx_weight);
@@ -77,8 +86,13 @@ async function main(): Promise<void> {
   console.log(``);
 
   const rows = await readDeliveryRows({ limit });
+  let skeletonSkipped = 0;
   const filtered = rows.filter((r) => {
     if (isFee(r.is_fee)) return false;
+    if (isEmptySkeletonRow(r)) {
+      skeletonSkipped += 1;
+      return false;
+    }
     if (from && (!r.delivery_date || r.delivery_date < from)) return false;
     if (to && (!r.delivery_date || r.delivery_date > to)) return false;
     return true;
@@ -108,7 +122,7 @@ async function main(): Promise<void> {
   const grandWeighed = filtered.reduce((s, r) => s + (rowPounds(r) != null ? 1 : 0), 0);
   const grandUnweighed = grandTotal - grandWeighed;
 
-  console.log(`Overall: ${grandTotal} non-fee rows, ${grandWeighed} weighed (${pct(grandWeighed, grandTotal)}), ${grandUnweighed} unweighed.`);
+  console.log(`Overall: ${grandTotal} non-fee non-skeleton rows, ${grandWeighed} weighed (${pct(grandWeighed, grandTotal)}), ${grandUnweighed} unweighed. (Skipped ${skeletonSkipped} empty grocery-rescue skeleton rows.)`);
   console.log(``);
   console.log(`## Per supplier (sorted by unweighed row count desc)`);
   console.log(``);
