@@ -1196,7 +1196,7 @@ async function handleGroceryRescueExportRequest(req: IncomingMessage, res: Serve
   const to = url.searchParams.get("to") || today;
 
   try {
-    const inboundRows = await readDeliveryRows({ limit: 5000 });
+    const inboundRows = await readDeliveryRows({ supplier: "grocery_rescue", limit: 100000 });
     const { filename, csv } = buildRescueSlipsCsv({ inboundRows, from, to });
     res.writeHead(200, {
       "Content-Type": "text/csv; charset=utf-8",

@@ -464,6 +464,81 @@ function programButtons(active: ViewOption, _token: string, activeProgram: Progr
     .join("");
 }
 
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function rescueMonthOptions(): Array<{ value: string; label: string; from: string; to: string }> {
+  const [ty, tm] = todayInTz().split("-").map(Number);
+  const anchor = ty * 12 + (tm - 1);
+  const opts: Array<{ value: string; label: string; from: string; to: string }> = [];
+  for (let i = 0; i < 12; i++) {
+    const total = anchor - i;
+    const yy = Math.floor(total / 12);
+    const m0 = total - yy * 12;
+    const monthNum = m0 + 1;
+    const daysInMonth = new Date(Date.UTC(yy, monthNum, 0)).getUTCDate();
+    const value = `${yy}-${String(monthNum).padStart(2, "0")}`;
+    const from = `${value}-01`;
+    const to = `${value}-${String(daysInMonth).padStart(2, "0")}`;
+    const label = i === 0
+      ? `This month (${MONTH_NAMES[m0]} ${yy})`
+      : `${MONTH_NAMES[m0]} ${yy}`;
+    opts.push({ value, label, from, to });
+  }
+  return opts;
+}
+
+function rescueExportControl(): string {
+  const opts = rescueMonthOptions();
+  const first = opts[0];
+  const optionHtml = opts
+    .map((o) => `<option value="${o.value}" data-from="${o.from}" data-to="${o.to}">${o.label}</option>`)
+    .join("") + `<option value="custom">Custom range…</option>`;
+  return `
+<span class="rescue-export">
+  <select id="rescue-month" class="rescue-select">${optionHtml}</select>
+  <span id="rescue-custom" class="rescue-custom" hidden>
+    <input type="date" id="rescue-from" class="rescue-date">
+    <span class="rescue-dash">→</span>
+    <input type="date" id="rescue-to" class="rescue-date">
+  </span>
+  <a class="btn btn-export" id="rescue-export-btn" href="/export/grocery-rescue?from=${first.from}&amp;to=${first.to}" download>↓ Grocery rescue slips (Food Lifeline)</a>
+</span>
+<script>
+(function(){
+  var sel = document.getElementById('rescue-month');
+  var custom = document.getElementById('rescue-custom');
+  var fromEl = document.getElementById('rescue-from');
+  var toEl = document.getElementById('rescue-to');
+  var btn = document.getElementById('rescue-export-btn');
+  function update(){
+    var f, t;
+    if (sel.value === 'custom') {
+      custom.hidden = false;
+      f = fromEl.value; t = toEl.value;
+    } else {
+      custom.hidden = true;
+      var opt = sel.options[sel.selectedIndex];
+      f = opt.getAttribute('data-from');
+      t = opt.getAttribute('data-to');
+    }
+    if (f && t) {
+      btn.href = '/export/grocery-rescue?from=' + encodeURIComponent(f) + '&to=' + encodeURIComponent(t);
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+    } else {
+      btn.removeAttribute('href');
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.5';
+    }
+  }
+  sel.addEventListener('change', update);
+  fromEl.addEventListener('change', update);
+  toEl.addEventListener('change', update);
+  update();
+})();
+</script>`;
+}
+
 export function buildDashboardHtml(params: {
   view: View;
   range: Range;
@@ -529,6 +604,18 @@ thead th:first-child { text-align: left; }
 .col-weekday { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .col-date    { font-size: 13px; font-weight: 600; color: var(--ink); }
 .chart-wrap  { position: relative; height: 320px; }
+
+.rescue-export { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.rescue-select, .rescue-date {
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 7px 10px; line-height: 1;
+}
+.rescue-select { padding-right: 24px; }
+.rescue-custom { display: inline-flex; gap: 6px; align-items: center; }
+.rescue-custom[hidden] { display: none; }
+.rescue-dash { color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -544,7 +631,7 @@ thead th:first-child { text-align: left; }
     <div class="btn-group">${rangeButtons(active, token, program)}</div>
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
-    <a class="btn btn-export" href="/export/grocery-rescue" download>↓ Grocery rescue slips (Food Lifeline)</a>
+    ${rescueExportControl()}
     <a class="btn" href="/review">Review queue →</a>
   </div>
 </header>
