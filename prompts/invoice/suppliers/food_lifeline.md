@@ -23,4 +23,6 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 ## Not this supplier
 
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+  - **STOP CHECK (do this first):** If the document has a handwritten **Pounds** column (and NO printed "Quantity" column), it is NOT this supplier. Do not extract under this prompt — re-route to `grocery_rescue` and use its prompt. The `grocery_rescue` prompt maps the handwritten **Pounds** value to `quantity` (read the handwritten number carefully — e.g., 79 not 70).
+  - **Fallback:** If for any reason you continue under THIS prompt on such a slip, DO NOT leave `quantity` blank. The handwritten **Pounds** value IS the `quantity` for that line. Never emit a blank `quantity` when a Pounds number is legible.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
