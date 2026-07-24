@@ -41,6 +41,7 @@ import {
   EOD_SHEET_HEADERS
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
+import { buildRescueSlipsCsv } from "./rescue-export.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, buildOutboundListHtml, buildOutboundSlipDetailHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
 import { buildLandingHtml } from "./landing.js";
 import { buildDonateHtml, parseDonateFormBody } from "./donate.js";
@@ -1175,6 +1176,41 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
   }
 }
 
+// Export grocery rescue slips as a Food Lifeline bulk-import CSV.
+// Query params: `from` and `to` (YYYY-MM-DD). Default window = last 7 days
+// ending today (America/Los_Angeles). One CSV row per (donor, pickup date).
+async function handleGroceryRescueExportRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date());
+  const dayMs = 86400000;
+  const [y, m, d] = today.split("-").map(Number);
+  const weekAgo = new Date(Date.UTC(y, m - 1, d) - 6 * dayMs);
+  const weekAgoStr = `${weekAgo.getUTCFullYear()}-${String(weekAgo.getUTCMonth() + 1).padStart(2, "0")}-${String(weekAgo.getUTCDate()).padStart(2, "0")}`;
+
+  const from = url.searchParams.get("from") || weekAgoStr;
+  const to = url.searchParams.get("to") || today;
+
+  try {
+    const inboundRows = await readDeliveryRows({ limit: 5000 });
+    const { filename, csv } = buildRescueSlipsCsv({ inboundRows, from, to });
+    res.writeHead(200, {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "no-store"
+    });
+    res.end(csv);
+  } catch (err) {
+    console.error("Grocery rescue export error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
 // ── Review UI handlers ──────────────────────────────────────────────────────
 
 async function reviewAuth(req: IncomingMessage, res: ServerResponse): Promise<URL | null> {
@@ -1907,6 +1943,11 @@ function startHttpServer(): void {
 
     if (req.method === "GET" && path === "/review") {
       await handleReviewListRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/export/grocery-rescue") {
+      await handleGroceryRescueExportRequest(req, res);
       return;
     }
 

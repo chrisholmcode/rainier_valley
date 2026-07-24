@@ -490,6 +490,7 @@ thead th:first-child { text-align: left; }
     <div class="btn-group">${rangeButtons(active, token, program)}</div>
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
+    <a class="btn btn-export" href="/export/grocery-rescue" download>↓ Grocery rescue slips (Food Lifeline)</a>
     <a class="btn" href="/review">Review queue →</a>
   </div>
 </header>
