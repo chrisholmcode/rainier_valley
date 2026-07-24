@@ -102,6 +102,19 @@ function isFee(v: string | null | undefined): boolean {
   return s === "true" || s === "1" || s === "yes" || s === "y";
 }
 
+// Grocery rescue slips carry a fixed skeleton of 10 category rows regardless of
+// what's on the form. Rows the extractor synthesized for categories the form
+// left blank (Coffee Kiosk hatched out, Non-Meat Protein empty, etc.) look
+// "unweighed" but there was never any inventory to weigh — they're placeholders
+// for the reviewer's benefit. Exclude them from coverage math so grocery rescue
+// isn't unfairly penalized. Reviewer-filled skeletons (quantity now populated)
+// still count normally.
+function isEmptySkeletonRow(r: DeliverySheetRow): boolean {
+  if (!r.notes || !r.notes.includes("auto-inserted skeleton")) return false;
+  const q = (r.quantity ?? "").trim();
+  return q === "" || q === "0" || toNumber(r.quantity) === 0;
+}
+
 // Pounds for an inbound row. Prefer approx_weight (line-total pounds populated
 // by the extractor). Fall back to quantity when the unit is already "lb"
 // (grocery rescue + Weigelt convention). Returns null when we can't infer a
@@ -160,6 +173,7 @@ export function aggregate(
     const key = bucketKeyFor(r.delivery_date, view);
     if (!key || !buckets.has(key)) continue;
     if (isFee(r.is_fee)) continue;
+    if (isEmptySkeletonRow(r)) continue;
     const bucket = buckets.get(key)!;
 
     const lbs = inboundPoundsFor(r);
