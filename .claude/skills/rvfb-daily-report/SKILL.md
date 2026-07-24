@@ -53,7 +53,7 @@ jq '.outbound | sort_by(-(.quantity | tonumber? // 0))' /tmp/rvfb_raw.json
 
 See [references/data-format.md](references/data-format.md) for the exact column order and aggregation rules:
 
-- **Inbound:** group by `(supplier, invoice_or_order_number)`. Within each group, separate fees (`is_fee = TRUE`) from line items, sum quantities, sum line totals (skip nulls), and flag rows with missing `unit_cost` / `line_total` or `confidence < 0.75`.
+- **Inbound:** group by `(supplier, invoice_or_order_number)`. Within each group, separate fees (`is_fee = TRUE`) from line items, sum `quantity` (cases), sum `row_pounds` (approx_weight, fallback to quantity when unit=lb — see data-format.md), sum `line_total` (skip nulls), track weight coverage (weighed vs unweighed row counts), and flag rows with missing `unit_cost` / `line_total` or `confidence < 0.75`. Headline totals and supplier subtotals are in **pounds**; per-row display keeps `quantity` + `unit` as the primitive.
 - **Outbound:** filter to today's `date`. Sort by `quantity` desc. Flag rows with `confidence < 0.85` as `low confidence`. Use `quantity_raw` or `notes` as the tally-detail string.
 
 ### 4. Render HTML
@@ -78,7 +78,7 @@ See [references/rendering.md](references/rendering.md) for the exact Chrome comm
 
 Confirm both files exist (`ls -la ~/Downloads/rvfb_daily_summary_<date>.*`), then summarize for the user:
 
-- Inbound: total cases, line items, supplier breakdown, combined invoice value (flag if partial).
+- Inbound: total pounds (with weight coverage `N of M rows weighed` if incomplete), line items, supplier breakdown, combined invoice value (flag if partial).
 - Outbound: total cases, line items, source, low-confidence callouts.
 - Any data-quality warnings the bot logged (`warnings_json` column).
 

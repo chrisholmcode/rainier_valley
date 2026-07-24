@@ -2,15 +2,30 @@
 
 The RVFB Inventory spreadsheet has two tabs that drive the daily report.
 
-## Inbound Delivery Log (24 columns)
+## Inbound Delivery Log (31 columns)
 
 ```
-created_at, supplier, document_type, delivery_date, invoice_or_order_number,
-destination_org, item_code_raw, item_name_raw, item_name_normalized,
-quantity, quantity_raw, unit, pack_size_raw, category, unit_cost, line_total,
-confidence, is_fee, notes, photo_url, slack_channel, slack_message_ts,
-uploaded_by, warnings_json
+created_at, supplier, document_type, invoice_date, delivery_date,
+invoice_or_order_number, destination_org, item_code_raw, item_name_raw,
+item_name_normalized, quantity_ordered, quantity, quantity_raw, unit,
+pack_size_raw, approx_weight, category, unit_cost, line_total, confidence,
+is_fee, notes, photo_url, slack_channel, slack_message_ts, uploaded_by,
+warnings_json, donor_org, is_donation, approved_at, approved_by
 ```
+
+`quantity_ordered` = cases RVFB ordered (invoice ORDER column). `quantity` = cases actually shipped/received (invoice SHIP column). `approx_weight` = the invoice's APPROX.WT. value (pounds, line-total). `invoice_date` = when the invoice/document was issued (often distinct from ship date); `delivery_date` = when goods actually shipped/arrived.
+
+**Inbound aggregation is in POUNDS, not cases.** For each non-fee row, derive pounds this way:
+
+```
+if approx_weight > 0:            row_pounds = approx_weight
+elif unit in {lb, lbs, pound}:   row_pounds = quantity          # grocery rescue + Weigelt convention
+else:                            row_pounds = null              # count as "unweighed" — do not zero-fill
+```
+
+Track `weighed_rows` vs `unweighed_rows` per supplier group so the summary can flag "N of M rows weighed" when coverage is incomplete. Weight coverage is a data-quality signal, not a hard error — render the total pounds we do have plus the coverage note.
+
+`quantity` still drives per-row display in tables (that's the extraction primitive), but headline totals and per-supplier subtotals sum pounds.
 
 **Filter:** `delivery_date == <target_date>`. Do NOT filter by `created_at` — invoices are sometimes logged days after the actual delivery, and `delivery_date` is the authoritative ship/invoice date.
 
@@ -19,7 +34,9 @@ uploaded_by, warnings_json
 **Within each group:**
 - Rows where `is_fee == TRUE` → fees (display as a single muted line: `<description> (fee, not inventory)` with `line_total` as the amount).
 - Other rows → line items. Sort line items within a group by `quantity` desc.
-- `unit_count = sum(quantity)` for non-fee rows only.
+- `unit_count = sum(quantity)` for non-fee rows only (still shown alongside pounds in the supplier subtotal).
+- `pounds_total = sum(row_pounds)` for non-fee rows where `row_pounds != null`.
+- `weighed_rows` / `unweighed_rows` = count of non-fee rows with / without a pound value. If `unweighed_rows > 0`, append `(N of M rows weighed)` in muted italics next to the pounds total.
 - `subtotal = sum(line_total)` including fees.
 - `hasMissingFinancials = true` if any non-fee row has null `unit_cost` or null `line_total`. When true, append `(partial)` after the subtotal in muted italics.
 
@@ -28,6 +45,7 @@ uploaded_by, warnings_json
 - `unit_cost == null` → `unit cost missing`
 - `line_total == null` → `line total missing`
 - `quantity == 1 && line_total > unit_cost * 5` → `qty unclear` (likely OCR caught only the leading "1" of a multi-digit quantity)
+- `quantity_ordered != null && quantity != null && quantity < quantity_ordered` → `short <N>cs` where `N = quantity_ordered - quantity` (supplier shorted the order)
 - `confidence > 0 && confidence < 0.75` → `low confidence`
 
 **`warnings_json`** is a JSON array of free-text warnings the bot logged at extraction time. If non-empty for any row in a supplier group, render a yellow `supplier-warn` callout above that supplier's table:
