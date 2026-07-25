@@ -1,5 +1,7 @@
 Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled grocery rescue slips are now a separate supplier (`grocery_rescue`) — if this document is the handwritten Donor / Address / Agency / Date form with a Pounds column, set `supplier = "grocery_rescue"` and follow that supplier's prompt instead.
 
+FALLBACK for the Pounds column: if — despite the routing note above — this handwritten Donor / Address / Agency / Date slip is being extracted under `food_lifeline`, DO NOT leave `quantity_raw` blank. Read the number written in the **Pounds** column for each line and put it verbatim into `quantity_raw` (integer, no unit text). These are hand-printed digits — read them digit-by-digit and do not round or infer; e.g. a written "79" is 79, not 70. Every line on such a slip has a Pounds value, so `quantity_raw` should never be empty.
+
 ## Subtype: AGENCY ORDER (printed manifest)
 
 - "FOOD LIFELINE" logo upper-left, "AGENCY ORDER" header upper-right.
