@@ -11,6 +11,8 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
   - Suffix `-CITY` => City Fund donation. Note in line `notes`: "funding: CITY".
   - Other suffixes (e.g., `-EFAP`, `-CSFP`) => capture the suffix into notes verbatim.
 - Description => item_name_raw verbatim. When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
+  - Do NOT emit bare category/section headers (e.g., "Bakery", "Canned", "Canned/Dry Goods", "Produce", "Dairy") as `item_name_raw`. These are grouping labels, not line items — if a row contains only such a category label with no actual product/description, leave `item_name_raw` blank (do not fabricate an item).
+  - If a category label legitimately IS the line item's full description, capture the ENTIRE label verbatim including any "/…" continuation (e.g., write "Canned/Dry Goods", never the truncated "Canned"). Never split a multi-word or slash-joined label at whitespace or "/".
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
 - delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
