@@ -15,6 +15,8 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
 - delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
 - invoice_or_order_number: Use the **Agency Order No** value in the upper-right (e.g., "ACR-XXXXXX").
+  - If there is NO "Agency Order No" (ACR-…) field but the slip carries a donor-store reference (e.g., a "QFC" pickup) with a date, build the order number from that reference in the form `<STORE>-<SITE>-<YYYY-MM-DD>` exactly as printed (e.g., "QFC-MI-2026-07-10"). Do NOT leave `invoice_or_order_number` blank in this case.
+  - A donor-store reference like "QFC-…" is a strong signal this is actually a handwritten grocery-rescue slip — re-check the routing rule above and set `supplier = "grocery_rescue"` if it is the Donor / Address / Agency / Date form.
 - destination_org: Use the **Sold To** name (typically "Rainier Valley Food Bank").
 - Totals: subtotal = 0, tax = 0, grand_total = 0. Preserve the printed zeros.
 - fees[] = [].
