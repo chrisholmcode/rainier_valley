@@ -3,6 +3,20 @@ import { google } from "googleapis";
 import { env } from "./config.js";
 import { ExtractionResult, EodExtractionResult, EodSheetRow, DeliverySheetRow, ProgramType, ExtractionTrace, PromptSuggestionRow, PromptSuggestionStatus } from "./types.js";
 import { ensureRescueSkeleton, normalizeRescueSlip } from "./extraction.js";
+import { mirrorSlip, resolveTenant } from "./store.js";
+
+// Zip positional row arrays against their header names so the durable store
+// (store.ts) receives column→value objects instead of SHEET_HEADERS-ordered
+// arrays. Keeps the store decoupled from column ordering.
+function rowsToRecords(headers: string[], rows: unknown[][]): Record<string, unknown>[] {
+  return rows.map((r) => {
+    const obj: Record<string, unknown> = {};
+    headers.forEach((h, i) => {
+      obj[h] = r[i] ?? null;
+    });
+    return obj;
+  });
+}
 
 const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
@@ -467,6 +481,17 @@ export async function appendExtractionRows(params: {
     requestBody: {
       values: allRows
     }
+  });
+
+  // Dual-write: best-effort mirror to the durable store. No-op unless
+  // STORE_BACKEND is set. Never throws (see mirrorSlip) so the Sheets write
+  // above remains authoritative and intake can't break on a store failure.
+  await mirrorSlip({
+    tenant: resolveTenant(slackChannel),
+    table: "inbound_delivery_log",
+    slipKey: photoUrl || null,
+    rows: rowsToRecords(SHEET_HEADERS, allRows),
+    writtenAt: new Date().toISOString()
   });
 
   return allRows.length;

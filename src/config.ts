@@ -30,7 +30,15 @@ const EnvSchema = z.object({
   VOICE_PORT: z.coerce.number().default(3001),
   DASHBOARD_TOKEN: z.string().min(1).optional(),
   CF_ACCESS_TEAM_DOMAIN: z.string().min(1).optional(),
-  CF_ACCESS_AUD_TAG: z.string().min(1).optional()
+  CF_ACCESS_AUD_TAG: z.string().min(1).optional(),
+  // Durable store mirror (see src/store.ts). Default "none" keeps prod
+  // byte-for-byte identical; "file" writes local JSONL for local testing;
+  // "firestore" mirrors to GCP (requires @google-cloud/firestore installed).
+  STORE_BACKEND: z.enum(["none", "file", "firestore"]).default("none"),
+  STORE_TENANT_DEFAULT: z.string().default("rvfb"),
+  STORE_FILE_PATH: z.string().default("./data/slip-store.jsonl"),
+  STORE_FIRESTORE_PROJECT_ID: z.string().optional(),
+  STORE_FIRESTORE_COLLECTION: z.string().default("slips")
 });
 
 const parsed = EnvSchema.safeParse(process.env);
