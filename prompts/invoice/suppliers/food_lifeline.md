@@ -10,7 +10,9 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
   - Suffix `-TEFA` => TEFAP federal commodity (USDA). Note in line `notes`: "funding: TEFAP".
   - Suffix `-CITY` => City Fund donation. Note in line `notes`: "funding: CITY".
   - Other suffixes (e.g., `-EFAP`, `-CSFP`) => capture the suffix into notes verbatim.
-- Description => item_name_raw verbatim. When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
+- Description => item_name_raw verbatim.
+- Category grouping headers are NOT line items. Standalone words that label a section of the manifest — e.g., "Bakery", "Canned", "Canned/Dry Goods", "Produce", "Frozen", "Meat" — must NOT be emitted as `item_name_raw`. Skip the header row entirely (leave `item_name_raw` blank / do not create a line for it) and only capture the actual product descriptions listed beneath it.
+- If a category-style label genuinely appears in the Description column of a real line item, use the FULL printed text verbatim, including slash-joined words that may wrap across lines ("Canned/Dry Goods", never a truncated "Canned"). When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
 - delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
