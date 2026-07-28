@@ -2,6 +2,7 @@ import type { DeliverySheetRow, EodSheetRow, PromptSuggestionRow } from "./types
 import type { SlipSummary, EodSlipSummary } from "./sheets.js";
 import { RESCUE_CATEGORIES, RESCUE_DONOR_CANONICAL } from "./extraction.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
+import { env } from "./config.js";
 
 function escapeHtml(s: string): string {
   return s
@@ -291,14 +292,14 @@ export function buildReviewListHtml(params: {
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>RVFB Review</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Review</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${FONT_HEAD_LINKS}
 <style>${STYLE}</style>
 </head><body><div class="container">
 <header class="page">
   <div>
-    <h1>RVFB Slip Review</h1>
+    <h1>${env.TENANT_SHORT} Slip Review</h1>
     <div class="meta">${slips.length} slip${slips.length === 1 ? "" : "s"} · confidence threshold ${Math.round(threshold * 100)}% · ${escapeHtml(generated)} PT</div>
   </div>
   <div class="tabs">
@@ -314,7 +315,7 @@ ${FONT_HEAD_LINKS}
   <span class="muted search-count" id="search-count"></span>
 </div>
 ${body}
-<footer>RVFB Inventory · Slip Review · Edit history in Corrections Log tab</footer>
+<footer>${env.TENANT_SHORT} Inventory · Slip Review · Edit history in Corrections Log tab</footer>
 </div>
 <script>
 function filterSlips(q) {
@@ -425,7 +426,7 @@ export function buildSuggestionsListHtml(params: {
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>RVFB Prompt Suggestions</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Prompt Suggestions</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${FONT_HEAD_LINKS}
 <style>${STYLE}</style>
@@ -635,7 +636,7 @@ export function buildSlipDetailHtml(params: {
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>RVFB Review · ${escapeHtml(slip.supplier)}</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Review · ${escapeHtml(slip.supplier)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${FONT_HEAD_LINKS}
 <style>${STYLE}</style>
@@ -975,7 +976,7 @@ export function buildOutboundListHtml(params: {
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>RVFB Outbound Review</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Outbound Review</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${FONT_HEAD_LINKS}
 <style>${STYLE}</style>
@@ -998,7 +999,7 @@ ${FONT_HEAD_LINKS}
   <span class="muted search-count" id="search-count"></span>
 </div>
 ${body}
-<footer>RVFB Inventory · Outbound Review · Whiteboard photos + EOD text/voice</footer>
+<footer>${env.TENANT_SHORT} Inventory · Outbound Review · Whiteboard photos + EOD text/voice</footer>
 </div>
 <script>
 function filterSlips(q) {
@@ -1110,7 +1111,7 @@ export function buildOutboundSlipDetailHtml(params: {
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>RVFB Outbound Review · ${escapeHtml(slip.source)}</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Outbound Review · ${escapeHtml(slip.source)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${FONT_HEAD_LINKS}
 <style>${STYLE}</style>

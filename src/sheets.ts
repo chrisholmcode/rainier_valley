@@ -503,7 +503,7 @@ export async function appendInKindDonationRow(sub: InKindDonationSubmission): Pr
     today,
     today,
     sub.submissionId,
-    "Rainier Valley Food Bank",
+    env.TENANT_NAME,
     null,
     itemName,
     itemName,

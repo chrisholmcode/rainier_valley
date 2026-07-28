@@ -124,8 +124,8 @@ footer { padding: 40px 0 60px; color: var(--muted); font-size: 13px; }
 }
 `;
 
-export function buildLandingHtml(params: { reviewUrl: string }): string {
-  const { reviewUrl } = params;
+export function buildLandingHtml(params: { reviewUrl: string; orgName: string }): string {
+  const { reviewUrl, orgName } = params;
   return `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><title>Loadslip — Delivery slips, structured.</title>
@@ -150,7 +150,7 @@ ${FONT_HEAD_LINKS}
 
   <header class="hero">
     <div>
-      <div class="eyebrow"><span class="eyebrow-dot"></span> Live at Rainier Valley Food Bank</div>
+      <div class="eyebrow"><span class="eyebrow-dot"></span> Live at ${orgName}</div>
       <h1 class="headline">Delivery slips, structured.</h1>
       <p class="sub">
         Photograph an invoice in Slack. Loadslip classifies, extracts every line
@@ -248,7 +248,7 @@ ${FONT_HEAD_LINKS}
 
 <footer>
   <div class="container footer-row">
-    <div>© ${new Date().getFullYear()} Loadslip — built with the team at Rainier Valley Food Bank.</div>
+    <div>© ${new Date().getFullYear()} Loadslip — built with the team at ${orgName}.</div>
     <div><a class="link" href="${reviewUrl}">Reviewers sign in →</a></div>
   </div>
 </footer>
