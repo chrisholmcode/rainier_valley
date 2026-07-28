@@ -30,7 +30,11 @@ const EnvSchema = z.object({
   VOICE_PORT: z.coerce.number().default(3001),
   DASHBOARD_TOKEN: z.string().min(1).optional(),
   CF_ACCESS_TEAM_DOMAIN: z.string().min(1).optional(),
-  CF_ACCESS_AUD_TAG: z.string().min(1).optional()
+  CF_ACCESS_AUD_TAG: z.string().min(1).optional(),
+  // Tenant identity — defaults preserve RVFB behavior for backwards compatibility.
+  // Set both on new tenants (e.g. TENANT_NAME="Edmonds Food Bank" TENANT_SHORT="Edmonds").
+  TENANT_NAME: z.string().default("Rainier Valley Food Bank"),
+  TENANT_SHORT: z.string().default("RVFB")
 });
 
 const parsed = EnvSchema.safeParse(process.env);

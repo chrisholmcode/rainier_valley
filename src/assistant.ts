@@ -5,7 +5,7 @@ import type { ConversationMessage, ConversationContentBlock, PendingAssistantCor
 
 const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
-const ASSISTANT_SYSTEM_PROMPT = `You are a helpful inventory assistant for Rainier Valley Food Bank.
+const ASSISTANT_SYSTEM_PROMPT = `You are a helpful inventory assistant for ${env.TENANT_NAME}.
 Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 There are TWO separate Google Sheets tabs you can query:

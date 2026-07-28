@@ -589,9 +589,9 @@ app.event("message", async ({ event, client, logger }) => {
       }
 
       if (!extraction.destination_org || !extraction.destination_org.trim()) {
-        extraction.destination_org = "Rainier Valley Food Bank";
+        extraction.destination_org = env.TENANT_NAME;
         extraction.source_warnings.push(
-          `destination_org not found on document — defaulted to Rainier Valley Food Bank`
+          `destination_org not found on document — defaulted to ${env.TENANT_NAME}`
         );
       }
 
@@ -1927,10 +1927,9 @@ function startHttpServer(): void {
     const path = (req.url ?? "/").split("?")[0];
 
     if (req.method === "GET" && path === "/") {
-      // Public marketing landing page — no auth. Uses the review origin so
-      // "Sign in" bounces the visitor straight into the Access-gated app.
-      const reviewUrl = env.CF_ACCESS_TEAM_DOMAIN ? "https://review.loadslip.com/review" : "/review";
-      const html = buildLandingHtml({ reviewUrl });
+      // Public marketing landing page — no auth. Review link is relative so it
+      // stays on the current host — CF Access on that host gates the sign-in.
+      const html = buildLandingHtml({ reviewUrl: "/review", orgName: env.TENANT_NAME });
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" });
       res.end(html);
       return;

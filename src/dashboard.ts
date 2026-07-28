@@ -1,5 +1,6 @@
 import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
+import { env } from "./config.js";
 
 const PROGRAM_LABEL: Record<ProgramType, string> = {
   home_delivery: "Home Delivery",
@@ -414,7 +415,7 @@ export function buildCsvExport(params: {
 
   const programSlug = program ? `-${program}` : "";
   return {
-    filename: `rvfb-export${programSlug}-${startDate}_to_${endDate}.csv`,
+    filename: `${env.TENANT_SHORT.toLowerCase()}-export${programSlug}-${startDate}_to_${endDate}.csv`,
     csv: lines.join("\n") + "\n"
   };
 }
@@ -591,7 +592,7 @@ export function buildDashboardHtml(params: {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RVFB Dashboard</title>
+<title>${env.TENANT_SHORT} Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ${FONT_HEAD_LINKS}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -623,7 +624,7 @@ thead th:first-child { text-align: left; }
 
 <header class="page">
   <div>
-    <h1>RVFB Dashboard</h1>
+    <h1>${env.TENANT_SHORT} Dashboard</h1>
     <div class="meta">Last ${periods} ${periodWord} · Generated ${escapeHtml(generatedLabel)} PT</div>
   </div>
   <div class="toolbar">
@@ -682,7 +683,7 @@ thead th:first-child { text-align: left; }
   </table>
 </div>
 
-<footer>RVFB Inventory · Inbound + Outbound Delivery Logs · Auto-aggregated from Google Sheets</footer>
+<footer>${env.TENANT_SHORT} Inventory · Inbound + Outbound Delivery Logs · Auto-aggregated from Google Sheets</footer>
 
 </div>
 
