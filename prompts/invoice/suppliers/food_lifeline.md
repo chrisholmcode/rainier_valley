@@ -22,5 +22,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). DISAMBIGUATION: if the document has a handwritten **Pounds** column and does NOT have the printed AGENCY ORDER columns (Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight), it is `grocery_rescue`, NOT this supplier. On those slips there is no separate "Quantity" column — the number written in the **Pounds** column IS the `quantity` for the line (e.g., a slip showing 14 / 17 / 70 lb → quantity = 14 / 17 / 70). Do not leave `quantity` blank because you cannot find a "Quantity" header; read the Pounds value. Reprocess under the grocery_rescue prompt.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
