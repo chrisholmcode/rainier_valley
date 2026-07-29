@@ -578,6 +578,19 @@ export function buildDashboardHtml(params: {
 
   const totalInboundPounds = buckets.reduce((s, b) => s + b.inboundPounds, 0);
   const totalOutbound = buckets.reduce((s, b) => s + b.outboundCases, 0);
+
+  const bucketKeys = new Set(buckets.map((b) => b.key));
+  const programBreakdown = new Map<ProgramType, number>();
+  for (const r of outboundRows) {
+    const key = bucketKeyFor(r.date, view);
+    if (!key || !bucketKeys.has(key)) continue;
+    const pt = (r.program_type || "unknown") as ProgramType;
+    const label: ProgramType = pt in PROGRAM_LABEL ? pt : "unknown";
+    programBreakdown.set(label, (programBreakdown.get(label) ?? 0) + toNumber(r.quantity));
+  }
+  const programBreakdownEntries = Array.from(programBreakdown.entries())
+    .filter(([, qty]) => qty > 0)
+    .sort((a, b) => b[1] - a[1]);
   const totalWeighed = buckets.reduce((s, b) => s + b.inboundWeighedRows, 0);
   const totalUnweighed = buckets.reduce((s, b) => s + b.inboundUnweighedRows, 0);
   const totalInboundRows = totalWeighed + totalUnweighed;
@@ -650,6 +663,9 @@ thead th:first-child { text-align: left; }
   <div class="summary-pill out">
     <div class="label">${program ? `Outbound · ${escapeHtml(PROGRAM_LABEL[program])} cases` : "Outbound · total cases"}</div>
     <div class="value">${formatNum(totalOutbound)}</div>
+    ${!program && programBreakdownEntries.length > 0
+      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">${programBreakdownEntries.map(([p, qty]) => `${escapeHtml(PROGRAM_LABEL[p])} ${formatNum(qty)}`).join(" · ")}</div>`
+      : ""}
   </div>
   ${program
     ? `<div class="summary-pill"><div class="label">Showing</div><div class="value" style="font-size: 14px; line-height: 1.4;">Outbound for ${escapeHtml(PROGRAM_LABEL[program])}<br><span class="muted" style="font-size: 12px; font-weight: 400;">inbound is org-wide</span></div></div>`
