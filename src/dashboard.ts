@@ -656,9 +656,14 @@ thead th:first-child { text-align: left; }
     : ""}
 </div>
 
-<h2>Inbound pounds &amp; outbound cases by ${bucketWord}</h2>
+<h2>Inbound pounds by ${bucketWord}</h2>
 <div class="card">
-  <div class="chart-wrap"><canvas id="casesChart"></canvas></div>
+  <div class="chart-wrap"><canvas id="inboundChart"></canvas></div>
+</div>
+
+<h2>Outbound cases by ${bucketWord}</h2>
+<div class="card">
+  <div class="chart-wrap"><canvas id="outboundChart"></canvas></div>
 </div>
 
 <h2>${view === "daily" ? "Daily" : "Weekly"} breakdown</h2>
@@ -688,35 +693,24 @@ thead th:first-child { text-align: left; }
 </div>
 
 <script>
-  const ctx = document.getElementById('casesChart').getContext('2d');
-  new Chart(ctx, {
+  const chartLabels = ${chartLabels};
+  const inboundSeries = ${inboundSeries};
+  const outboundSeries = ${outboundSeries};
+
+  new Chart(document.getElementById('inboundChart').getContext('2d'), {
     type: 'line',
     data: {
-      labels: ${chartLabels},
-      datasets: [
-        {
-          label: 'Inbound pounds',
-          data: ${inboundSeries},
-          borderColor: '#047857',
-          backgroundColor: 'rgba(4, 120, 87, 0.1)',
-          tension: 0.25,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          yAxisID: 'yLbs'
-        },
-        {
-          label: 'Outbound cases',
-          data: ${outboundSeries},
-          borderColor: '#b45309',
-          backgroundColor: 'rgba(180, 83, 9, 0.1)',
-          tension: 0.25,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          yAxisID: 'yCases'
-        }
-      ]
+      labels: chartLabels,
+      datasets: [{
+        label: 'Inbound pounds',
+        data: inboundSeries,
+        borderColor: '#047857',
+        backgroundColor: 'rgba(4, 120, 87, 0.1)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
     },
     options: {
       responsive: true,
@@ -724,11 +718,40 @@ thead th:first-child { text-align: left; }
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { boxWidth: 12, font: { size: 13 } } },
-        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + (c.dataset.yAxisID === 'yLbs' ? ' lbs' : ' cases') } }
+        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + ' lbs' } }
       },
       scales: {
-        yLbs:   { position: 'left',  beginAtZero: true, title: { display: true, text: 'Pounds (inbound)' }, grid: { drawOnChartArea: true } },
-        yCases: { position: 'right', beginAtZero: true, title: { display: true, text: 'Cases (outbound)' }, grid: { drawOnChartArea: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Pounds' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('outboundChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        label: 'Outbound cases',
+        data: outboundSeries,
+        borderColor: '#b45309',
+        backgroundColor: 'rgba(180, 83, 9, 0.1)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 13 } } },
+        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + ' cases' } }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'Cases' } },
         x: { grid: { display: false } }
       }
     }
