@@ -170,6 +170,20 @@ const FIXTURES: FixtureCase[] = [
       isDonation: true,
       donorOrgContains: "Safeway"
     }
+  },
+  {
+    file: "tests/fixtures/hayton_farms_IMG_4349.jpg",
+    supplierHint: "hayton_farms",
+    expect: {
+      supplier: "hayton_farms",
+      document_type: "invoice",
+      minLineItems: 1,
+      feesCount: 0,
+      itemNameRawContainsAny: ["blueberry", "1/2 flat"],
+      requireTotalsPresent: ["grand_total"],
+      isDonation: true,
+      donorOrgContains: "Hayton"
+    }
   }
 ];
 

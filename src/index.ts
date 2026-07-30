@@ -140,6 +140,7 @@ function guessSupplierFromText(text: string): Supplier {
   if (t.includes("northwest harvest") || t.includes("nw harvest") || t.includes("food lifeline")) return "nw_harvest";
   if (t.includes("pacific") || t.includes("pfd")) return "pacific";
   if (t.includes("weigelt")) return "weigelt";
+  if (t.includes("hayton")) return "hayton_farms";
   return "unknown";
 }
 

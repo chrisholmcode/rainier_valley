@@ -1,0 +1,28 @@
+Supplier: Hayton Farms Berries (Mount Vernon, WA).
+Document format: Simple QuickBooks-style invoice with strawberry logo, header block with "Invoice", and a single line-item table with columns SERVICE | DESCRIPTION | QTY | RATE | AMOUNT.
+- Header block on the left contains supplier address (20584 Skagit City Road, Mount Vernon, WA 98273), phone, and email; the right side shows the "Hayton Farms berries" wordmark. Ignore.
+- **BILL TO** and **SHIP TO** are separate blocks:
+  - BILL TO may be a program aggregator like "Seattle Neighborhood Farmers Markets (food banks)" — do NOT use as destination_org.
+  - SHIP TO is the physical delivery destination — populate `destination_org` from this block (e.g., "Rainier Valley Food Bank").
+- Header table with columns INVOICE # | DATE | TOTAL DUE | DUE DATE | TERMS | ENCLOSED:
+  - INVOICE # (e.g., "385") => invoice_or_order_number.
+  - DATE (MM/DD/YYYY, e.g., "07/13/2026") => invoice_date. Convert to YYYY-MM-DD.
+  - Ignore TOTAL DUE, DUE DATE (payment due, not delivery), TERMS ("Net 30"), ENCLOSED.
+- **SHIP DATE** field appears immediately below the header table (e.g., "07/14/2026") => delivery_date. Convert to YYYY-MM-DD. When SHIP DATE is missing, fall back to DATE for delivery_date so it isn't null.
+- Line-item table columns:
+  - SERVICE column is usually blank — ignore.
+  - DESCRIPTION => item_name_raw (keep exact, e.g., "blueberry 1/2 flat"). Any program annotation on subsequent lines (e.g., "revised from 20 to 39.5 half flats", "growing for good", "this has been paid") stays out of item_name_raw — put it in `notes`.
+  - QTY (may be decimal like `39.50`) => quantity.
+  - RATE => unit_cost.
+  - AMOUNT => line_total.
+- Pack notation lives inside DESCRIPTION. Common forms:
+  - `1/2 flat` (half-flat of berries) => pack_size_raw = "1/2 flat", unit = "case".
+  - `flat` (full flat) => pack_size_raw = "flat", unit = "case".
+  - `pint`, `half-pint`, `clamshell` => unit = "ea", pack_size_raw matches the phrase.
+- **approx_weight:** Hayton invoices do NOT print a weight column and berry flat weights vary by supplier. Leave approx_weight = null and let the reviewer fill it in from the delivery. Do NOT guess.
+- Normalize: `blueberry 1/2 flat` => `Blueberries`; `strawberry flat` => `Strawberries`; `raspberry 1/2 flat` => `Raspberries`. Category is always `produce`.
+- **Donation handling:** Hayton deliveries to RVFB come via the "Growing for Good" program (goods paid for by a third party — Seattle Neighborhood Farmers Markets or similar — and shipped to the food bank at no cost to RVFB). Treat these as donations:
+  - Set `is_donation = true` when the description or a nearby line contains "growing for good", "this has been paid", or the BILL TO differs from the SHIP TO.
+  - Set `donor_org = "Hayton Farms Berries"` (the physical origin of the goods). Do NOT put the program aggregator in donor_org.
+- No fuel surcharge / delivery fee — leave fees[] empty unless one is explicitly visible.
+- Ignore the "Ways to pay" footer with card logos and the "View and pay" button.
