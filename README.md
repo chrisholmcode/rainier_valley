@@ -24,6 +24,7 @@ Vendor-specific extraction rules live in `prompts/invoice/suppliers/`. Each supp
 | `food_lifeline` | Food Lifeline AGENCY ORDER (printed manifest) | donation |
 | `grand_central` | Grand Central Bakery (Seattle, WA) | per-invoice (Customer suffix `- Donation` / `- Purchased`) |
 | `grocery_rescue` | Food Lifeline grocery rescue pickups (QFC, Safeway, Homegrown) — donor store captured in `donor_org` | donation |
+| `hayton_farms` | Hayton Farms Berries (Mount Vernon, WA) via the "Growing for Good" program | donation |
 | `nw_harvest` | Northwest Harvest (Auburn warehouse) | donation |
 | `pacific` | Pacific Food Distributors | purchased |
 | `terrebonne` | Terrebonne Truck Patch (North Bend, WA) | purchased |

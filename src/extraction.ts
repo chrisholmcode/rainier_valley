@@ -14,7 +14,7 @@ const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const extractionSchema = z.object({
   document_type: z.enum(["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"]),
-  supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"]),
+  supplier: z.enum(["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "hayton_farms", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"]),
   invoice_date: z.string().nullable(),
   delivery_date: z.string().nullable(),
   invoice_or_order_number: z.string().nullable(),
@@ -63,6 +63,7 @@ const SUPPLIER_PROMPTS: Record<Supplier, string> = {
   food_lifeline: loadPrompt("invoice/suppliers/food_lifeline.md"),
   grand_central: loadPrompt("invoice/suppliers/grand_central.md"),
   grocery_rescue: loadPrompt("invoice/suppliers/grocery_rescue.md"),
+  hayton_farms: loadPrompt("invoice/suppliers/hayton_farms.md"),
   in_kind: loadPrompt("invoice/suppliers/unknown.md"),
   nw_harvest: loadPrompt("invoice/suppliers/nw_harvest.md"),
   pacific: loadPrompt("invoice/suppliers/pacific.md"),
@@ -91,7 +92,7 @@ const EXTRACTION_INPUT_SCHEMA = {
   type: "object" as const,
   properties: {
     document_type: { type: "string", enum: ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"] },
-    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"] },
+    supplier: { type: "string", enum: ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "hayton_farms", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"] },
     invoice_date: { type: ["string", "null"], description: "The date printed on the invoice/document (labels vary: 'Invoice date', 'Order date', 'Date'). Format YYYY-MM-DD. When the document shows both an invoice date and a distinct ship/delivery date, they go in separate columns. When the document shows only one date, populate BOTH invoice_date and delivery_date with that same value — do not leave either null." },
     delivery_date: { type: ["string", "null"], description: "The date the goods physically shipped or arrived (labels vary: 'Ship date', 'Shipped on', 'Delivered', 'Received'). Format YYYY-MM-DD. When the document shows only one date, populate BOTH invoice_date and delivery_date with that same value." },
     invoice_or_order_number: { type: ["string", "null"] },
@@ -233,6 +234,7 @@ export function guessSupplierFromFilename(filename: string): Supplier {
   if (f.includes("pacific") || f.includes("pfd")) return "pacific";
   if (f.includes("terrebonne") || f.includes("truck_patch") || f.includes("truck-patch") || f.includes("truckpatch") || f.includes("ttp")) return "terrebonne";
   if (f.includes("weigelt")) return "weigelt";
+  if (f.includes("hayton") || f.includes("haytonfarms") || f.includes("hayton_farms") || f.includes("hayton-farms")) return "hayton_farms";
   return "unknown";
 }
 
