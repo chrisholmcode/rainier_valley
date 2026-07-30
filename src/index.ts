@@ -60,6 +60,7 @@ import {
 } from "./extraction.js";
 import { runAssistantLoop } from "./assistant.js";
 import { reconcileWithCarusoCatalog } from "./carusoCatalog.js";
+import { preflightImageBuffer, ImagePreflightError } from "./image-preflight.js";
 import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection, ProgramType } from "./types.js";
 
 interface ProcessedFileExtraction {
@@ -533,13 +534,32 @@ app.event("message", async ({ event, client, logger }) => {
         continue;
       }
 
-      const kind = await classifyImage({ imageBytes: buffer, mimeType: file.mimetype });
+      let imageBytes: Buffer;
+      let mimeType: string;
+      try {
+        const preflighted = await preflightImageBuffer(buffer, file.mimetype, file.name);
+        imageBytes = preflighted.buffer;
+        mimeType = preflighted.mimeType;
+      } catch (err) {
+        if (err instanceof ImagePreflightError) {
+          console.warn(`preflight failed file=${file.name}: ${err.message}`);
+          await client.chat.postMessage({
+            channel: message.channel,
+            thread_ts: message.ts,
+            text: `⚠️ *${file.name}* is too large to process. Please retake or resend the photo at lower resolution.`
+          });
+          continue;
+        }
+        throw err;
+      }
+
+      const kind = await classifyImage({ imageBytes, mimeType });
       console.log(`Classified ${file.name} as: ${kind}`);
 
       if (kind === "whiteboard") {
         const wbExtraction = await extractFromWhiteboard({
-          imageBytes: buffer,
-          mimeType: file.mimetype,
+          imageBytes,
+          mimeType,
           filename: file.name
         });
         whiteboardFiles.push({
@@ -557,8 +577,8 @@ app.event("message", async ({ event, client, logger }) => {
         : guessSupplierFromFilename(file.name || "");
 
       const { result: extraction, trace } = await extractFromImage({
-        imageBytes: buffer,
-        mimeType: file.mimetype,
+        imageBytes,
+        mimeType,
         filename: file.name,
         supplierHint
       });
