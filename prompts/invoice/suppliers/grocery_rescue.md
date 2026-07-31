@@ -74,6 +74,8 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
+Before finalizing approx_weight, run this 3-point check (grocery_rescue's most-corrected field): (1) **Full-integer check** — confirm you captured EVERY digit; "45" is often "145" and "50" is often "51", so re-scan the left edge for a hundreds digit and the right edge for a trailing digit before committing. (2) **Row-ownership check** — confirm the number sits inside THIS row's Pounds cell and isn't bleeding in from the row above/below; if it straddles a boundary or you can't tell which row it belongs to, leave this row's Pounds fields null and add a source_warning `"pounds value ambiguous between adjacent rows — please verify"`. (3) **Rejected-value check** — if every numeral in the cell is fully crossed out / scribbled over with nothing clean surviving, treat the cell as empty (approx_weight = null, quantity = null, quantity_raw = null, notes = "all values crossed out — no accepted weight"); do NOT emit a crossed-out number just to avoid a blank.
+
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
 ### Totals and fees on grocery rescue forms
