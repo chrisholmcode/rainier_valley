@@ -20,7 +20,7 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - fees[] = [].
 - Ignore handwritten storage allocations (e.g., "F-1", "C-3", "D-1") and receipt checkmarks.
 
-## Not this supplier
+
 
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
