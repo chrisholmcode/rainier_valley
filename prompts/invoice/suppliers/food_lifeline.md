@@ -22,5 +22,6 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). This includes ANY slip with a handwritten "Pounds" column; the printed AGENCY ORDER manifest never has a Pounds column (it has Cubic Feet + Gross Weight). If you see handwritten pound values, you are almost certainly on the wrong supplier — reroute to `grocery_rescue`.
+  - Safety net (only if you nonetheless stay on `food_lifeline` for a slip that has a handwritten Pounds column): transcribe EACH handwritten Pounds value verbatim into that line's `quantity_raw`. Never leave `quantity_raw` blank when a Pounds value is written. Read the handwritten digits carefully (e.g., distinguish 70 from 79, 14 from 19); if a digit is ambiguous, transcribe your best single reading of the number as written rather than omitting it.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
