@@ -43,6 +43,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
+  - **Row-anchoring caution — read each label off the form, do NOT paste from memory.** The predefined table above is only the *expected set* of rows; it is NOT a guaranteed row ORDER for a given slip, and the printed label for each physical line must be re-read visually. Before assigning `item_name_normalized`/`category` to a line, confirm the Pounds value you extracted sits on the SAME horizontal row as that printed label on the actual image. A classic failure here is an off-by-one vertical shift (labeling a weight with the row directly above/below it). If a slip's visible row order differs from the table, follow the SLIP, and if you cannot confidently align a value to its printed label, lower confidence to ≤ 0.6 and add a `source_warning: "row-label alignment uncertain — verify item_name against slip"`.
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
