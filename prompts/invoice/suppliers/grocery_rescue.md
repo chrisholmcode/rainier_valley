@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Leading-digit check (do not drop a faint first digit):** Before finalizing any number, count its digits against the space it occupies and the width of neighboring numbers. A thin or crowded leading "1" is easy to miss — e.g. "145" mis-read as "45", or "151" as "51". If a number looks implausibly small for its cell width, or a faint stroke precedes the first clear digit, re-read for a leading digit; put both readings in `quantity_raw` and lower confidence to ≤ 0.6.
+>
+> **Row-ownership check (do not borrow a number onto an empty row):** A number belongs to a row ONLY if it is physically written inside that row's Pounds cell. Do NOT copy a value from an adjacent row, a temp column, or an earlier tally onto a row whose own Pounds cell is empty — a blank cell stays blank (approx_weight=null, quantity=null, quantity_raw=null, notes="no value on form"). If the same value appears to apply to two rows, confirm which single cell actually contains the digits; never emit the same reading on a row where the cell is genuinely empty.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
