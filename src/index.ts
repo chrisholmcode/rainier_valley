@@ -37,6 +37,8 @@ import {
   ensurePromptSuggestionsHeader,
   readRescueDedupeKeys,
   rescueDedupeKey,
+  readCrateById,
+  markCrateConsumed,
   SHEET_HEADERS,
   EOD_SHEET_HEADERS
 } from "./sheets.js";
@@ -45,6 +47,13 @@ import { buildRescueSlipsCsv } from "./rescue-export.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, buildOutboundListHtml, buildOutboundSlipDetailHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
 import { buildLandingHtml } from "./landing.js";
 import { buildDonateHtml, parseDonateFormBody } from "./donate.js";
+import {
+  buildLabelsFormHtml,
+  mintAndBuildLabelsPrintHtml,
+  parseLabelsPostBody,
+  buildScanPageHtml,
+  buildScanNotFoundHtml
+} from "./labels.js";
 import {
   extractFromImage,
   extractFromText,
@@ -1943,6 +1952,193 @@ async function handleDonatePostRequest(req: IncomingMessage, res: ServerResponse
   }
 }
 
+async function handleLabelsFormRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+  const qtyRaw = url.searchParams.get("qty_per_crate");
+  const wRaw = url.searchParams.get("weight_lb_per_crate");
+  const iriRaw = url.searchParams.get("intake_row_index");
+  const html = buildLabelsFormHtml({
+    presetItem: url.searchParams.get("item"),
+    presetDate: url.searchParams.get("date"),
+    presetSource: url.searchParams.get("source"),
+    presetQtyPerCrate: qtyRaw && !Number.isNaN(Number(qtyRaw)) ? Number(qtyRaw) : null,
+    presetUnit: url.searchParams.get("unit"),
+    presetWeightLb: wRaw && !Number.isNaN(Number(wRaw)) ? Number(wRaw) : null,
+    slipKey: url.searchParams.get("slip_key"),
+    intakeRowIndex: iriRaw && !Number.isNaN(Number(iriRaw)) ? Number(iriRaw) : null,
+    slipLabel: url.searchParams.get("slip_label")
+  });
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(html);
+}
+
+function inferBaseUrl(req: IncomingMessage): string {
+  if (env.PUBLIC_BASE_URL) return env.PUBLIC_BASE_URL.replace(/\/$/, "");
+  const host = req.headers.host ?? "localhost";
+  const proto = (req.headers["x-forwarded-proto"] as string | undefined) ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+async function handleLabelsPrintRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+  const printedBy = (await requestUserEmail(req)) ?? "unknown";
+  const baseUrl = inferBaseUrl(req);
+  try {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const body = Buffer.concat(chunks).toString("utf8");
+    const parsed = parseLabelsPostBody(body);
+    if (!parsed.item.trim()) {
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("Pick an item before printing.");
+      return;
+    }
+    const html = await mintAndBuildLabelsPrintHtml({
+      ...parsed,
+      printedBy,
+      baseUrl
+    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Labels print error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(`Could not mint labels: ${(err as Error).message}`);
+  }
+}
+
+async function handleCrateScanRequest(req: IncomingMessage, res: ServerResponse, crateId: string): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+  try {
+    const crate = await readCrateById(crateId);
+    if (!crate) {
+      const html = buildScanNotFoundHtml(crateId);
+      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(html);
+      return;
+    }
+    // Optionally enrich with the intake slip label. Cheap best-effort — if the
+    // slip_key doesn't resolve, just show "freeform crate".
+    let slipLabel: string | null = null;
+    if (crate.slip_key) {
+      slipLabel = `Delivery ${crate.slip_key.slice(0, 40)}${crate.slip_key.length > 40 ? "…" : ""}`;
+    }
+    const html = buildScanPageHtml({
+      crateId: crate.crate_id,
+      itemName: crate.item_name,
+      qtyPerCrate: crate.qty_per_crate,
+      unit: crate.unit,
+      weightLbPerCrate: crate.weight_lb_per_crate,
+      sourceTag: crate.source_tag,
+      createdAt: crate.created_at,
+      status: crate.status,
+      consumedAt: crate.consumed_at,
+      consumedBy: crate.consumed_by,
+      consumedQty: crate.consumed_qty,
+      slipLabel
+    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Crate scan error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(`Could not load crate: ${(err as Error).message}`);
+  }
+}
+
+async function handleCrateConsumeRequest(req: IncomingMessage, res: ServerResponse, crateId: string): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+  const consumedBy = (await requestUserEmail(req)) ?? "unknown";
+  try {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const raw = Buffer.concat(chunks).toString("utf8");
+    const body = raw ? JSON.parse(raw) as { action?: string; consumed_qty?: number } : {};
+    const action = body.action === "partial" ? "partial" : "empty";
+
+    const crate = await readCrateById(crateId);
+    if (!crate) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "crate not found" }));
+      return;
+    }
+    if (crate.status !== "active") {
+      res.writeHead(409, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: `crate already ${crate.status}` }));
+      return;
+    }
+
+    const perCrate = crate.qty_per_crate ?? 0;
+    const partialQty = typeof body.consumed_qty === "number" && Number.isFinite(body.consumed_qty) ? body.consumed_qty : 0;
+    const consumedQty = action === "empty"
+      ? (perCrate > 0 ? perCrate : 1)
+      : partialQty;
+    const status: "empty" | "partial" = action === "empty" ? "empty" : "partial";
+
+    const perCrateWeight = crate.weight_lb_per_crate ?? 0;
+    const weightForOutbound = action === "empty" || perCrate <= 0
+      ? perCrateWeight
+      : perCrateWeight * (partialQty / perCrate);
+
+    await markCrateConsumed({
+      rowIndex: crate.rowIndex,
+      status,
+      consumedQty,
+      consumedBy
+    });
+
+    // Write to the outbound log so this scan shows up on the dashboard.
+    // We synthesize a minimal EodExtractionResult-shaped payload. The
+    // `crate_scan` source keys it apart from whiteboard/text/voice writes.
+    const nowIso = new Date().toISOString();
+    const dateStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    const eodUnits = ["case", "bag", "pallet", "lb", "oz", "ct", "ea", "other"] as const;
+    type EodUnit = typeof eodUnits[number];
+    const unitLookup: Record<string, EodUnit> = {
+      cans: "ct", boxes: "case", bags: "bag", cases: "case", lbs: "lb", each: "ea",
+      case: "case", bag: "bag", pallet: "pallet", lb: "lb", oz: "oz", ct: "ct", ea: "ea", other: "other"
+    };
+    const normalizedUnit: EodUnit | null = crate.unit
+      ? (unitLookup[crate.unit.toLowerCase()] ?? "other")
+      : null;
+
+    await appendEodRows({
+      extraction: {
+        date: dateStr,
+        line_items: [{
+          item_name_raw: crate.item_name,
+          item_name_normalized: crate.item_name,
+          quantity: consumedQty,
+          quantity_raw: consumedQty != null ? String(consumedQty) : null,
+          unit: normalizedUnit,
+          category: "unknown",
+          notes: `Crate ${crate.crate_id.slice(0, 8)}${weightForOutbound > 0 ? ` · ~${weightForOutbound.toFixed(1)} lb` : ""}${action === "partial" ? " (partial)" : ""}`,
+          confidence: 1,
+          program_type: null
+        }],
+        source_warnings: []
+      },
+      source: "crate_scan",
+      slackChannel: "",
+      slackMessageTs: nowIso,
+      recordedBy: consumedBy,
+      photoUrl: null,
+      autoApprove: true
+    });
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, status, consumedQty }));
+  } catch (err) {
+    console.error("Crate consume error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: (err as Error).message }));
+  }
+}
+
 function startHttpServer(): void {
   const server = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
     const path = (req.url ?? "/").split("?")[0];
@@ -2031,6 +2227,29 @@ function startHttpServer(): void {
       return;
     }
 
+    if (req.method === "GET" && path === "/labels") {
+      await handleLabelsFormRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/labels/print") {
+      await handleLabelsPrintRequest(req, res);
+      return;
+    }
+
+    // /crate/<uuid>  — mobile scan page
+    // /api/crate/<uuid>/consume — POST to record consumption
+    const crateMatch = path.match(/^\/crate\/([0-9a-fA-F-]{36})$/);
+    if (req.method === "GET" && crateMatch) {
+      await handleCrateScanRequest(req, res, crateMatch[1]);
+      return;
+    }
+    const crateConsumeMatch = path.match(/^\/api\/crate\/([0-9a-fA-F-]{36})\/consume$/);
+    if (req.method === "POST" && crateConsumeMatch) {
+      await handleCrateConsumeRequest(req, res, crateConsumeMatch[1]);
+      return;
+    }
+
     if (req.method === "POST" && path === "/voice") {
       // Accept Bearer token (for curl/testing) OR Alexa signature headers (for real device)
       const authHeader = req.headers["authorization"] ?? "";
@@ -2064,7 +2283,7 @@ function startHttpServer(): void {
   server.listen(port, () => {
     const routes: string[] = [];
     if (env.VOICE_WEBHOOK_SECRET) routes.push("/voice");
-    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review", "/donate");
+    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review", "/donate", "/labels");
     const authModes: string[] = [];
     if (cfJwks) authModes.push("cf-access-jwt");
     if (env.DASHBOARD_TOKEN) authModes.push("token");

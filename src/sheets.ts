@@ -784,7 +784,7 @@ export async function ensureEodSheetHeader(): Promise<void> {
 
 export async function appendEodRows(params: {
   extraction: EodExtractionResult;
-  source: "text" | "voice" | "whiteboard";
+  source: "text" | "voice" | "whiteboard" | "crate_scan";
   slackChannel: string;
   slackMessageTs: string;
   recordedBy: string;
@@ -1566,5 +1566,178 @@ export async function updateSheetCells(params: {
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: { valueInputOption: "RAW", data }
+  });
+}
+
+// ── Crates ──────────────────────────────────────────────────────────────────
+//
+// One row per physical crate. Written by /labels/print (mint at print time),
+// updated by /api/crate/:id/consume (mark empty/partial at scan time).
+// The crate is the unit that closes the inbound→outbound loop: an intake row
+// mints N crates, each crate empties into an outbound row.
+
+export const CRATES_SHEET_HEADERS = [
+  "crate_id",           // UUID, matches the QR payload
+  "created_at",
+  "printed_by",
+  "slip_key",           // photo_url or empty (freeform crate)
+  "intake_row_index",   // Inbound Delivery Log row this crate came from; empty for freeform
+  "item_name",
+  "qty_per_crate",
+  "unit",
+  "weight_lb_per_crate",
+  "source_tag",         // TEFAP / Donation / Purchased / Grocery Rescue / Food Drive / ""
+  "status",             // active | empty | partial
+  "consumed_at",
+  "consumed_by",
+  "consumed_qty",       // how many units of the crate went out at consume time
+  "notes"
+];
+
+export interface CrateRow {
+  rowIndex: number;
+  crate_id: string;
+  created_at: string;
+  printed_by: string;
+  slip_key: string | null;
+  intake_row_index: number | null;
+  item_name: string;
+  qty_per_crate: number | null;
+  unit: string | null;
+  weight_lb_per_crate: number | null;
+  source_tag: string | null;
+  status: "active" | "empty" | "partial";
+  consumed_at: string | null;
+  consumed_by: string | null;
+  consumed_qty: number | null;
+  notes: string | null;
+}
+
+export interface CrateMintInput {
+  crate_id: string;
+  printed_by: string;
+  slip_key?: string | null;
+  intake_row_index?: number | null;
+  item_name: string;
+  qty_per_crate?: number | null;
+  unit?: string | null;
+  weight_lb_per_crate?: number | null;
+  source_tag?: string | null;
+}
+
+export async function ensureCratesSheetHeader(): Promise<void> {
+  await ensureHeader(env.CRATES_WORKSHEET_NAME, CRATES_SHEET_HEADERS);
+}
+
+export async function appendCrateRows(inputs: CrateMintInput[]): Promise<void> {
+  if (!inputs.length) return;
+  await ensureCratesSheetHeader();
+  const now = new Date().toISOString();
+  const values = inputs.map((c) => [
+    c.crate_id,
+    now,
+    c.printed_by,
+    c.slip_key ?? "",
+    c.intake_row_index == null ? "" : String(c.intake_row_index),
+    c.item_name,
+    c.qty_per_crate ?? "",
+    c.unit ?? "",
+    c.weight_lb_per_crate ?? "",
+    c.source_tag ?? "",
+    "active",
+    "",
+    "",
+    "",
+    ""
+  ]);
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.CRATES_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values }
+  });
+}
+
+function parseCrateRow(r: string[], rowIndex: number): CrateRow {
+  const qty = r[6];
+  const weight = r[8];
+  const consumedQty = r[13];
+  const intakeIdx = r[4];
+  const status = (r[10] as CrateRow["status"]) || "active";
+  return {
+    rowIndex,
+    crate_id: r[0] ?? "",
+    created_at: r[1] ?? "",
+    printed_by: r[2] ?? "",
+    slip_key: r[3] || null,
+    intake_row_index: intakeIdx && intakeIdx !== "" ? Number(intakeIdx) : null,
+    item_name: r[5] ?? "",
+    qty_per_crate: qty && qty !== "" ? Number(qty) : null,
+    unit: r[7] || null,
+    weight_lb_per_crate: weight && weight !== "" ? Number(weight) : null,
+    source_tag: r[9] || null,
+    status: status === "empty" || status === "partial" ? status : "active",
+    consumed_at: r[11] || null,
+    consumed_by: r[12] || null,
+    consumed_qty: consumedQty && consumedQty !== "" ? Number(consumedQty) : null,
+    notes: r[14] || null
+  };
+}
+
+export async function readCrateById(crateId: string): Promise<CrateRow | null> {
+  await ensureCratesSheetHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.CRATES_WORKSHEET_NAME}!A2:O`
+  });
+  const rows = res.data.values ?? [];
+  const idx = rows.findIndex((r) => (r[0] ?? "") === crateId);
+  if (idx < 0) return null;
+  return parseCrateRow(rows[idx] as string[], idx + 2);
+}
+
+export async function readActiveCrates(): Promise<CrateRow[]> {
+  await ensureCratesSheetHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.CRATES_WORKSHEET_NAME}!A2:O`
+  });
+  const rows = res.data.values ?? [];
+  return rows
+    .map((r, i) => parseCrateRow(r as string[], i + 2))
+    .filter((c) => c.status === "active");
+}
+
+export async function markCrateConsumed(params: {
+  rowIndex: number;
+  status: "empty" | "partial";
+  consumedQty: number;
+  consumedBy: string;
+  notes?: string | null;
+}): Promise<void> {
+  const { rowIndex, status, consumedQty, consumedBy, notes } = params;
+  const statusCol = indexToColumn(CRATES_SHEET_HEADERS.indexOf("status"));
+  const consumedAtCol = indexToColumn(CRATES_SHEET_HEADERS.indexOf("consumed_at"));
+  const consumedByCol = indexToColumn(CRATES_SHEET_HEADERS.indexOf("consumed_by"));
+  const consumedQtyCol = indexToColumn(CRATES_SHEET_HEADERS.indexOf("consumed_qty"));
+  const notesCol = indexToColumn(CRATES_SHEET_HEADERS.indexOf("notes"));
+  const now = new Date().toISOString();
+  const tab = env.CRATES_WORKSHEET_NAME;
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    requestBody: {
+      valueInputOption: "RAW",
+      data: [
+        { range: `${tab}!${statusCol}${rowIndex}`, values: [[status]] },
+        { range: `${tab}!${consumedAtCol}${rowIndex}`, values: [[now]] },
+        { range: `${tab}!${consumedByCol}${rowIndex}`, values: [[consumedBy]] },
+        { range: `${tab}!${consumedQtyCol}${rowIndex}`, values: [[consumedQty]] },
+        ...(notes != null ? [{ range: `${tab}!${notesCol}${rowIndex}`, values: [[notes]] }] : [])
+      ]
+    }
   });
 }

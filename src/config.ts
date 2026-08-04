@@ -18,6 +18,10 @@ const EnvSchema = z.object({
   CORRECTIONS_LOG_WORKSHEET_NAME: z.string().default("Corrections Log"),
   EXTRACTION_TRACES_WORKSHEET_NAME: z.string().default("Extraction Traces"),
   PROMPT_SUGGESTIONS_WORKSHEET_NAME: z.string().default("Prompt Suggestions"),
+  CRATES_WORKSHEET_NAME: z.string().default("Crates"),
+  // Public host used to build QR-code URLs on printed labels. Falls back to a
+  // relative path in dev/local so testing still works.
+  PUBLIC_BASE_URL: z.string().optional(),
   ADMIN_SLACK_USER_ID: z.string().min(1).optional(),
   ADMIN_EMAIL: z.string().default("chrischolm@gmail.com"),
   REVIEW_CONFIDENCE_THRESHOLD: z.coerce.number().default(0.75),
