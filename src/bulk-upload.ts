@@ -430,7 +430,7 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
   .drop-zone strong { color: var(--ink); }
   .drop-zone .hint { font-size: 12px; }
 
-  input[type=file] { display: none; }
+  input[type=file] { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
   .controls { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
   .summary { color: var(--muted); font-size: 13px; }
@@ -470,10 +470,10 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
 </div>
 
 <div class="card">
-  <label for="files" class="drop-zone" id="drop">
+  <div class="drop-zone" id="drop" role="button" tabindex="0">
     <p><strong>Click to select files</strong> or drag &amp; drop</p>
     <p class="hint">Images or PDFs · up to 25 MB each · uploads process 3 at a time</p>
-  </label>
+  </div>
   <input type="file" id="files" multiple accept="image/*,application/pdf">
   <div class="controls">
     <button class="btn primary" id="submit" disabled>Upload &amp; extract</button>
@@ -529,6 +529,10 @@ function setSelected(files) {
 }
 
 filesInput.addEventListener('change', (e) => setSelected(e.target.files));
+dropZone.addEventListener('click', () => filesInput.click());
+dropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); filesInput.click(); }
+});
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragging'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
 dropZone.addEventListener('drop', (e) => {
