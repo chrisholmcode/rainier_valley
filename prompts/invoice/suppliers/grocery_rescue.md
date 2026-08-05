@@ -41,7 +41,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
 - Common fields for every row:
-  - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
+  - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy"). **Read this label OFF THE SLIP, from the printed text on the same physical row as the Pounds value you are recording — do NOT fill labels in positionally from the canonical list above.** The 10 rows are a checklist of which categories to emit, NOT a guaranteed printed order: rows may be reordered, spaced unevenly, or shifted, and pairing labels by position causes off-by-one drift (e.g., recording a Frozen Foods weight under the "Dairy/Juice/Alt. Dairy" label). For every non-empty Pounds cell, trace horizontally back to the printed label on that exact row and confirm the label text matches before emitting. If a row's printed label is illegible or you cannot confidently align a weight to its label, keep the weight with your best-read label, lower confidence to ≤ 0.6, and add a source_warning `"row_label alignment uncertain: <label> may be mismatched to Pounds value — please verify"`.
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
   - category = per the table above.
