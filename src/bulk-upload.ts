@@ -139,6 +139,9 @@ interface UploadedFileResult {
   rowsAdded: number;
   photoUrl: string;
   duplicateOfHash?: string;
+  // `sheet` = sheets.ts dedupe hit (same supplier+invoice already in sheet)
+  // `session` = same file already uploaded this process session
+  duplicateReason?: "sheet" | "session";
 }
 
 interface UploadedFileError {
@@ -211,7 +214,13 @@ async function processInvoiceFile(params: {
     slackMessageTs,
     uploadedBy: input.uploadedBy
   });
-  await appendSummaryRow({ extraction, photoUrl });
+  // rowsAdded === 0 means sheets.ts skipped the write because the (supplier,
+  // invoice#) or photo_url was already logged. Skip the summary row too so
+  // we don't add a phantom rollup for a slip that isn't actually there.
+  const isSheetDuplicate = rowsAdded === 0;
+  if (!isSheetDuplicate) {
+    await appendSummaryRow({ extraction, photoUrl });
+  }
 
   const totalConf = extraction.line_items.reduce((s, li) => s + li.confidence, 0);
   const avgConfidence = extraction.line_items.length > 0 ? totalConf / extraction.line_items.length : 0;
@@ -225,7 +234,8 @@ async function processInvoiceFile(params: {
     avgConfidence,
     warnings: extraction.source_warnings,
     rowsAdded,
-    photoUrl
+    photoUrl,
+    ...(isSheetDuplicate ? { duplicateReason: "sheet" as const } : {})
   };
 }
 
@@ -286,7 +296,7 @@ async function processOne(input: UploadedFileInput): Promise<UploadedFileResult 
 
   const prior = processedHashes.get(contentHash);
   if (prior) {
-    return { ...prior, duplicateOfHash: contentHash };
+    return { ...prior, duplicateOfHash: contentHash, duplicateReason: "session" };
   }
 
   let imageBytes: Buffer;
@@ -445,6 +455,7 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
   .status.uploading { background: #fef3c7; color: #92400e; }
   .status.processing { background: #dbeafe; color: #1e40af; }
   .status.done { background: #d1fae5; color: #065f46; }
+  .status.duplicate { background: #fef3c7; color: #92400e; }
   .status.error { background: #fee2e2; color: #991b1b; }
 
   .filename { font-weight: 500; color: var(--ink); }
@@ -585,7 +596,7 @@ function escapeHtml(s) {
 }
 
 function renderProgressSummary(states) {
-  const counts = { queued: 0, uploading: 0, processing: 0, done: 0, error: 0 };
+  const counts = { queued: 0, uploading: 0, processing: 0, done: 0, duplicate: 0, error: 0 };
   let totalRows = 0;
   for (const s of states) {
     counts[s.status] = (counts[s.status] || 0) + 1;
@@ -595,6 +606,7 @@ function renderProgressSummary(states) {
     '<div><span class="num">' + counts.done + '</span><span class="lbl">Done</span></div>' +
     '<div><span class="num">' + (counts.processing + counts.uploading) + '</span><span class="lbl">In flight</span></div>' +
     '<div><span class="num">' + counts.queued + '</span><span class="lbl">Queued</span></div>' +
+    '<div><span class="num">' + counts.duplicate + '</span><span class="lbl">Duplicate</span></div>' +
     '<div><span class="num">' + counts.error + '</span><span class="lbl">Errors</span></div>' +
     '<div><span class="num">' + totalRows + '</span><span class="lbl">Rows written</span></div>';
   progressSummary.style.display = 'flex';
@@ -640,10 +652,17 @@ async function uploadOne(state, states) {
       state.status = 'error';
       state.statusLabel = 'Error';
       state.details = escapeHtml(body.error || 'Unknown error');
-    } else if (body.duplicateOfHash) {
-      state.status = 'done';
+    } else if (body.duplicateReason === 'session') {
+      state.status = 'duplicate';
       state.statusLabel = 'Duplicate';
       state.details = 'Identical file already uploaded this session — not written again.';
+    } else if (body.duplicateReason === 'sheet') {
+      state.status = 'duplicate';
+      state.statusLabel = 'Duplicate';
+      const label = body.supplier
+        ? body.supplier + (body.invoiceNumber ? ' · #' + body.invoiceNumber : '')
+        : 'this slip';
+      state.details = 'Already in Inbound Delivery Log as ' + escapeHtml(label) + ' — nothing new written.';
     } else {
       state.status = 'done';
       state.statusLabel = 'Done';
