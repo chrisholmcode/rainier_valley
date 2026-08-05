@@ -21,6 +21,61 @@ export function decodeSlipKey(encoded: string): string {
   return Buffer.from(encoded, "base64url").toString("utf-8");
 }
 
+function defaultSourceForSlip(slip: { supplier: string | null; is_donation: string | null }): string {
+  if ((slip.supplier ?? "") === "grocery_rescue") return "Grocery Rescue";
+  if (/^(true|1|yes)$/i.test(slip.is_donation ?? "")) return "Donation";
+  return "Purchased";
+}
+
+function buildLabelsLink(params: {
+  item?: string | null;
+  date?: string | null;
+  source?: string | null;
+  slipKey?: string | null;
+  intakeRowIndex?: number | null;
+  qtyPerCrate?: string | number | null;
+  unit?: string | null;
+  weightLb?: string | number | null;
+  slipLabel?: string | null;
+}): string {
+  const p = new URLSearchParams();
+  if (params.item) p.set("item", params.item);
+  if (params.date) p.set("date", params.date);
+  if (params.source) p.set("source", params.source);
+  if (params.slipKey) p.set("slip_key", params.slipKey);
+  if (params.intakeRowIndex != null) p.set("intake_row_index", String(params.intakeRowIndex));
+  if (params.qtyPerCrate != null && params.qtyPerCrate !== "") p.set("qty_per_crate", String(params.qtyPerCrate));
+  if (params.unit) p.set("unit", params.unit);
+  if (params.weightLb != null && params.weightLb !== "") p.set("weight_lb_per_crate", String(params.weightLb));
+  if (params.slipLabel) p.set("slip_label", params.slipLabel);
+  return `/labels?${p.toString()}`;
+}
+
+function labelCellHtml(params: {
+  item: string | null | undefined;
+  date: string | null | undefined;
+  source: string;
+  slipKey: string;
+  intakeRowIndex: number | null;
+  qtyPerCrate?: string | number | null;
+  unit?: string | null;
+  weightLb?: string | number | null;
+  slipLabel: string;
+}): string {
+  const href = buildLabelsLink({
+    item: params.item?.trim() || null,
+    date: params.date,
+    source: params.source,
+    slipKey: params.slipKey,
+    intakeRowIndex: params.intakeRowIndex,
+    qtyPerCrate: params.qtyPerCrate,
+    unit: params.unit,
+    weightLb: params.weightLb,
+    slipLabel: params.slipLabel
+  });
+  return `<a class="btn label-btn" href="${escapeHtml(href)}" target="_blank" rel="noopener" title="Mint crate + print label">🏷️</a>`;
+}
+
 function statusBadge(slip: SlipSummary): string {
   if (slip.approved) {
     const humanApproved = slip.approvedBy && slip.approvedBy !== "auto-approved";
@@ -141,7 +196,7 @@ tr.row-label-dup-row td { background: var(--danger-bg); }
 
 /* Editable line-items table — wider, with horizontal scroll */
 .line-items-card { overflow-x: auto; }
-table.line-items { min-width: 1800px; }
+table.line-items { min-width: 1860px; }
 table.line-items th, table.line-items td { padding:8px 8px; }
 table.line-items col.col-code       { width:  90px; }
 table.line-items col.col-raw        { width: 170px; }
@@ -158,7 +213,10 @@ table.line-items col.col-total      { width:  90px; }
 table.line-items col.col-fee        { width:  80px; }
 table.line-items col.col-conf       { width:  80px; }
 table.line-items col.col-notes      { width: 180px; }
+table.line-items col.col-label      { width:  60px; }
 table.line-items input, table.line-items select { min-width: 0; padding: 6px 8px; }
+.label-btn { padding: 4px 8px; font-size: 14px; line-height: 1; }
+.label-btn:hover { background: var(--primary-bg); border-color: var(--primary); }
 
 /* Sortable table headers */
 th.sortable { cursor: pointer; user-select: none; }
@@ -306,6 +364,7 @@ ${FONT_HEAD_LINKS}
     <a class="${queueCls}" href="/review?tab=queue">Inbound Queue</a>
     <a class="${historyCls}" href="/review?tab=history">Inbound History</a>
     <a class="btn" href="/review?tab=outbound">Outbound</a>
+    <a class="btn" href="/review/upload">Bulk Upload</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -440,6 +499,7 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/review?tab=queue">Inbound Queue</a>
     <a class="btn" href="/review?tab=history">Inbound History</a>
     <a class="btn" href="/review?tab=outbound">Outbound</a>
+    <a class="btn" href="/review/upload">Bulk Upload</a>
     <a class="btn active" href="/review?tab=suggestions">Prompt Suggestions${pendingCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -573,6 +633,9 @@ export function buildSlipDetailHtml(params: {
   </div>`;
 
   const rescue = isGroceryRescue(slip);
+  const defaultSource = defaultSourceForSlip(slip);
+  const labelDate = slip.delivery_date ?? slip.created_at?.slice(0, 10) ?? null;
+  const slipLabel = `${supplierDisplay(slip.supplier ?? "")} · ${labelDate ?? "unknown date"}`;
 
   const rescueLabelOptions = RESCUE_CATEGORIES.map((c) => c.label);
 
@@ -593,6 +656,17 @@ export function buildSlipDetailHtml(params: {
           <td>${textInput("pounds", poundsValue, r.rowIndex, "number")}</td>
           <td>${textInput("notes", r.notes, r.rowIndex)}</td>
           <td class="muted">${r.confidence ? escapeHtml(String(Math.round(parseFloat(r.confidence) * 100)) + "%") : "—"}</td>
+          <td>${labelCellHtml({
+            item: currentLabel,
+            date: labelDate,
+            source: defaultSource,
+            slipKey: slip.slipKey,
+            intakeRowIndex: r.rowIndex,
+            qtyPerCrate: poundsValue,
+            unit: "lbs",
+            weightLb: poundsValue,
+            slipLabel
+          })}</td>
         </tr>`;
       }).join("")
     : rows.map((r) => {
@@ -617,6 +691,17 @@ export function buildSlipDetailHtml(params: {
           <td>${boolInput("is_fee", r.is_fee, r.rowIndex)}</td>
           <td>${textInput("confidence", r.confidence, r.rowIndex, "number")}</td>
           <td>${textInput("notes", r.notes, r.rowIndex)}</td>
+          <td>${labelCellHtml({
+            item: r.item_name_normalized ?? r.item_name_raw,
+            date: labelDate,
+            source: defaultSource,
+            slipKey: slip.slipKey,
+            intakeRowIndex: r.rowIndex,
+            qtyPerCrate: r.quantity,
+            unit: r.unit,
+            weightLb: r.approx_weight,
+            slipLabel
+          })}</td>
         </tr>`;
       }).join("");
 
@@ -648,6 +733,7 @@ ${FONT_HEAD_LINKS}
   </div>
   <div class="tabs">
     <a class="btn" href="/review?tab=queue">← Back to Queue</a>
+    <a class="btn" href="${escapeHtml(buildLabelsLink({ date: labelDate, source: defaultSource, slipKey: slip.slipKey, slipLabel }))}" target="_blank" rel="noopener" title="Mint crate labels for this slip (date + source pre-filled)">🏷️ Labels</a>
     <button class="btn btn-primary" onclick="approveSlip()">${slip.approved ? "Re-approve" : "Approve slip"}</button>
   </div>
 </header>
@@ -662,7 +748,7 @@ ${FONT_HEAD_LINKS}
            <div class="dup-banner" id="rescue-dup-banner" style="display:none;">⚠️ Two or more rows share the same category label. Each rescue slip should have one row per category.</div>
            <table>
              <thead><tr>
-               <th>Category row</th><th>Pounds (lb)</th><th>Notes</th><th>Conf</th>
+               <th>Category row</th><th>Pounds (lb)</th><th>Notes</th><th>Conf</th><th>Label</th>
              </tr></thead>
              <tbody>${lineRows}</tbody>
            </table>`
@@ -684,13 +770,14 @@ ${FONT_HEAD_LINKS}
                <col class="col-fee">
                <col class="col-conf">
                <col class="col-notes">
+               <col class="col-label">
              </colgroup>
              <thead><tr>
                <th>Code</th><th>Raw name</th><th>Normalized</th>
                <th>Qty ord</th><th>Qty</th><th>Qty raw</th>
                <th>Pack</th><th>Unit</th><th>Category</th>
                <th>Weight (lb)</th><th>Unit cost</th><th>Line total</th>
-               <th>Fee?</th><th>Conf</th><th>Notes</th>
+               <th>Fee?</th><th>Conf</th><th>Notes</th><th>Label</th>
              </tr></thead>
              <tbody>${lineRows}</tbody>
            </table>`}
@@ -859,7 +946,7 @@ export { EDITABLE_PER_SLIP, EDITABLE_PER_ROW };
 
 const EOD_UNIT_OPTIONS = ["case", "bag", "pallet", "lb", "oz", "ct", "ea", "other"];
 const EOD_PROGRAM_OPTIONS = ["home_delivery", "in_person_shopping", "pre_made_bags", "unknown"];
-const EOD_SOURCE_OPTIONS = ["whiteboard", "text", "voice"];
+const EOD_SOURCE_OPTIONS = ["whiteboard", "text", "voice", "crate_scan"];
 
 const EOD_EDITABLE_PER_SLIP = ["date"];
 const EOD_EDITABLE_PER_ROW = [
@@ -990,6 +1077,7 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/review?tab=queue">Inbound Queue</a>
     <a class="btn" href="/review?tab=history">Inbound History</a>
     <a class="btn active" href="/review?tab=outbound">Outbound</a>
+    <a class="btn" href="/review/upload">Bulk Upload</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
