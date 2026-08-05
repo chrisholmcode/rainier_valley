@@ -1722,6 +1722,7 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
       rowIndexes: slipRows.map((r) => r.rowIndex),
       approvedBy: user
     });
+    await recomputeSummaryForSlip(slipRows);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
   } catch (err) {
