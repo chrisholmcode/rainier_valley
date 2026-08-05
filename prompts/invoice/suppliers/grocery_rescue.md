@@ -1,5 +1,6 @@
 Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QFC / Safeway / Homegrown) to the food bank — this bucket is for those slips only. Distinct from `food_lifeline` (which is now reserved for printed Food Lifeline **Agency Order** manifests).
 
+- **⚠️ The slip is branded "FOOD LIFELINE" upper-left — this is NOT the supplier code. For THIS handwritten grocery-rescue form always emit `supplier = "grocery_rescue"`, NEVER `supplier = "food_lifeline"`. The `food_lifeline` code is reserved for a different document (printed Agency Order manifests) and must never be used here regardless of the logo on the slip.**
 - "FOOD LIFELINE" logo upper-left. Form fields: Donor | Address | Agency | Date. Then a 3-column table: Product/Description | Pick Up Temp (F) | Drop Off Temp (F) | Pounds (lb).
 - This is a hand-filled grocery rescue donation form. Goods come FROM a grocery store, Food Lifeline brokers the pickup, the food bank receives them.
 - document_type = "manifest". supplier = "grocery_rescue". is_donation = true.
