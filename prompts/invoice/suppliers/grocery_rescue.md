@@ -41,8 +41,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
 - Common fields for every row:
-  - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
-  - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
+  - **item_name_raw and item_name_normalized are FIXED per row — do NOT transcribe or re-read them from the image.** The 10 rows are pre-printed and identical on every form, so these two fields are constants taken from the "Predefined category rows" table by position, in the exact order listed there. Emit them in that fixed order and attach each row's Pounds value to the row you are actually reading — never shift a label onto an adjacent category. Use exactly:
+    - item_name_raw = the row label spelled exactly as in the predefined table (e.g., "Bakery", "Dairy/Juice/Alt. Dairy", "Frozen Foods", "Meat").
+    - item_name_normalized = the canonical clean form: "Bakery", "Canned / Dry Goods", "Coffee Kiosk", "Dairy / Juice / Alt. Dairy", "Frozen Foods", "Meat", "Nonfood", "Non-Meat Protein (eggs, tofu)", "Prepared / Perishable", "Produce" — one per row, in order. Do not invent variants like "Alternative Dairy".
+    - **Alignment check:** before emitting, confirm each Pounds value is on the same printed line as its label; if row-to-value alignment is ambiguous, lower confidence and add a source_warning rather than guessing a shifted label.
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
