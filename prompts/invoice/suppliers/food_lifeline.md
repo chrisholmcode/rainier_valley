@@ -20,6 +20,10 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - fees[] = [].
 - Ignore handwritten storage allocations (e.g., "F-1", "C-3", "D-1") and receipt checkmarks.
 
+## If a handwritten Pounds slip lands here anyway
+
+Ideally the handwritten Donor / Address / Agency / Date slip is re-routed to `grocery_rescue` (see below). If for any reason you are extracting such a slip under `food_lifeline`, DO capture the handwritten **Pounds** column value into `quantity_raw` for each line — never leave `quantity_raw` blank when a Pounds figure is legibly written. Transcribe the Pounds number exactly as handwritten (e.g., a written "79" is 79, not 70); if a digit is ambiguous, prefer the fuller/longer reading and flag it in `notes` rather than omitting the value.
+
 ## Not this supplier
 
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
