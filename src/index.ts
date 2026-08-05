@@ -48,6 +48,11 @@ import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, bui
 import { buildLandingHtml } from "./landing.js";
 import { buildDonateHtml, parseDonateFormBody } from "./donate.js";
 import {
+  handleBulkUploadPageRequest,
+  handleBulkUploadOneRequest,
+  tryServeUploadedPhoto
+} from "./bulk-upload.js";
+import {
   buildLabelsFormHtml,
   mintAndBuildLabelsPrintHtml,
   parseLabelsPostBody,
@@ -1546,6 +1551,9 @@ async function handleReviewPhotoRequest(req: IncomingMessage, res: ServerRespons
     res.end("Slip has no photo URL");
     return;
   }
+  // Web bulk-upload photos live in a process-local store, not Slack. Serve
+  // them directly instead of trying to fetch as if they were Slack URLs.
+  if (tryServeUploadedPhoto(photoUrl, res)) return;
   try {
     const upstream = await axios.get<ArrayBuffer>(photoUrl, {
       responseType: "arraybuffer",
@@ -2159,6 +2167,21 @@ function startHttpServer(): void {
 
     if (req.method === "GET" && path === "/review") {
       await handleReviewListRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/review/upload") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      await handleBulkUploadPageRequest(res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/upload/one") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      const uploadedBy = (await requestUserEmail(req)) ?? "web-upload";
+      await handleBulkUploadOneRequest(req, res, uploadedBy);
       return;
     }
 
