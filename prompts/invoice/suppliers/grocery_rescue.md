@@ -76,6 +76,8 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
+> **Multi-number / digit-count cells always go to review — never silently commit.** Before choosing a value, transcribe EVERY discrete digit-run into `quantity_raw` verbatim (this guards against dropping a leading digit — e.g. a cell reading "145" must never be reported as "45"; if you emit "45", double-check you haven't lost a leading "1"). Then, whenever EITHER of the following is true — (a) the cell contains more than one legible number, or (b) you are unsure how many digits a number has (adjacent marks that could be "50" vs "51", "1 17" vs "117", etc.) — you MUST still emit your best-guess `approx_weight`/`quantity` (never leave them blank), but ALSO set confidence ≤ 0.6 and add a `source_warning`: `"Pounds cell ambiguous: read as <chosen value> but could be <alternative value(s)> — please verify against slip"`. Do not pick one reading silently. This is the single most-corrected cell type on this supplier.
+
 ### Totals and fees on grocery rescue forms
 
 - subtotal = null, tax = null, grand_total = null. The "Total:" box in the lower-right is usually blank — leave totals null unless a number is clearly written.
