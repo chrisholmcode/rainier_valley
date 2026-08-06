@@ -44,7 +44,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
-  - category = per the table above.
+  - category = **strictly the value from the "Predefined category rows" table above, keyed ONLY by the row label.** The category is a fixed property of the row, not of the goods. Do NOT infer or override category from the handwritten Product/Description text, from what the item "really is," or from its perishability/temperature. Examples: the **Frozen Foods** row is ALWAYS `frozen` (never `dairy`); the **Meat** row is ALWAYS `meat_protein` (never `frozen`); the **Dairy/Juice/Alt. Dairy** row is ALWAYS `dairy` (never `shelf_stable`). Since all 10 rows are emitted in fixed order, each row's category is fully predetermined — look it up, do not judge it.
 - **Rows with a non-empty Pounds cell:**
   > ⚠️ **All three of `approx_weight`, `quantity`, and `quantity_raw` are REQUIRED and must be non-null on any row where any numeral is legible in the Pounds cell.** These are the three most-corrected fields in production. If you can read even one number, extract it — never leave them blank. `quantity` must always equal `approx_weight` on rescue forms.
   - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below. **NEVER leave `approx_weight` blank when any numeral is legible.** If the number is hard to read, extract your best guess, lower `confidence` to ≤ 0.6, and add a `source_warning`. Only set `approx_weight = null` when the cell contains **absolutely no writing**.
