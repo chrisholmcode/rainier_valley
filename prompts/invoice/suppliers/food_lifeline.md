@@ -22,5 +22,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). If you encounter a **Pounds** column on any Food Lifeline document (even one you are still classifying as food_lifeline), NEVER leave the weight blank: write the printed Pounds number for each line into `quantity_raw` verbatim (e.g., Pounds "24" => quantity_raw = 24). A blank quantity_raw is always wrong when a Pounds value is legible on the slip.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
