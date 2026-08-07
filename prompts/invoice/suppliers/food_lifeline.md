@@ -4,7 +4,8 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 - "FOOD LIFELINE" logo upper-left, "AGENCY ORDER" header upper-right.
 - Printed line items in columns. No money changes hands; all dollar totals are $0.
-- document_type = "manifest". supplier = "food_lifeline". donor_org = null. is_donation = true.
+- document_type = "manifest". supplier = "food_lifeline". is_donation = true.
+- donor_org: Capture the printed **donor / source code** on the manifest verbatim (e.g., "SWY-GEN" for Safeway-General, "QFC-MI"). These are short uppercase codes of the form `RETAILER-SUFFIX` and identify the donating organization. Only set `donor_org = null` if no such code appears anywhere on the document.
 - Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight.
 - Item No. (e.g., "28AAA80-TEFA", "28AA830-CITY") => item_code_raw verbatim, including the trailing source suffix.
   - Suffix `-TEFA` => TEFAP federal commodity (USDA). Note in line `notes`: "funding: TEFAP".
