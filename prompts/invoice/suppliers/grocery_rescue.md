@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Leading-digit re-read check.** Before finalizing any 2-digit reading, explicitly look left of the first digit for a faint or narrow leading "1" (or other digit) — hand-filled forms often crowd a leading "1" against the tens digit, so a true "145" reads as "45" and "151" reads as "51". If a value looks small relative to the other rows or to typical grocery-rescue pickup weights, re-examine for a dropped leading digit and prefer the fuller reading; note the reconciliation and lower confidence to ≤ 0.6.
+>
+> **Row-alignment check.** Each Pounds value belongs to exactly the row on whose baseline it sits. Do NOT borrow a number from the row above/below, and do NOT emit a value on a row whose Pounds cell is actually blank just because an adjacent row has writing. If a numeral straddles a row boundary or you are unsure which row it belongs to, assign it to the single most-aligned row, leave the other row's quantity null, and add a `source_warning` naming both rows so a reviewer can confirm.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
