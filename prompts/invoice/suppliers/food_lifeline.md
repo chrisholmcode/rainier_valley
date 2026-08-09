@@ -22,5 +22,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). This handwritten form has **no** printed "Quantity" column; its only numeric column is **Pounds**. If for any reason this slip is processed under the food_lifeline prompt instead of being routed to `grocery_rescue`, read the value from the **Pounds** column into `quantity` (never leave `quantity` blank because a "Quantity" column is absent) and set `unit = "lb"`.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
