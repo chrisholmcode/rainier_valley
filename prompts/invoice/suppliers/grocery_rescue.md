@@ -45,6 +45,19 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
   - category = per the table above.
+
+- **item_name_normalized is a FIXED per-row constant — do NOT paraphrase or re-read it from the image.** Because you always emit the same 10 rows in the same fixed order, each row's normalized label is predetermined by its POSITION, not by what you think you see next to a given Pounds value. Use exactly these canonical strings, in this order, one per line item:
+  1. `Bakery` (category `shelf_stable`)
+  2. `Canned / Dry Goods` (category `shelf_stable`)
+  3. `Coffee Kiosk` (category `shelf_stable`)
+  4. `Dairy / Juice / Alt. Dairy` (category `dairy`)
+  5. `Frozen Foods` (category `frozen`)
+  6. `Meat` (category `meat_protein`)
+  7. `Nonfood` (category `non_food`)
+  8. `Non-Meat Protein (eggs, tofu)` (category `dairy`)
+  9. `Prepared / Perishable` (category `produce`)
+  10. `Produce` (category `produce`)
+  - `item_name_normalized`, `item_name_raw`, and `category` on a single line item MUST all describe the SAME row — never mix a Pounds value read from one row with a neighboring row's label. If handwriting spacing or hatched temp columns make it hard to tell which row a Pounds value belongs to, re-align by counting rows top-to-bottom against this fixed list; do not shift values up or down a row. When a Pounds value's owning row is genuinely ambiguous, keep the fixed label, lower confidence to ≤ 0.6, and add a source_warning noting the possible row misalignment.
 - **Rows with a non-empty Pounds cell:**
   > ⚠️ **All three of `approx_weight`, `quantity`, and `quantity_raw` are REQUIRED and must be non-null on any row where any numeral is legible in the Pounds cell.** These are the three most-corrected fields in production. If you can read even one number, extract it — never leave them blank. `quantity` must always equal `approx_weight` on rescue forms.
   - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below. **NEVER leave `approx_weight` blank when any numeral is legible.** If the number is hard to read, extract your best guess, lower `confidence` to ≤ 0.6, and add a `source_warning`. Only set `approx_weight = null` when the cell contains **absolutely no writing**.
