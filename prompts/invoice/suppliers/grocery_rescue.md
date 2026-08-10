@@ -40,6 +40,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Prepared/Perishable | produce | |
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
+- **`category` is fixed by the row label, NOT inferred from the goods and NOT copied from an adjacent row.** The 10 rows always appear in the same printed order with the same fixed category mapping; emit them in that exact order and copy `category` verbatim from the table above for each row — Bakery→shelf_stable, Canned/Dry Goods→shelf_stable, Coffee Kiosk→shelf_stable, Dairy/Juice/Alt. Dairy→dairy, Frozen Foods→frozen, Meat→meat_protein, Nonfood→non_food, Non-Meat Protein→dairy, Prepared/Perishable→produce, Produce→produce. **Guard against off-by-one row drift:** before finalizing, verify each emitted `item_name_raw` sits on the same physical table row as the Pounds value you assigned it, and that its `category` matches the table for THAT label. If Dairy's weight looks like it landed on Frozen (or Frozen on Meat, etc.), you have shifted a row — re-align. Never let the category of one row bleed onto the neighboring row.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
