@@ -13,9 +13,6 @@
  *
  * Usage:
  *   npx tsx src/backfill-donor-org-canonical.ts [--apply]
- *
- * The local .env points at the legacy "Delivery Log" tab; run against
- * production with GOOGLE_WORKSHEET_NAME="Inbound Delivery Log" prefixed.
  */
 import { google, sheets_v4 } from "googleapis";
 import { GoogleAuth } from "google-auth-library";

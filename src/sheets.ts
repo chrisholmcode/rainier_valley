@@ -28,6 +28,12 @@ async function ensureTabExists(worksheetName: string): Promise<void> {
   const tabs = (meta.data.sheets ?? []).map((s) => s.properties?.title).filter((t): t is string => Boolean(t));
   for (const t of tabs) tabsKnownToExist.add(t);
   if (tabsKnownToExist.has(worksheetName)) return;
+  // Loud on purpose. Silent auto-create hid a `.env` drift (GOOGLE_WORKSHEET_NAME
+  // set to "Delivery Log" instead of "Inbound Delivery Log") for weeks — dev
+  // runs kept spawning a shadow tab and nobody noticed. If a legitimate new
+  // tab is being added (e.g. a new tenant, a new schema tab like Processed
+  // Emails), this line still fires — once — and that's fine.
+  console.warn(`[sheets] creating new tab "${worksheetName}" in spreadsheet ${env.GOOGLE_SPREADSHEET_ID} — if this was unexpected, check your GOOGLE_WORKSHEET_NAME / EOD_WORKSHEET_NAME / *_WORKSHEET_NAME env vars.`);
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: { requests: [{ addSheet: { properties: { title: worksheetName } } }] }
