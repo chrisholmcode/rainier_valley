@@ -18,7 +18,19 @@ const EnvSchema = z.object({
   CORRECTIONS_LOG_WORKSHEET_NAME: z.string().default("Corrections Log"),
   EXTRACTION_TRACES_WORKSHEET_NAME: z.string().default("Extraction Traces"),
   PROMPT_SUGGESTIONS_WORKSHEET_NAME: z.string().default("Prompt Suggestions"),
+  PROCESSED_EMAILS_WORKSHEET_NAME: z.string().default("Processed Emails"),
   CRATES_WORKSHEET_NAME: z.string().default("Crates"),
+  // Email intake (POST /api/inbound-email). Endpoint returns 503 unless BOTH
+  // are set — no half-configured state. Allowlist patterns: exact address
+  // ("billing@rvfb.org"), full domain ("@charlies-produce.com"), or wildcard
+  // ("*@carusos.com"). Comma-separated.
+  EMAIL_INTAKE_SECRET: z.string().min(16).optional(),
+  EMAIL_ALLOWED_SENDERS: z.string().optional(),
+  // Silent-breakage heartbeat. CSV of `pattern:staleDays` pairs, same pattern
+  // format as EMAIL_ALLOWED_SENDERS. Example:
+  //   "@charlies-produce.com:10,@carusos.com:14"
+  // Unset disables the heartbeat entirely.
+  EMAIL_HEARTBEAT_VENDORS: z.string().optional(),
   // Public host used to build QR-code URLs on printed labels. Falls back to a
   // relative path in dev/local so testing still works.
   PUBLIC_BASE_URL: z.string().optional(),
