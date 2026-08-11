@@ -22,5 +22,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). When you encounter such a slip, map each handwritten **Pounds** entry into `quantity_raw` verbatim (e.g., a Pounds value of `24` => `quantity_raw = 24`) — never leave `quantity_raw` blank for a legible Pounds figure. On the printed AGENCY ORDER manifest there is no Pounds column, so `quantity_raw` is not populated from this file.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
