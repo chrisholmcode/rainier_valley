@@ -61,7 +61,7 @@ setInterval(() => {
 // on restart, same shape as the Slack handler's `processedContentHashes`.
 const processedHashes = new Map<string, UploadedFileResult>();
 
-function storePhoto(hash: string, mimeType: string, bytes: Buffer): void {
+export function storePhoto(hash: string, mimeType: string, bytes: Buffer): void {
   photoStore.set(hash, { mimeType, bytes, expiresAt: Date.now() + PHOTO_TTL_MS });
 }
 
@@ -117,18 +117,29 @@ class Semaphore {
 
 const semaphore = new Semaphore(BULK_UPLOAD_CONCURRENCY);
 
+// Shared with the email-intake handler so a burst of inbound invoices can't
+// stampede the Anthropic API alongside a heavy web-upload session.
+export async function withBulkUploadSlot<T>(fn: () => Promise<T>): Promise<T> {
+  const release = await semaphore.acquire();
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
 // ── Single-file processing ─────────────────────────────────────────────────
 
 const ACCEPTED_MIMES = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf)$/i;
 
-interface UploadedFileInput {
+export interface UploadedFileInput {
   filename: string;
   mimeType: string;
   bytes: Buffer;
   uploadedBy: string;
 }
 
-interface UploadedFileResult {
+export interface UploadedFileResult {
   ok: true;
   kind: "invoice" | "whiteboard";
   supplier: Supplier | null;
@@ -144,12 +155,12 @@ interface UploadedFileResult {
   duplicateReason?: "sheet" | "session";
 }
 
-interface UploadedFileError {
+export interface UploadedFileError {
   ok: false;
   error: string;
 }
 
-async function processInvoiceFile(params: {
+export async function processInvoiceFile(params: {
   input: UploadedFileInput;
   imageBytes: Buffer;
   mimeType: string;

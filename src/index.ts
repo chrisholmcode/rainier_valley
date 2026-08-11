@@ -52,6 +52,8 @@ import {
   handleBulkUploadOneRequest,
   tryServeUploadedPhoto
 } from "./bulk-upload.js";
+import { handleInboundEmailRequest } from "./email-intake.js";
+import { startEmailHeartbeat } from "./email-heartbeat.js";
 import {
   buildLabelsFormHtml,
   mintAndBuildLabelsPrintHtml,
@@ -2185,6 +2187,13 @@ function startHttpServer(): void {
       return;
     }
 
+    // Inbound-email intake. Not wrapped in authRequest — the handler enforces
+    // its own HMAC (X-Loadslip-Signature) so a leaked URL alone is not enough.
+    if (req.method === "POST" && path === "/api/inbound-email") {
+      await handleInboundEmailRequest(req, res);
+      return;
+    }
+
     if (req.method === "GET" && path === "/export/grocery-rescue") {
       await handleGroceryRescueExportRequest(req, res);
       return;
@@ -2349,6 +2358,15 @@ async function start(): Promise<void> {
   if (env.VOICE_WEBHOOK_SECRET || env.DASHBOARD_TOKEN || cfJwks) {
     startHttpServer();
   }
+
+  // Silent-breakage watchdog for the inbound-email pipeline. No-op unless
+  // EMAIL_HEARTBEAT_VENDORS + ADMIN_SLACK_USER_ID are both configured.
+  startEmailHeartbeat({
+    alertAdmin: async (text) => {
+      if (!env.ADMIN_SLACK_USER_ID) return;
+      await app.client.chat.postMessage({ channel: env.ADMIN_SLACK_USER_ID, text });
+    }
+  });
 }
 
 start().catch((err) => {

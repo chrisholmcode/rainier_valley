@@ -28,6 +28,12 @@ async function ensureTabExists(worksheetName: string): Promise<void> {
   const tabs = (meta.data.sheets ?? []).map((s) => s.properties?.title).filter((t): t is string => Boolean(t));
   for (const t of tabs) tabsKnownToExist.add(t);
   if (tabsKnownToExist.has(worksheetName)) return;
+  // Loud on purpose. Silent auto-create hid a `.env` drift (GOOGLE_WORKSHEET_NAME
+  // set to "Delivery Log" instead of "Inbound Delivery Log") for weeks — dev
+  // runs kept spawning a shadow tab and nobody noticed. If a legitimate new
+  // tab is being added (e.g. a new tenant, a new schema tab like Processed
+  // Emails), this line still fires — once — and that's fine.
+  console.warn(`[sheets] creating new tab "${worksheetName}" in spreadsheet ${env.GOOGLE_SPREADSHEET_ID} — if this was unexpected, check your GOOGLE_WORKSHEET_NAME / EOD_WORKSHEET_NAME / *_WORKSHEET_NAME env vars.`);
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
     requestBody: { requests: [{ addSheet: { properties: { title: worksheetName } } }] }
@@ -1000,6 +1006,149 @@ export async function ensureCorrectionsLogHeader(): Promise<void> {
 
 export async function ensureExtractionTracesHeader(): Promise<void> {
   await ensureHeader(env.EXTRACTION_TRACES_WORKSHEET_NAME, TRACE_SHEET_HEADERS);
+}
+
+// ── Processed Emails (inbound email intake audit + dedup) ───────────────────
+//
+// One row per attachment processed by POST /api/inbound-email. Doubles as the
+// persistent dedup key: findProcessedEmailByMessageId scans this tab so a
+// re-delivered email (Cloudflare/Postmark retry, forwarding loop) short-circuits
+// before it hits the extraction pipeline again. The `result` column encodes
+// terminal state so a reviewer can grep the tab for failures without joining
+// to the delivery log.
+
+export const PROCESSED_EMAILS_HEADERS = [
+  "received_at",
+  "message_id",
+  "from",
+  "subject",
+  "attachment_filename",
+  "attachment_sha256",
+  "result",
+  "supplier",
+  "invoice_or_order_number",
+  "rows_added",
+  "photo_url",
+  "error"
+];
+
+export type ProcessedEmailResult =
+  | "processed"
+  | "dedup_message_id"
+  | "dedup_content_hash"
+  | "dedup_sheet"
+  | "extraction_failed"
+  | "unsupported_mime";
+
+export interface ProcessedEmailLogEntry {
+  receivedAt: string;
+  messageId: string;
+  from: string;
+  subject: string;
+  attachmentFilename: string;
+  attachmentSha256: string;
+  result: ProcessedEmailResult;
+  supplier: string | null;
+  invoiceOrOrderNumber: string | null;
+  rowsAdded: number;
+  photoUrl: string | null;
+  error: string | null;
+}
+
+export async function ensureProcessedEmailsHeader(): Promise<void> {
+  await ensureHeader(env.PROCESSED_EMAILS_WORKSHEET_NAME, PROCESSED_EMAILS_HEADERS);
+}
+
+export async function appendProcessedEmailRow(entry: ProcessedEmailLogEntry): Promise<void> {
+  await ensureProcessedEmailsHeader();
+  const row = [
+    entry.receivedAt,
+    entry.messageId,
+    entry.from,
+    entry.subject,
+    entry.attachmentFilename,
+    entry.attachmentSha256,
+    entry.result,
+    entry.supplier ?? "",
+    entry.invoiceOrOrderNumber ?? "",
+    entry.rowsAdded,
+    entry.photoUrl ?? "",
+    entry.error ?? ""
+  ];
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.PROCESSED_EMAILS_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [row] }
+  });
+}
+
+// Full-tab read for the heartbeat cron. The tab is small (dozens of rows/day)
+// so a full scan once a day is cheap; if it ever gets huge, switch to a
+// bounded range read.
+export async function readProcessedEmails(): Promise<ProcessedEmailLogEntry[]> {
+  await ensureProcessedEmailsHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const resp = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.PROCESSED_EMAILS_WORKSHEET_NAME}!A:L`
+  });
+  const rows = resp.data.values ?? [];
+  const out: ProcessedEmailLogEntry[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r) continue;
+    out.push({
+      receivedAt: String(r[0] ?? ""),
+      messageId: String(r[1] ?? ""),
+      from: String(r[2] ?? ""),
+      subject: String(r[3] ?? ""),
+      attachmentFilename: String(r[4] ?? ""),
+      attachmentSha256: String(r[5] ?? ""),
+      result: (String(r[6] ?? "processed")) as ProcessedEmailResult,
+      supplier: r[7] ? String(r[7]) : null,
+      invoiceOrOrderNumber: r[8] ? String(r[8]) : null,
+      rowsAdded: Number(r[9] ?? 0),
+      photoUrl: r[10] ? String(r[10]) : null,
+      error: r[11] ? String(r[11]) : null
+    });
+  }
+  return out;
+}
+
+// Scans the tab bottom-up so the most recent processed row wins if a message
+// was ever logged more than once (should not happen, but the tab is our only
+// source of truth). Returns null if unseen.
+export async function findProcessedEmailByMessageId(messageId: string): Promise<ProcessedEmailLogEntry | null> {
+  if (!messageId) return null;
+  await ensureProcessedEmailsHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const resp = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.PROCESSED_EMAILS_WORKSHEET_NAME}!A:L`
+  });
+  const rows = resp.data.values ?? [];
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const r = rows[i];
+    if (r?.[1] === messageId) {
+      return {
+        receivedAt: String(r[0] ?? ""),
+        messageId: String(r[1] ?? ""),
+        from: String(r[2] ?? ""),
+        subject: String(r[3] ?? ""),
+        attachmentFilename: String(r[4] ?? ""),
+        attachmentSha256: String(r[5] ?? ""),
+        result: (String(r[6] ?? "processed")) as ProcessedEmailResult,
+        supplier: r[7] ? String(r[7]) : null,
+        invoiceOrOrderNumber: r[8] ? String(r[8]) : null,
+        rowsAdded: Number(r[9] ?? 0),
+        photoUrl: r[10] ? String(r[10]) : null,
+        error: r[11] ? String(r[11]) : null
+      };
+    }
+  }
+  return null;
 }
 
 // ── Prompt Suggestions ──────────────────────────────────────────────────────
