@@ -80,6 +80,14 @@ function toBase64(bytes: ArrayBuffer | Uint8Array): string {
 
 // 3 attempts with exponential backoff: ~0s, 2s, 6s. Fast-fails on 4xx that
 // won't succeed on retry (401/403/400) — those are config bugs, not transient.
+//
+// Per-attempt timeout: 150s. The real ceiling is Cloudflare's edge proxy
+// timeout at review.loadslip.com — 100s on Free/Pro/Business plans (only
+// Enterprise can bump). Setting the AbortController above that ensures CF's
+// 524 arrives cleanly before we tear down the socket, so logs distinguish
+// "edge timed out waiting for Railway" from "network partition dropped us."
+const REQUEST_TIMEOUT_MS = 150_000;
+
 async function postWithRetry(url: string, body: string, signature: string): Promise<Response> {
   const backoffsMs = [0, 2000, 6000];
   let lastResp: Response | null = null;
@@ -87,6 +95,11 @@ async function postWithRetry(url: string, body: string, signature: string): Prom
 
   for (let i = 0; i < backoffsMs.length; i++) {
     if (backoffsMs[i] > 0) await new Promise((r) => setTimeout(r, backoffsMs[i]));
+
+    // Fresh controller per attempt — reusing one would abort future retries.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const startedAt = Date.now();
     try {
       const resp = await fetch(url, {
         method: "POST",
@@ -94,16 +107,27 @@ async function postWithRetry(url: string, body: string, signature: string): Prom
           "Content-Type": "application/json",
           "X-Loadslip-Signature": `sha256=${signature}`
         },
-        body
+        body,
+        signal: controller.signal
       });
       if (resp.ok) return resp;
       lastResp = resp;
-      // 4xx (except 408/429) means the webhook rejected us — retrying won't help.
-      if (resp.status >= 400 && resp.status < 500 && resp.status !== 408 && resp.status !== 429) {
-        return resp;
-      }
+      // 524 (CF edge timeout waiting on origin) and 502/503/504 are transient
+      // and worth retrying; 408/429 same. Everything else 4xx is config.
+      const status = resp.status;
+      const isRetryable = status === 408 || status === 429 || (status >= 500 && status <= 599);
+      if (!isRetryable) return resp;
+      console.log(`webhook attempt ${i + 1}/${backoffsMs.length} non-2xx status=${status} dur=${Date.now() - startedAt}ms — retrying`);
     } catch (err) {
-      lastErr = err as Error;
+      const e = err as Error;
+      lastErr = e;
+      const dur = Date.now() - startedAt;
+      // Distinguish AbortError (our 150s cap fired) from real network errors
+      // so log-diving is straightforward when this eventually bites.
+      const cause = e.name === "AbortError" ? `client-timeout(${REQUEST_TIMEOUT_MS}ms)` : `${e.name}: ${e.message}`;
+      console.log(`webhook attempt ${i + 1}/${backoffsMs.length} threw dur=${dur}ms cause=${cause}`);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
   if (lastResp) return lastResp;
