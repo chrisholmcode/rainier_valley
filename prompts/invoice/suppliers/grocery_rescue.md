@@ -74,6 +74,10 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
+6. **Row/value alignment + digit-count check (most-corrected failure).** Before committing a Pounds value, do two checks:
+   (a) **Confirm the value sits inside THIS row's Pounds cell**, not bleeding in from the row above/below. Handwriting on these forms drifts across ruled lines. If a number sits ambiguously on a row boundary, or the cell for this row otherwise looks empty, do NOT claim it — set approx_weight/quantity/quantity_raw = null, notes = "no value clearly in this row's cell", and add a source_warning `"Pounds cell ambiguous — number may belong to adjacent row; please verify"`. (This prevents emitting a value like "51" where the row is actually blank.)
+   (b) **Re-count the digits of your reading.** Grocery-rescue pickups are frequently 100+ lb; a leading "1" is easy to miss. If your candidate value is a 2-digit number but the ink spans wide enough to plausibly be 3 digits, or a leading stroke could be a "1", record BOTH readings in quantity_raw (e.g. "45 / 145"), take the LARGER plausible reading as approx_weight, set confidence ≤ 0.6, and add a source_warning `"Pounds leading digit uncertain: read as <value>, may be <alt> — please verify"`. Never silently drop a leading digit.
+
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
 ### Totals and fees on grocery rescue forms
