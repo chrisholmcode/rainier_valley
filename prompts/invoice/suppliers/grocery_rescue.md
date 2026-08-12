@@ -40,6 +40,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Prepared/Perishable | produce | |
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
+- **Row-anchoring (prevents off-by-one category errors):** Determine `category` from the row label that is physically on the SAME horizontal line as the Pounds value you are reading — NOT from position in the skeleton list. Before finalizing, re-scan the form top-to-bottom and, for EACH row, confirm the label text and its Pounds cell sit on the same line (labels do not always appear in the skeleton's listed order, and one shifted row cascades into the wrong category for every row below it). If a value seems to belong to the row above or below its label, you have likely miscounted a line — realign. Category is ALWAYS driven by the verbatim `item_name_raw` on that line via the predefined table, never by list order.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
