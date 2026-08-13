@@ -226,6 +226,17 @@ th.sortable.asc::after { content: '\\25B2'; opacity: 1; color: var(--primary); }
 th.sortable.desc::after { content: '\\25BC'; opacity: 1; color: var(--primary); }
 th.sortable:hover { color: var(--primary); }
 
+/* Mobile: hide low-priority queue columns; stack slip-meta grid; smaller section headings. */
+@media (max-width: 640px) {
+  .hide-mobile { display: none; }
+  .slip-meta { padding: 14px; }
+  .slip-meta dl { grid-template-columns: 1fr; gap: 4px 0; }
+  .slip-meta dt { padding-top: 8px; font-size: 11px; }
+  .section-title { font-size: 17px; margin: 22px 0 10px; }
+  .search-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  /* Line-items editor keeps min-width 1860 + overflow-x — desktop workflow. */
+}
+
 /* Toast */
 .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px;
          border-radius: var(--radius-md);
@@ -253,35 +264,35 @@ function renderSlipRow(s: SlipSummary, threshold: number): string {
   const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
   return `<tr>
     <td>${statusBadge(s)}</td>
-    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
-    <td data-sort="${escapeHtml(uploadedIso)}">${uploaded}</td>
+    <td class="hide-mobile" data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
+    <td class="hide-mobile" data-sort="${escapeHtml(uploadedIso)}">${uploaded}</td>
     <td data-sort="${escapeHtml(deliveryIso)}">${date}</td>
     <td>${donorOrSupplier(s)}</td>
     <td>${invoice}</td>
-    <td class="num">${s.rowCount}</td>
+    <td class="num hide-mobile">${s.rowCount}</td>
     <td class="num" data-sort="${poundsRaw ?? ""}">${pounds}</td>
-    <td data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td class="hide-mobile" data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
     <td><a class="slip-link" href="/review/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
 
 function renderSlipTable(slips: SlipSummary[], threshold: number): string {
   const body = slips.map((s) => renderSlipRow(s, threshold)).join("");
-  return `<table>
+  return `<div class="table-scroll"><table>
     <thead><tr>
       <th data-sort-type="text">Status</th>
-      <th data-sort-type="date">Approved</th>
-      <th data-sort-type="date">Uploaded</th>
+      <th class="hide-mobile" data-sort-type="date">Approved</th>
+      <th class="hide-mobile" data-sort-type="date">Uploaded</th>
       <th data-sort-type="date">Delivery date</th>
       <th data-sort-type="text">Donor / Supplier</th>
       <th data-sort-type="text">Invoice #</th>
-      <th class="num" data-sort-type="num">Rows</th>
+      <th class="num hide-mobile" data-sort-type="num">Rows</th>
       <th class="num" data-sort-type="num">Pounds</th>
-      <th data-sort-type="num">Min confidence</th>
+      <th class="hide-mobile" data-sort-type="num">Min confidence</th>
       <th></th>
     </tr></thead>
     <tbody>${body}</tbody>
-  </table>`;
+  </table></div>`;
 }
 
 export function buildReviewListHtml(params: {
@@ -988,33 +999,33 @@ function renderEodSlipRow(s: EodSlipSummary, threshold: number): string {
   const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
   return `<tr>
     <td>${eodStatusBadge(s)}</td>
-    <td data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
-    <td data-sort="${escapeHtml(recordedIso)}">${recorded}</td>
+    <td class="hide-mobile" data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
+    <td class="hide-mobile" data-sort="${escapeHtml(recordedIso)}">${recorded}</td>
     <td data-sort="${escapeHtml(dateIso)}">${date}</td>
     <td data-sort="${escapeHtml(s.source ?? "")}">${sourceChip(s.source)}</td>
     <td>${program}</td>
-    <td class="num">${s.rowCount}</td>
-    <td data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
+    <td class="num hide-mobile">${s.rowCount}</td>
+    <td class="hide-mobile" data-sort="${confSort}">${confidenceBadge(s.minConfidence, threshold)}</td>
     <td><a class="slip-link" href="/review/outbound/slip?slip=${enc}">Open ›</a></td>
   </tr>`;
 }
 
 function renderEodSlipTable(slips: EodSlipSummary[], threshold: number): string {
   const body = slips.map((s) => renderEodSlipRow(s, threshold)).join("");
-  return `<table>
+  return `<div class="table-scroll"><table>
     <thead><tr>
       <th data-sort-type="text">Status</th>
-      <th data-sort-type="date">Approved</th>
-      <th data-sort-type="date">Recorded</th>
+      <th class="hide-mobile" data-sort-type="date">Approved</th>
+      <th class="hide-mobile" data-sort-type="date">Recorded</th>
       <th data-sort-type="date">Date</th>
       <th data-sort-type="text">Source</th>
       <th data-sort-type="text">Program</th>
-      <th class="num" data-sort-type="num">Rows</th>
-      <th data-sort-type="num">Min confidence</th>
+      <th class="num hide-mobile" data-sort-type="num">Rows</th>
+      <th class="hide-mobile" data-sort-type="num">Min confidence</th>
       <th></th>
     </tr></thead>
     <tbody>${body}</tbody>
-  </table>`;
+  </table></div>`;
 }
 
 export function buildOutboundListHtml(params: {
