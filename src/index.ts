@@ -1724,6 +1724,10 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
       rowIndexes: slipRows.map((r) => r.rowIndex),
       approvedBy: user
     });
+    // Sync Inventory Summary on sign-off. Without this, low-conf slips that
+    // land in the review queue only get a summary row when a reviewer *edits*
+    // them (via the edit path). Approve-only drifts silently.
+    await recomputeSummaryForSlip(slipRows);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
   } catch (err) {
