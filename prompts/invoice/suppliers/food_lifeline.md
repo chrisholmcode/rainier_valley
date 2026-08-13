@@ -23,4 +23,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 ## Not this supplier
 
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- If the document is the handwritten slip with a **Pounds** column: after setting `supplier = "grocery_rescue"`, capture each line's Pounds number verbatim into `quantity_raw` (e.g., "24", "170"). Never leave `quantity_raw` blank when a Pounds value is legible — the Pounds column IS the quantity_raw source for these slips.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
