@@ -20,6 +20,22 @@ interface Env {
 }
 
 const ACCEPTED_MIME = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf)$/i;
+const ACCEPTED_EXT = /\.(pdf|jpg|jpeg|png|webp|heic|heif|gif)$/i;
+
+// Some forwarders (notably Outlook manual forwards) label PDF attachments
+// with generic MIME types like application/octet-stream or omit the type.
+// If the filename extension is known-good, coerce to a canonical MIME so the
+// Railway handler's own MIME check passes downstream.
+function normalizeMime(mimeType: string | undefined, filename: string | undefined): string | null {
+  if (mimeType && ACCEPTED_MIME.test(mimeType)) return mimeType;
+  if (!filename) return null;
+  const m = filename.match(ACCEPTED_EXT);
+  if (!m) return null;
+  const ext = m[1].toLowerCase();
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  return `image/${ext}`;
+}
 
 // ── Auth helpers ───────────────────────────────────────────────────────────
 
@@ -175,13 +191,19 @@ export default {
 
     // 3. Filter to acceptable attachments. If none, dead-letter so a vendor
     //    format change surfaces instead of silently dropping.
-    const attachments = (parsed.attachments ?? [])
-      .filter((a) => a.mimeType && ACCEPTED_MIME.test(a.mimeType) && a.content)
-      .map((a) => ({
-        filename: a.filename ?? "attachment",
-        mimeType: a.mimeType!,
-        contentBase64: toBase64(a.content as ArrayBuffer)
-      }));
+    // Log every attachment's raw MIME + filename first so a rejection is
+    // diagnosable without needing wrangler tail live at receipt time.
+    const rawAtts = parsed.attachments ?? [];
+    for (const a of rawAtts) {
+      console.log(`attachment from=${from} filename="${a.filename ?? ""}" mimeType="${a.mimeType ?? ""}" bytes=${a.content ? (a.content as ArrayBuffer).byteLength : 0}`);
+    }
+    const attachments = rawAtts
+      .filter((a) => a.content)
+      .map((a) => {
+        const mimeType = normalizeMime(a.mimeType, a.filename);
+        return mimeType ? { filename: a.filename ?? "attachment", mimeType, contentBase64: toBase64(a.content as ArrayBuffer) } : null;
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
 
     if (attachments.length === 0) {
       await deadLetter(message, env, "No PDF/image attachments after filter");

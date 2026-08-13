@@ -40,6 +40,20 @@ import {
 const MAX_BODY_BYTES = 30 * 1024 * 1024;
 
 const ACCEPTED_MIMES = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf)$/i;
+const ACCEPTED_EXT = /\.(pdf|jpg|jpeg|png|webp|heic|heif|gif)$/i;
+
+// Belt-and-suspenders with the Worker: if a forwarder mis-typed a real PDF
+// (Outlook loves application/octet-stream), fall back to the filename ext
+// and coerce to the canonical MIME so the downstream extractor accepts it.
+export function normalizeMime(mimeType: string, filename: string): string | null {
+  if (ACCEPTED_MIMES.test(mimeType)) return mimeType;
+  const m = filename.match(ACCEPTED_EXT);
+  if (!m) return null;
+  const ext = m[1].toLowerCase();
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  return `image/${ext}`;
+}
 
 const InboundAttachmentSchema = z.object({
   filename: z.string().min(1),
@@ -140,14 +154,15 @@ async function processAttachment(params: {
     warnings: []
   };
 
-  if (!ACCEPTED_MIMES.test(attachment.mimeType)) {
-    return { ...base, result: "unsupported_mime", error: `Unsupported MIME: ${attachment.mimeType}` };
+  const normalizedMime = normalizeMime(attachment.mimeType, attachment.filename);
+  if (!normalizedMime) {
+    return { ...base, result: "unsupported_mime", error: `Unsupported MIME: ${attachment.mimeType} (filename ${attachment.filename})` };
   }
 
   let imageBytes: Buffer;
   let mimeType: string;
   try {
-    const preflighted = await preflightImageBuffer(bytes, attachment.mimeType, attachment.filename);
+    const preflighted = await preflightImageBuffer(bytes, normalizedMime, attachment.filename);
     imageBytes = preflighted.buffer;
     mimeType = preflighted.mimeType;
   } catch (err) {
