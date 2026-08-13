@@ -193,4 +193,24 @@ footer {
   color: var(--muted); font-size: 12px;
   text-align: center;
 }
+
+/* Mobile: phone-friendly padding, larger tap targets, stacked summary. */
+@media (max-width: 640px) {
+  .container { padding: 16px 12px 40px; }
+  header.page { flex-direction: column; align-items: flex-start; gap: 10px; padding-bottom: 16px; margin-bottom: 18px; }
+  header.page h1 { font-size: 22px; }
+  header.page .meta { font-size: 12px; margin-top: 4px; }
+  .toolbar { width: 100%; }
+  .btn, .btn-primary, .btn-secondary, .btn-export, .btn-danger {
+    min-height: 40px; padding: 10px 14px; font-size: 13px;
+  }
+  .summary-row { flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .summary-pill { min-width: 0; width: 100%; padding: 12px 14px; }
+  .summary-pill .value { font-size: 22px; }
+  .card { padding: 14px; margin-bottom: 12px; border-radius: 10px; }
+  h2 { margin: 20px 0 10px; }
+  th, td { padding: 8px 10px; font-size: 12px; }
+  thead th { padding: 8px 10px; font-size: 10px; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
+}
 `;

@@ -481,6 +481,27 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
   .progress-summary { display: flex; gap: 20px; padding: 16px 20px; background: #fafbfc; border-radius: 8px; margin-top: 12px; font-size: 13px; }
   .progress-summary .num { font-size: 20px; font-weight: 600; display: block; }
   .progress-summary .lbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  @media (max-width: 640px) {
+    body { padding: 16px 12px; }
+    h1 { font-size: 20px; }
+    .meta { font-size: 12px; margin-bottom: 14px; }
+    .card { padding: 16px; }
+    .drop-zone { padding: 32px 16px; }
+    .drop-zone p { font-size: 14px; }
+    .drop-zone .hint { font-size: 11px; }
+    .btn, .btn.primary { min-height: 44px; padding: 12px 16px; font-size: 14px; }
+    .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+    .controls .btn.primary { width: 100%; text-align: center; justify-content: center; }
+    .summary { text-align: center; }
+    .progress-summary { flex-wrap: wrap; gap: 12px; padding: 12px 14px; }
+    .progress-summary > div { min-width: calc(50% - 6px); }
+    table { font-size: 12px; }
+    th, td { padding: 8px 10px; }
+    /* Stack the results table for touch: file name on its own line, status +
+       details wrap under it. Keeps everything readable without a horizontal scroll. */
+    .results-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  }
 </style>
 </head><body><div class="container">
 <h1>Bulk Slip Upload</h1>
@@ -493,8 +514,8 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
 
 <div class="card">
   <div class="drop-zone" id="drop" role="button" tabindex="0">
-    <p><strong>Click to select files</strong> or drag &amp; drop</p>
-    <p class="hint">Images or PDFs · up to 25 MB each · uploads process 3 at a time</p>
+    <p><strong>Tap or click to add photos or PDFs</strong></p>
+    <p class="hint">Up to 25 MB each · drag &amp; drop supported on desktop · uploads process 3 at a time</p>
   </div>
   <input type="file" id="files" multiple accept="image/*,application/pdf">
   <div class="controls">
@@ -505,12 +526,14 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
 
 <div class="card" id="results-card" style="display:none;">
   <div class="progress-summary" id="progress-summary" style="display:none;"></div>
-  <table id="results-table">
-    <thead>
-      <tr><th>File</th><th>Status</th><th>Details</th></tr>
-    </thead>
-    <tbody id="results-body"></tbody>
-  </table>
+  <div class="results-scroll">
+    <table id="results-table">
+      <thead>
+        <tr><th>File</th><th>Status</th><th>Details</th></tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
