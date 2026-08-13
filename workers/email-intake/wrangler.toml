@@ -2,6 +2,8 @@ name = "loadslip-email-intake"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
 # nodejs_compat is not required — we deliberately use only Web Crypto + fetch.
+# Email-only worker, no HTTP surface — skip workers.dev subdomain.
+workers_dev = false
 
 # Non-secret config. LOADSLIP_WEBHOOK_SECRET is set separately via:
 #   wrangler secret put LOADSLIP_WEBHOOK_SECRET
@@ -10,7 +12,7 @@ compatibility_date = "2026-08-01"
 LOADSLIP_WEBHOOK_URL = "https://review.loadslip.com/api/inbound-email"
 # Same format as the Railway service's EMAIL_ALLOWED_SENDERS. Kept in sync
 # manually — worker rejects at SMTP, Railway re-checks as belt-and-suspenders.
-ALLOWED_SENDERS = "billing@rvfb.org,*@charlies-produce.com,*@carusos.com"
+ALLOWED_SENDERS = "*@rvfb.org,*@charlies-produce.com,*@carusos.com,chrischolm@gmail.com"
 # Any email that can't be delivered to the webhook (retries exhausted, no
 # valid attachments, sender not allowed) is forwarded here for manual replay.
 DEAD_LETTER_EMAIL = "chrischolm@gmail.com"
