@@ -4,6 +4,7 @@ import {
   parseVendorConfig,
   matchesPattern,
   computeVendorStatuses,
+  computePipeAgeDays,
   type VendorRule
 } from "../../src/email-heartbeat.js";
 import type { ProcessedEmailLogEntry, ProcessedEmailResult } from "../../src/sheets.js";
@@ -150,5 +151,38 @@ describe("computeVendorStatuses", () => {
     ];
     const [charlies] = computeVendorStatuses([rules[0]], rows, now);
     assert.equal(charlies.lastReceivedAt, null);
+  });
+});
+
+describe("computePipeAgeDays", () => {
+  const now = new Date("2026-08-13T12:00:00Z");
+
+  it("returns null for an empty tab", () => {
+    assert.equal(computePipeAgeDays([], now), null);
+  });
+
+  it("measures from the oldest row's receivedAt regardless of vendor", () => {
+    const rows: ProcessedEmailLogEntry[] = [
+      row("someone@anything.com", "2026-08-11T12:00:00Z"), // 2d ago — oldest
+      row("ap@charlies-produce.com", "2026-08-12T09:00:00Z"),
+      row("billing@rvfb.org", "2026-08-13T09:00:00Z")
+    ];
+    assert.equal(computePipeAgeDays(rows, now), 2);
+  });
+
+  it("ignores rows with unparseable receivedAt", () => {
+    const rows: ProcessedEmailLogEntry[] = [
+      row("ap@charlies-produce.com", "not-a-date"),
+      row("ap@charlies-produce.com", "2026-08-10T12:00:00Z")
+    ];
+    assert.equal(computePipeAgeDays(rows, now), 3);
+  });
+
+  it("returns null when every row has an unparseable receivedAt", () => {
+    const rows: ProcessedEmailLogEntry[] = [
+      row("ap@charlies-produce.com", "garbage"),
+      row("ar@carusos.com", "also-garbage")
+    ];
+    assert.equal(computePipeAgeDays(rows, now), null);
   });
 });
