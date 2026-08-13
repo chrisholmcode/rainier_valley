@@ -33,6 +33,10 @@ interface FixtureExpectations {
   requireTotalsPresent?: Array<"subtotal" | "tax" | "grand_total">;
   isDonation?: boolean;
   donorOrgContains?: string;
+  // Fraction of non-fee line items with a numeric approx_weight. 0.7 means
+  // at least 70% of line items got a weight. Guards prompt regressions on
+  // suppliers where a printed weight column exists but is often ignored.
+  minApproxWeightCoverage?: number;
 }
 
 interface FixtureCase {
@@ -91,7 +95,8 @@ const FIXTURES: FixtureCase[] = [
       feesCount: 1,
       feeDescriptionContains: ["ENERGY"],
       itemNameRawContainsAny: ["AVOCADO", "CUCUMBER", "LETTUCE", "PEPPER"],
-      requireTotalsPresent: ["grand_total"]
+      requireTotalsPresent: ["grand_total"],
+      minApproxWeightCoverage: 0.7
     }
   },
   {
@@ -277,6 +282,17 @@ async function runFixture(f: FixtureCase): Promise<CheckResult[]> {
     ));
   }
 
+  if (typeof f.expect.minApproxWeightCoverage === "number") {
+    const nonFee = result.line_items.filter((li) => !li.is_fee);
+    const weighted = nonFee.filter((li) => typeof li.approx_weight === "number" && li.approx_weight !== null);
+    const coverage = nonFee.length === 0 ? 0 : weighted.length / nonFee.length;
+    checks.push(check(
+      `approx_weight coverage >= ${(f.expect.minApproxWeightCoverage * 100).toFixed(0)}%`,
+      coverage >= f.expect.minApproxWeightCoverage,
+      `got ${(coverage * 100).toFixed(0)}% (${weighted.length}/${nonFee.length})`
+    ));
+  }
+
   return checks;
 }
 
@@ -284,7 +300,15 @@ async function main(): Promise<void> {
   let totalFail = 0;
   let totalPass = 0;
 
-  for (const fixture of FIXTURES) {
+  // Prompt-iteration escape hatch: `FIXTURE_SUPPLIER=charlies npm test` runs
+  // only that supplier's fixtures. Full suite still runs by default.
+  const supplierFilter = process.env.FIXTURE_SUPPLIER;
+  const active = supplierFilter
+    ? FIXTURES.filter((f) => f.supplierHint === supplierFilter)
+    : FIXTURES;
+  if (supplierFilter) console.log(`(FIXTURE_SUPPLIER=${supplierFilter} — running ${active.length}/${FIXTURES.length} fixtures)`);
+
+  for (const fixture of active) {
     try {
       const results = await runFixture(fixture);
       for (const r of results) {
