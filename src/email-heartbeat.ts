@@ -61,6 +61,21 @@ export interface VendorStatus {
   isStale: boolean;
 }
 
+// How long the pipe has actually been receiving email, measured from the
+// oldest Processed Emails row. Used to gate `never_seen` alerts — a vendor
+// that "hasn't emailed us in 10 days" is only newsworthy once the pipe has
+// been up for at least 10 days. Returns null if the tab has no rows yet.
+export function computePipeAgeDays(rows: ProcessedEmailLogEntry[], now: Date): number | null {
+  let oldest: number | null = null;
+  for (const row of rows) {
+    const ts = Date.parse(row.receivedAt);
+    if (Number.isNaN(ts)) continue;
+    if (oldest === null || ts < oldest) oldest = ts;
+  }
+  if (oldest === null) return null;
+  return (now.getTime() - oldest) / (24 * 60 * 60 * 1000);
+}
+
 // Pure function — takes the sheet snapshot and returns per-vendor status.
 // Any row matches (regardless of `result`) because the question is "did the
 // mail arrive," not "did extraction succeed." Dedup hits and extraction
@@ -132,17 +147,22 @@ export async function runEmailHeartbeatCheck(params: {
   const now = params.now ?? new Date();
   const rows = await readProcessedEmails();
 
-  // Fresh-deploy guard: if the tab is completely empty, don't fire "never
-  // seen" alerts for every vendor — we simply haven't been running long
-  // enough to say. A vendor missing while OTHERS are landing IS a real signal.
+  // Pipe-age guard: only fire `never_seen` for a vendor once the pipe has
+  // been receiving mail for longer than that vendor's staleDays threshold.
+  // Prevents "no Charlies email in 10 days" from firing during the first
+  // 10 days the pipe is even live. Also covers the empty-tab case (null age).
+  const pipeAgeDays = computePipeAgeDays(rows, now);
   const tabEmpty = rows.length === 0;
   const statuses = computeVendorStatuses(rules, rows, now);
 
   const alerts: string[] = [];
   for (const status of statuses) {
     let reason: "stale" | "never_seen" | null = null;
-    if (status.lastReceivedAt === null && !tabEmpty) reason = "never_seen";
-    else if (status.isStale) reason = "stale";
+    if (status.lastReceivedAt === null && pipeAgeDays !== null && pipeAgeDays > status.staleDays) {
+      reason = "never_seen";
+    } else if (status.isStale) {
+      reason = "stale";
+    }
     if (!reason) continue;
 
     const last = alertedAt.get(status.pattern) ?? 0;
@@ -161,7 +181,7 @@ export async function runEmailHeartbeatCheck(params: {
     }
   }
 
-  console.log(`[email-heartbeat] checked vendors=${rules.length} tabEmpty=${tabEmpty} alerts=${alerts.length}`);
+  console.log(`[email-heartbeat] checked vendors=${rules.length} tabEmpty=${tabEmpty} pipeAgeDays=${pipeAgeDays === null ? "null" : pipeAgeDays.toFixed(1)} alerts=${alerts.length}`);
   return { ran: true, reason: tabEmpty ? "tab_empty" : "checked", alerts };
 }
 
