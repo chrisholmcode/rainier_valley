@@ -52,6 +52,11 @@ import {
   handleBulkUploadOneRequest,
   tryServeUploadedPhoto
 } from "./bulk-upload.js";
+import {
+  handleGroceryRescueUploadPageRequest,
+  handleGroceryRescueUploadPreviewRequest,
+  handleGroceryRescueUploadCommitRequest
+} from "./grocery-rescue-upload.js";
 import { handleInboundEmailRequest } from "./email-intake.js";
 import { startEmailHeartbeat } from "./email-heartbeat.js";
 import {
@@ -2188,6 +2193,28 @@ function startHttpServer(): void {
       if (!authed) return;
       const uploadedBy = (await requestUserEmail(req)) ?? "web-upload";
       await handleBulkUploadOneRequest(req, res, uploadedBy);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/review/upload/grocery-rescue") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      await handleGroceryRescueUploadPageRequest(res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/upload/grocery-rescue/preview") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      await handleGroceryRescueUploadPreviewRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/review/upload/grocery-rescue/commit") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      const uploadedBy = (await requestUserEmail(req)) ?? "grocery-rescue-upload";
+      await handleGroceryRescueUploadCommitRequest(req, res, uploadedBy);
       return;
     }
 

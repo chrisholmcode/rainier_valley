@@ -467,6 +467,7 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
 <div class="tabs">
   <a class="btn" href="/review?tab=queue">← Inbound Queue</a>
   <a class="btn active" href="/review/upload">Bulk Upload</a>
+  <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue Upload</a>
   <a class="btn" href="/dashboard?view=daily&range=1w">Dashboard</a>
 </div>
 
