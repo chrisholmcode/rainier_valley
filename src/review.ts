@@ -376,6 +376,7 @@ ${FONT_HEAD_LINKS}
     <a class="${historyCls}" href="/review?tab=history">Inbound History</a>
     <a class="btn" href="/review?tab=outbound">Outbound</a>
     <a class="btn" href="/review/upload">Bulk Upload</a>
+    <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -511,6 +512,7 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/review?tab=history">Inbound History</a>
     <a class="btn" href="/review?tab=outbound">Outbound</a>
     <a class="btn" href="/review/upload">Bulk Upload</a>
+    <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue</a>
     <a class="btn active" href="/review?tab=suggestions">Prompt Suggestions${pendingCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -1089,6 +1091,7 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/review?tab=history">Inbound History</a>
     <a class="btn active" href="/review?tab=outbound">Outbound</a>
     <a class="btn" href="/review/upload">Bulk Upload</a>
+    <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
