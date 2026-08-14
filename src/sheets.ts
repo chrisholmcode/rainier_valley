@@ -619,6 +619,20 @@ function itemPounds(item: ExtractionResult["line_items"][number]): number | null
   return null;
 }
 
+// Exported so batched writers (e.g. grocery-rescue-upload) can build the
+// same summary row shape that appendSummaryRow produces without going
+// through the per-slip append path.
+export function rollupExtractionForSummary(extraction: ExtractionResult): SummaryRollup {
+  return rollupExtraction(extraction);
+}
+
+// Exported for batched writers so they don't have to re-create the auth
+// client. Do NOT export `auth` directly — google.sheets(...) binds it once
+// and the caller shouldn't need to know that.
+export function getSheetsClient(): ReturnType<typeof google.sheets> {
+  return google.sheets({ version: "v4", auth });
+}
+
 function rollupExtraction(extraction: ExtractionResult): SummaryRollup {
   const nonFeeItems = extraction.line_items.filter((item) => !item.is_fee);
 
