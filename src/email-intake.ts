@@ -172,7 +172,7 @@ async function processAttachment(params: {
     throw err;
   }
 
-  storePhoto(sha256, mimeType, imageBytes);
+  await storePhoto(sha256, mimeType, imageBytes);
   const photoUrl = buildUploadPhotoUrl(sha256);
   const slackMessageTs = `${Date.now()}-${sha256.slice(0, 8)}`;
 
