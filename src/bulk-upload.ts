@@ -2,8 +2,8 @@
 // Slack file_share handler (classify → invoice or whiteboard → sheet write)
 // against files POSTed from the /review/upload page.
 //
-// Photos are held in a process-local Map with a 24h TTL and served through
-// the existing /review/photo proxy. photo_url is written to the sheet as
+// Photos are persisted via the shared photo-store (R2 when configured,
+// in-memory fallback otherwise). photo_url is written to the sheet as
 // `https://loadslip.upload/<hash>` so it round-trips through the same
 // slip-group logic as Slack uploads.
 //
@@ -35,56 +35,14 @@ import {
   ensureEodSheetHeader
 } from "./sheets.js";
 import type { Supplier } from "./types.js";
+import { storePhoto, buildUploadPhotoUrl, tryServeUploadedPhoto } from "./photo-store.js";
 
-// ── Photo store ────────────────────────────────────────────────────────────
-
-const UPLOAD_HOST = "loadslip.upload";
-const PHOTO_TTL_MS = 24 * 60 * 60 * 1000;
-
-interface StoredPhoto {
-  mimeType: string;
-  bytes: Buffer;
-  expiresAt: number;
-}
-
-const photoStore = new Map<string, StoredPhoto>();
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [hash, p] of photoStore.entries()) {
-    if (p.expiresAt < now) photoStore.delete(hash);
-  }
-}, 60 * 60 * 1000).unref();
+export { storePhoto, buildUploadPhotoUrl, tryServeUploadedPhoto };
 
 // Session-scoped dedupe: re-uploading the exact same file within one server
 // process returns the prior result instead of logging a second copy. Cleared
 // on restart, same shape as the Slack handler's `processedContentHashes`.
 const processedHashes = new Map<string, UploadedFileResult>();
-
-export function storePhoto(hash: string, mimeType: string, bytes: Buffer): void {
-  photoStore.set(hash, { mimeType, bytes, expiresAt: Date.now() + PHOTO_TTL_MS });
-}
-
-export function buildUploadPhotoUrl(hash: string): string {
-  return `https://${UPLOAD_HOST}/${hash}`;
-}
-
-export function tryServeUploadedPhoto(photoUrl: string, res: ServerResponse): boolean {
-  if (!photoUrl.startsWith(`https://${UPLOAD_HOST}/`)) return false;
-  const hash = photoUrl.slice(`https://${UPLOAD_HOST}/`.length);
-  const p = photoStore.get(hash);
-  if (!p) {
-    res.writeHead(410, { "Content-Type": "text/plain" });
-    res.end("Uploaded photo has expired (24h retention). Re-upload the slip if you need to review the source image.");
-    return true;
-  }
-  res.writeHead(200, {
-    "Content-Type": p.mimeType,
-    "Cache-Control": "private, max-age=3600"
-  });
-  res.end(p.bytes);
-  return true;
-}
 
 // ── Concurrency semaphore ──────────────────────────────────────────────────
 
@@ -323,7 +281,7 @@ async function processOne(input: UploadedFileInput): Promise<UploadedFileResult 
     throw err;
   }
 
-  storePhoto(contentHash, mimeType, imageBytes);
+  await storePhoto(contentHash, mimeType, imageBytes);
   const photoUrl = buildUploadPhotoUrl(contentHash);
   // Unique per-file: multiple uploads in the same ms still get distinct ts.
   const slackMessageTs = `${Date.now()}-${contentHash.slice(0, 8)}`;

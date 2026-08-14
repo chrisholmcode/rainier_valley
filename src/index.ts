@@ -1555,7 +1555,7 @@ async function handleReviewPhotoRequest(req: IncomingMessage, res: ServerRespons
   }
   // Web bulk-upload photos live in a process-local store, not Slack. Serve
   // them directly instead of trying to fetch as if they were Slack URLs.
-  if (tryServeUploadedPhoto(photoUrl, res)) return;
+  if (await tryServeUploadedPhoto(photoUrl, res)) return;
   try {
     const upstream = await axios.get<ArrayBuffer>(photoUrl, {
       responseType: "arraybuffer",

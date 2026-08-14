@@ -31,6 +31,13 @@ const EnvSchema = z.object({
   //   "@charlies-produce.com:10,@carusos.com:14"
   // Unset disables the heartbeat entirely.
   EMAIL_HEARTBEAT_VENDORS: z.string().optional(),
+  // R2 (Cloudflare object storage) for durable slip photos. All four must be
+  // set together. If unset, photos fall back to in-memory (24h TTL, wiped on
+  // container restart) — fine for dev, insufficient for multi-week audit.
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_ENDPOINT: z.string().url().optional(),
+  R2_BUCKET: z.string().min(1).optional(),
   // Public host used to build QR-code URLs on printed labels. Falls back to a
   // relative path in dev/local so testing still works.
   PUBLIC_BASE_URL: z.string().optional(),
