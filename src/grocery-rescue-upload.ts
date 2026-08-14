@@ -19,16 +19,46 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import * as XLSX from "xlsx";
 import { env } from "./config.js";
-import { RESCUE_CATEGORIES, normalizeRescueDonor } from "./extraction.js";
+import { RESCUE_CATEGORIES, normalizeRescueDonor, normalizeRescueSlip, ensureRescueSkeleton } from "./extraction.js";
 import {
-  appendExtractionRows,
-  appendSummaryRow,
+  SHEET_HEADERS,
+  SUMMARY_SHEET_HEADERS,
   ensureSheetHeader,
   ensureSummarySheetHeader,
   ensureCorrectionsLogHeader,
-  readDeliveryRows
+  readDeliveryRows,
+  rollupExtractionForSummary,
+  getSheetsClient
 } from "./sheets.js";
 import type { ExtractionResult } from "./types.js";
+
+function indexToColumnLetter(col0: number): string {
+  let n = col0;
+  let s = "";
+  do {
+    s = String.fromCharCode(65 + (n % 26)) + s;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return s;
+}
+
+// True for food subcategories, false for non_food, null for unknown.
+// Mirrors sheets.ts's private categoryIsFood — kept in sync manually
+// because the two callers are in different modules.
+function categoryIsFood(category: string | null | undefined): boolean | null {
+  switch (category) {
+    case "produce":
+    case "meat_protein":
+    case "dairy":
+    case "shelf_stable":
+    case "frozen":
+      return true;
+    case "non_food":
+      return false;
+    default:
+      return null;
+  }
+}
 
 const MAX_BODY_BYTES = 25 * 1024 * 1024;
 
@@ -395,7 +425,9 @@ export async function handleGroceryRescueUploadPreviewRequest(req: IncomingMessa
     res.end(JSON.stringify(response));
   } catch (err) {
     console.error("[grocery-rescue-upload] preview error:", err);
-    res.writeHead(500, { "Content-Type": "application/json" });
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+    }
     res.end(JSON.stringify({ ok: false, error: (err as Error).message }));
   }
 }
@@ -419,33 +451,106 @@ export async function handleGroceryRescueUploadCommitRequest(
   res: ServerResponse,
   uploadedBy: string
 ): Promise<void> {
-  let body: CommitBody;
   try {
-    body = await readJsonBody<CommitBody>(req);
+    let body: CommitBody;
+    try {
+      body = await readJsonBody<CommitBody>(req);
+    } catch (err) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: (err as Error).message }));
+      return;
+    }
+
+    if (!Array.isArray(body.rows) || body.rows.length === 0) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "rows must be a non-empty array" }));
+      return;
+    }
+
+    const results = await commitRescueRows(body.rows, uploadedBy);
+
+    const written = results.filter((r) => r.status === "written").length;
+    const duplicate = results.filter((r) => r.status === "duplicate").length;
+    const skipped = results.filter((r) => r.status === "skipped").length;
+    const errored = results.filter((r) => r.status === "error").length;
+    console.log(
+      `[grocery-rescue-upload] commit by=${uploadedBy} total=${results.length} written=${written} duplicate=${duplicate} skipped=${skipped} errored=${errored}`
+    );
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, results, written, duplicate, skipped, errored }));
   } catch (err) {
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: false, error: (err as Error).message }));
-    return;
+    console.error("[grocery-rescue-upload] commit handler crashed:", err);
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+    }
+    res.end(JSON.stringify({ ok: false, error: (err as Error).message ?? "internal error" }));
   }
+}
 
-  if (!Array.isArray(body.rows) || body.rows.length === 0) {
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: false, error: "rows must be a non-empty array" }));
-    return;
-  }
-
+// Single-pass batched writer: one read of Inbound Delivery Log + Inventory
+// Summary for dedupe, then one batched append per sheet. Total 4 Sheets API
+// calls regardless of row count — replaces the previous per-slip flow that
+// did ~4 calls per row and timed out at the Cloudflare edge.
+async function commitRescueRows(rawRows: ParsedRescueRow[], uploadedBy: string): Promise<CommitRowResult[]> {
   await ensureSheetHeader();
   await ensureSummarySheetHeader();
   await ensureCorrectionsLogHeader();
 
   const results: CommitRowResult[] = [];
-  const slackMessageTsBase = Date.now();
+  const sheets = getSheetsClient();
 
-  // Sequential — the write to Inbound Delivery Log is a Sheets append and
-  // parallelizing risks racing dedupe checks against each other for
-  // same-day rows.
-  for (let i = 0; i < body.rows.length; i++) {
-    const row = body.rows[i];
+  // 1) One read per sheet to build the in-memory dedupe index.
+  const deliveryLastCol = indexToColumnLetter(SHEET_HEADERS.length - 1);
+  const summaryLastCol = indexToColumnLetter(SUMMARY_SHEET_HEADERS.length - 1);
+  const [deliveryResp, summaryResp] = await Promise.all([
+    sheets.spreadsheets.values.get({
+      spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+      range: `${env.GOOGLE_WORKSHEET_NAME}!A:${deliveryLastCol}`
+    }),
+    sheets.spreadsheets.values.get({
+      spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+      range: `${env.SUMMARY_WORKSHEET_NAME}!A:${summaryLastCol}`
+    })
+  ]);
+
+  const dSupIdx = SHEET_HEADERS.indexOf("supplier");
+  const dInvIdx = SHEET_HEADERS.indexOf("invoice_or_order_number");
+  const dPhotoIdx = SHEET_HEADERS.indexOf("photo_url");
+  const deliveryInvoiceKeys = new Set<string>();
+  const deliveryPhotoUrls = new Set<string>();
+  for (const r of (deliveryResp.data.values ?? []).slice(1)) {
+    const sup = String(r[dSupIdx] ?? "");
+    const inv = String(r[dInvIdx] ?? "");
+    const photo = String(r[dPhotoIdx] ?? "");
+    if (sup && inv) deliveryInvoiceKeys.add(`${sup}::${inv}`);
+    if (photo) deliveryPhotoUrls.add(photo);
+  }
+
+  const sSupIdx = SUMMARY_SHEET_HEADERS.indexOf("supplier");
+  const sInvIdx = SUMMARY_SHEET_HEADERS.indexOf("invoice_or_order_number");
+  const sPhotoIdx = SUMMARY_SHEET_HEADERS.indexOf("photo_url");
+  const summaryInvoiceKeys = new Set<string>();
+  const summaryPhotoUrls = new Set<string>();
+  for (const r of (summaryResp.data.values ?? []).slice(1)) {
+    const sup = String(r[sSupIdx] ?? "");
+    const inv = String(r[sInvIdx] ?? "");
+    const photo = String(r[sPhotoIdx] ?? "");
+    if (sup && inv) summaryInvoiceKeys.add(`${sup}::${inv}`);
+    if (photo) summaryPhotoUrls.add(photo);
+  }
+
+  // 2) Build all delivery + summary row arrays; track duplicates + skips.
+  const slackMessageTsBase = Date.now();
+  const deliveryRowsToAppend: unknown[][] = [];
+  const summaryRowsToAppend: unknown[][] = [];
+  // Guards against a workbook containing the same (donor,date) on two rows
+  // — commit once, dedupe the second in-memory before hitting the sheet.
+  const seenInvoiceThisBatch = new Set<string>();
+  const seenPhotoThisBatch = new Set<string>();
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const row = rawRows[i];
     const commitId = `${row.monthTab}::${row.sourceRowNumber}`;
     if (!row.donorCanonical || !row.date || row.computedTotal <= 0) {
       results.push({
@@ -458,32 +563,51 @@ export async function handleGroceryRescueUploadCommitRequest(
 
     try {
       const extraction = buildRescueExtraction(row);
+      normalizeRescueSlip(extraction);
+      ensureRescueSkeleton(extraction);
+
       const photoUrl = photoUrlFor(row);
+      const invoiceKey = `${extraction.supplier}::${extraction.invoice_or_order_number ?? ""}`;
       const slackMessageTs = `${slackMessageTsBase}-${i}`;
 
-      const rowsAdded = await appendExtractionRows({
-        extraction,
-        photoUrl,
-        slackChannel: "grocery-rescue-upload",
-        slackMessageTs,
-        uploadedBy
-      });
-      if (rowsAdded > 0) {
-        await appendSummaryRow({ extraction, photoUrl });
-        results.push({
-          commitId, donorCanonical: row.donorCanonical, date: row.date,
-          ok: true, status: "written", rowsAdded,
-          message: `${Object.keys(row.categoryTotals).length} categor${Object.keys(row.categoryTotals).length === 1 ? "y" : "ies"} · ${row.computedTotal} lb`
-        });
-      } else {
+      const isDuplicate =
+        deliveryPhotoUrls.has(photoUrl) ||
+        deliveryInvoiceKeys.has(invoiceKey) ||
+        seenPhotoThisBatch.has(photoUrl) ||
+        seenInvoiceThisBatch.has(invoiceKey);
+
+      if (isDuplicate) {
         results.push({
           commitId, donorCanonical: row.donorCanonical, date: row.date,
           ok: true, status: "duplicate", rowsAdded: 0,
           message: "already in Inbound Delivery Log"
         });
+        continue;
       }
+
+      const deliveryRows = buildDeliveryRowsForExtraction({
+        extraction, photoUrl, slackMessageTs, uploadedBy
+      });
+      for (const dr of deliveryRows) deliveryRowsToAppend.push(dr);
+
+      const summaryAlreadyExists =
+        summaryPhotoUrls.has(photoUrl) || summaryInvoiceKeys.has(invoiceKey);
+      if (!summaryAlreadyExists) {
+        summaryRowsToAppend.push(buildSummaryRowForExtraction({ extraction, photoUrl }));
+        summaryPhotoUrls.add(photoUrl);
+        summaryInvoiceKeys.add(invoiceKey);
+      }
+
+      seenPhotoThisBatch.add(photoUrl);
+      seenInvoiceThisBatch.add(invoiceKey);
+
+      results.push({
+        commitId, donorCanonical: row.donorCanonical, date: row.date,
+        ok: true, status: "written", rowsAdded: deliveryRows.length,
+        message: `${Object.keys(row.categoryTotals).length} categor${Object.keys(row.categoryTotals).length === 1 ? "y" : "ies"} · ${row.computedTotal} lb`
+      });
     } catch (err) {
-      console.error(`[grocery-rescue-upload] commit failed for ${commitId}:`, err);
+      console.error(`[grocery-rescue-upload] build failed for ${commitId}:`, err);
       results.push({
         commitId, donorCanonical: row.donorCanonical, date: row.date,
         ok: false, status: "error", rowsAdded: 0,
@@ -492,16 +616,126 @@ export async function handleGroceryRescueUploadCommitRequest(
     }
   }
 
-  const written = results.filter((r) => r.status === "written").length;
-  const duplicate = results.filter((r) => r.status === "duplicate").length;
-  const skipped = results.filter((r) => r.status === "skipped").length;
-  const errored = results.filter((r) => r.status === "error").length;
-  console.log(
-    `[grocery-rescue-upload] commit by=${uploadedBy} total=${results.length} written=${written} duplicate=${duplicate} skipped=${skipped} errored=${errored}`
-  );
+  // 3) Two batched appends. If either fails, mark every "written" row as
+  // errored — nothing landed, and lying about it is worse than a scary error.
+  try {
+    if (deliveryRowsToAppend.length > 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+        range: `${env.GOOGLE_WORKSHEET_NAME}!A:${deliveryLastCol}`,
+        valueInputOption: "RAW",
+        requestBody: { values: deliveryRowsToAppend }
+      });
+    }
+    if (summaryRowsToAppend.length > 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+        range: `${env.SUMMARY_WORKSHEET_NAME}!A:${summaryLastCol}`,
+        valueInputOption: "RAW",
+        requestBody: { values: summaryRowsToAppend }
+      });
+    }
+  } catch (err) {
+    console.error("[grocery-rescue-upload] batched append failed:", err);
+    for (const r of results) {
+      if (r.status === "written") {
+        r.status = "error";
+        r.ok = false;
+        r.rowsAdded = 0;
+        r.message = `Sheets append failed: ${(err as Error).message}`;
+      }
+    }
+  }
 
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ ok: true, results, written, duplicate, skipped, errored }));
+  return results;
+}
+
+// ── Row builders (kept in this module so the sheets.ts write path stays
+//    the single owner of appendExtractionRows / appendSummaryRow) ─────────
+
+interface BuildRowsCtx {
+  extraction: ExtractionResult;
+  photoUrl: string;
+  slackMessageTs: string;
+  uploadedBy: string;
+}
+
+// Builds the SHEET_HEADERS-shaped rows for one grocery-rescue slip.
+// Auto-approves if min line-item confidence meets REVIEW_CONFIDENCE_THRESHOLD
+// — matches appendExtractionRows's behavior so bulk-uploaded rescue slips
+// don't all pile into the review queue.
+function buildDeliveryRowsForExtraction(ctx: BuildRowsCtx): unknown[][] {
+  const { extraction, photoUrl, slackMessageTs, uploadedBy } = ctx;
+
+  const lineConfidences = extraction.line_items
+    .map((li) => li.confidence)
+    .filter((c): c is number => typeof c === "number" && Number.isFinite(c));
+  const minConfidence = lineConfidences.length ? Math.min(...lineConfidences) : null;
+  const autoApprove = minConfidence !== null && minConfidence >= env.REVIEW_CONFIDENCE_THRESHOLD;
+  const approvedAt = autoApprove ? new Date().toISOString() : null;
+  const approvedBy = autoApprove ? "auto-approved" : null;
+  const createdAt = new Date().toISOString();
+  const warningsJson = JSON.stringify(extraction.source_warnings);
+
+  const rowFromRecord = (rec: Record<string, unknown>): unknown[] =>
+    SHEET_HEADERS.map((h) => (h in rec ? rec[h] : null));
+
+  const rows: unknown[][] = extraction.line_items.map((item) => rowFromRecord({
+    created_at: createdAt,
+    supplier: extraction.supplier,
+    document_type: extraction.document_type,
+    invoice_date: extraction.invoice_date,
+    delivery_date: extraction.delivery_date,
+    invoice_or_order_number: extraction.invoice_or_order_number,
+    destination_org: extraction.destination_org,
+    item_code_raw: item.item_code_raw,
+    item_name_raw: item.item_name_raw,
+    item_name_normalized: item.item_name_normalized,
+    quantity_ordered: item.quantity_ordered,
+    quantity: item.quantity,
+    quantity_raw: item.quantity_raw,
+    unit: item.unit,
+    pack_size_raw: item.pack_size_raw,
+    approx_weight: item.approx_weight,
+    category: item.category,
+    unit_cost: item.unit_cost,
+    line_total: item.line_total,
+    confidence: item.confidence,
+    is_fee: item.is_fee,
+    notes: item.notes,
+    photo_url: photoUrl,
+    slack_channel: "grocery-rescue-upload",
+    slack_message_ts: slackMessageTs,
+    uploaded_by: uploadedBy,
+    warnings_json: warningsJson,
+    donor_org: extraction.donor_org,
+    is_donation: extraction.is_donation,
+    approved_at: approvedAt,
+    approved_by: approvedBy,
+    is_food: categoryIsFood(item.category)
+  }));
+
+  return rows;
+}
+
+function buildSummaryRowForExtraction(ctx: { extraction: ExtractionResult; photoUrl: string }): unknown[] {
+  const { extraction, photoUrl } = ctx;
+  const rollup = rollupExtractionForSummary(extraction);
+  const rec: Record<string, unknown> = {
+    created_at: new Date().toISOString(),
+    invoice_date: extraction.invoice_date,
+    delivery_date: extraction.delivery_date,
+    supplier: extraction.supplier,
+    weight_lb: rollup.weight_lb,
+    unit: "lb",
+    invoice_or_order_number: extraction.invoice_or_order_number,
+    food_type: rollup.food_type,
+    is_food: rollup.is_food,
+    cost: rollup.cost,
+    donation: rollup.donation,
+    photo_url: photoUrl
+  };
+  return SUMMARY_SHEET_HEADERS.map((h) => (h in rec ? rec[h] : null));
 }
 
 export async function handleGroceryRescueUploadPageRequest(res: ServerResponse): Promise<void> {
@@ -750,7 +984,10 @@ async function commitSelected() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rows })
     });
-    const body = await res.json();
+    const text = await res.text();
+    let body;
+    try { body = JSON.parse(text); }
+    catch { throw new Error('Server returned non-JSON (HTTP ' + res.status + '). First 200 chars: ' + text.slice(0, 200)); }
     if (!body.ok) throw new Error(body.error || 'commit failed');
     summary.innerHTML =
       '<strong>Done.</strong> ' + body.written + ' written · ' + body.duplicate + ' duplicate · ' + body.skipped + ' skipped · ' + body.errored + ' error(s).';
