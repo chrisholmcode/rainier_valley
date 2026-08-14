@@ -105,7 +105,13 @@ function toBase64(bytes: ArrayBuffer | Uint8Array): string {
 const REQUEST_TIMEOUT_MS = 150_000;
 
 async function postWithRetry(url: string, body: string, signature: string): Promise<Response> {
-  const backoffsMs = [0, 2000, 6000];
+  // Backoffs are long between attempts because the most common non-2xx we see
+  // is CF edge 524 — the request is probably still processing on Railway
+  // (extraction can take 60-90s on a fresh Costco PDF). Sleeping ~60s before
+  // retry gives the original request time to finish and populates the
+  // Message-ID dedup cache, so the retry returns 200 in <1s instead of
+  // re-triggering the full extraction.
+  const backoffsMs = [0, 60_000, 120_000];
   let lastResp: Response | null = null;
   let lastErr: Error | null = null;
 
