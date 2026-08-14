@@ -66,6 +66,11 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
 
+> **Digit-count & superseded-entry caution — grocery rescue quantities are frequently under-read.**
+> (a) **Leading-digit check:** grocery-rescue Pounds values are commonly 3 digits (100–600 lb). If your reading is a suspiciously small 2-digit number (e.g. "45", "50") but the ink to its left shows any additional stroke, re-read for a dropped leading digit ("145" not "45"). When a leading digit is faint but present, PREFER the larger multi-digit reading, set confidence ≤ 0.6, and record both in `quantity_raw`.
+> (b) **Last-digit check:** re-read the final digit of the accepted value carefully (e.g. "51" vs "50") before emitting; a single transposed unit digit is a top correction.
+> (c) **Superseded-entry check:** if the only number you can attribute to a row is itself crossed out, overwritten, or clearly an earlier/abandoned tally entry with NO surviving clean final value, that row's Pounds cell is effectively empty — set `approx_weight = null`, `quantity = null`, `quantity_raw = null`, note "only superseded/crossed-out entries present — no final value", confidence 0.7. Do NOT emit a crossed-out tally fragment as the row's quantity.
+
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
 1. **Single clean number** (e.g., "183") => approx_weight = 183.
