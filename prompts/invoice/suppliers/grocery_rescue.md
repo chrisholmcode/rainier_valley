@@ -42,7 +42,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
-  - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
+  - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy"). **Do NOT recite the canonical 10-row order from memory. Read the row label physically printed on THIS row of the image, then map it to the matching predefined category; the Pounds value you attach to this row MUST come from the same physical row you read the label from. Before finalizing, walk the table top-to-bottom once and confirm each emitted label lines up with the row printed at that position — the predefined table order is the *expected* order, but if the slip's visible labels don't match that order (a row is skipped, merged, reordered, or misread), trust the image, keep label and its Pounds value on the same physical row, and add a source_warning `"row order/label mismatch — verify item_name_normalized against slip rows"`. A common failure is shifting labels by one row (e.g., emitting "Frozen Foods" on the row that actually reads "Meat"); explicitly guard against this off-by-one drift.**
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
