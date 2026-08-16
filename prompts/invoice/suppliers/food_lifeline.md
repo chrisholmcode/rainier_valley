@@ -10,7 +10,9 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
   - Suffix `-TEFA` => TEFAP federal commodity (USDA). Note in line `notes`: "funding: TEFAP".
   - Suffix `-CITY` => City Fund donation. Note in line `notes`: "funding: CITY".
   - Other suffixes (e.g., `-EFAP`, `-CSFP`) => capture the suffix into notes verbatim.
-- Description => item_name_raw verbatim. When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
+- Description => item_name_raw verbatim.
+- item_name_raw MUST come from the Description cell of a line-item row ONLY. Do NOT copy a category/section banner (e.g., "Bakery", "Canned/Dry Goods", "Produce", "Meat") into item_name_raw — these are grouping headers, not items. If a row's Description cell is genuinely empty, leave item_name_raw blank rather than substituting the nearest header.
+- Copy the Description text EXACTLY and in full — never abbreviate or truncate a compound/multi-word label. If the cell reads "Canned/Dry Goods", write "Canned/Dry Goods", not "Canned". When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
 - delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
