@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Per-row anchoring — the value MUST come from that row's own Pounds cell.** Before writing `approx_weight` for a row, trace horizontally from that exact row label to its Pounds cell and confirm the number is physically inside that row. Do NOT carry a value down from the row above or up from the row below to satisfy the "emit all 10 rows" / "never leave blank" rules. If a row's own Pounds cell has no writing, it is a blank skeleton row — set `approx_weight = null` even though other rows are filled. Never duplicate one row's weight onto an adjacent row.
+>
+> **Dropped-leading-digit sanity check.** Grocery-rescue weights are almost always 2–3 digits, and pallet/bin rows commonly run 100+ lb. If your reading is an implausibly small value (e.g., a single- or low-double-digit number like "45" or "50" for a full category row), re-examine the left edge of the cell for a leading digit you may have clipped ("45" is often "145"; "50" is often "150" or a "51" with a smudged unit digit). When the cell width or ink suggests more digits than you read, prefer the larger reading, record both in `quantity_raw`, and lower confidence to ≤ 0.6.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
