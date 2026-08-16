@@ -22,5 +22,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). CHECK THIS FIRST, BEFORE extracting any fields. Decisive triggers, ANY of which mean this is `grocery_rescue`, not `food_lifeline`: (a) the document is hand-filled / handwritten rather than a printed manifest; (b) it has a column headed **Pounds** (as opposed to the printed manifest's `Quantity` + `Gross Weight` columns); (c) it shows Donor / Address / Agency / Date fields; (d) it lacks the printed "Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight" column layout. If reclassified, the **Pounds** value is that supplier's `quantity_raw` — do NOT extract it here and do NOT leave `quantity_raw` blank on this prompt. A blank `quantity_raw` on a slip with a Pounds column means this document was mis-routed and must be handled under `grocery_rescue`.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
