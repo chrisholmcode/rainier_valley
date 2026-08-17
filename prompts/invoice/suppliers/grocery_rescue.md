@@ -74,7 +74,12 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+If you cannot resolve which pattern applies, do NOT default to the largest or the last number as a rule of thumb. Instead transcribe every number verbatim into `quantity_raw`, set approx_weight/quantity to your single best literal reading of the intended final value, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity so a reviewer can correct it.
+
+> **High-frequency correction cautions on this supplier's Pounds cells — check each before finalizing a row:**
+> - **Do not drop a leading digit.** A cell that looks like "45" may actually be "145" (or "56" partly obscured). If a leading stroke/digit is faint or clipped at the cell edge, read the full number, note both readings in `quantity_raw`, and lower confidence — do not silently emit the shorter number.
+> - **Adjacent tally values can differ by 1** (e.g., "50" vs "51"). Read the digit actually written rather than rounding or picking a "nicer" number; if the last digit is ambiguous, record what you see and flag it.
+> - **A faint, stray, or ambiguous mark that does not clearly form a number is NOT a value.** In that case leave approx_weight = quantity = quantity_raw = null with notes = "no clear value on form" — do NOT invent a number to satisfy the "always extract" rule. Only extract when a numeral is genuinely legible.
 
 ### Totals and fees on grocery rescue forms
 
