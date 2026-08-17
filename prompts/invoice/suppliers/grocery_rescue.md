@@ -39,6 +39,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Non-Meat Protein (eggs, tofu) | dairy | Eggs/tofu — best fit is dairy |
   | Prepared/Perishable | produce | |
   | Produce | produce | |
+- **Row-alignment anchoring (prevents off-by-one category shift).** Assign each Pounds value to the printed row label sitting DIRECTLY on its own line — never by counting ordinal position. Handwritten weights often drift up or down between the pre-printed label lines; do NOT let a value attach to the label above or below it. Before finalizing, run this self-check: read the labels top-to-bottom against your extracted weights and confirm each weight lands on the row whose printed label it physically shares a line with. **Warning sign of a one-row shift:** if your categories look "bumped" (e.g., a weight you'd expect on Dairy landed on Frozen, Frozen on Meat, shelf_stable rows on Dairy), you have transposed the whole column by one row — re-anchor every value to its adjacent label and re-derive category strictly from the fixed table above. category comes ONLY from the printed row label, never inferred from the goods themselves.
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
