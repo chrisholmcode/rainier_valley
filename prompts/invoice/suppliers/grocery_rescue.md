@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Leading-digit check (do this for the number you finally choose):** transcribe the chosen number digit-by-digit, left to right, and count its digit positions. Dropped leading digits are the #1 correction on this supplier — e.g. a cell reading "145" is often mis-read as "45", and "156" as "56". If the number spans the full width of the cell but you only read two digits, re-examine for a faint or partially-cut leading digit before committing, and reflect any doubt in `quantity_raw` + confidence ≤ 0.6.
+>
+> **Row-attribution check (prevents phantom values on blank rows):** only emit a quantity for a row when a number physically sits inside THAT row's Pounds cell. A number belonging to an adjacent row, a carried-over/running total spilling across row lines, or ambiguous marginalia is NOT this row's value — treat this row as blank (approx_weight = quantity = quantity_raw = null, notes = "no value on form") instead of inventing a value. **Never copy a number you read on one row onto another row.** The "always emit all 10 rows / extract if legible" guidance does not authorize placing a borrowed or guessed number in a cell that is actually empty.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
