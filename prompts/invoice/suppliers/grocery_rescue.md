@@ -43,6 +43,8 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
+  - **Anchor the label to the physical row, not to the canonical order.** `item_name_raw`/`item_name_normalized` MUST come from the Product/Description text actually printed on the line whose Pounds cell you are reading — do NOT recite the 10-row list from this prompt and staple weights onto it positionally. The predefined rows are printed in the order above, but before you assign a weight, confirm the label to its LEFT on that same row matches. If a row appears skipped, misread, or out of expected order, do NOT let it shift every subsequent label by one — re-scan and align each Pounds value to the label physically on its row.
+  - **Off-by-one self-check:** after filling all 10 rows, verify each weight sits next to the label you actually see on that line. If you find you assigned "Frozen Foods" to a row that reads "Meat" (or any neighbor-shifted label), you have an alignment error — realign and lower confidence, adding a `source_warning`: `"row/label alignment uncertain — please verify each Pounds value against its printed row"`.
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
