@@ -76,6 +76,10 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
+> **Read the WHOLE number — check the leading digit.** Before finalizing, re-count the digits you extracted against the digits in the cell. A very common miss on this supplier is dropping a leading digit (reading "145" as "45", "156" as "56") or under-reading a numeral by one (e.g. "51" as "50"). If a leading "1" could be present, or if two adjacent readings differ only in the first/last digit, prefer the fuller reading, put both interpretations in `quantity_raw`, lower confidence to ≤ 0.6, and add a `source_warning`: `"pounds value digit count uncertain: read as <your reading>, may be <alternate> — please verify against slip"`.
+>
+> **Do NOT manufacture a weight from scratch marks.** The "never leave approx_weight blank" rule applies only to a genuinely *accepted* count. If every numeral in the cell is crossed out, scribbled over, tentative scratch-counting with no clean/circled final value, or otherwise does not resolve to an accepted weight, set `approx_weight = null`, `quantity = null`, keep the raw marks in `quantity_raw`, set confidence ≤ 0.6, and add a `source_warning`: `"pounds cell has writing but no clear final value — left blank for reviewer"`. Emitting a phantom number (e.g. a crossed-out "51") is worse than leaving it for review.
+
 ### Totals and fees on grocery rescue forms
 
 - subtotal = null, tax = null, grand_total = null. The "Total:" box in the lower-right is usually blank — leave totals null unless a number is clearly written.
