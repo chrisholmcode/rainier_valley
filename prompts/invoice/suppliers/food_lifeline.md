@@ -14,6 +14,9 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
 - delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
+  - Read the **month digit(s) directly off the printed Ship Date**; do NOT infer or round the month. On these slips a printed "7" is easily misread as "8" — zoom in and confirm the month before emitting it.
+  - The output month MUST be a valid two-digit month "01"–"12" and the day a valid two-digit day. Never emit a malformed month such as "0" or a single digit (e.g., `2026-0-07` is invalid); write `2026-07-07`.
+  - Sanity check: the Ship Date should be consistent with any date visible elsewhere on the document/image. If the manifest clearly shows July, the month is `07`, not `08`.
 - invoice_or_order_number: Use the **Agency Order No** value in the upper-right (e.g., "ACR-XXXXXX").
 - destination_org: Use the **Sold To** name (typically "Rainier Valley Food Bank").
 - Totals: subtotal = 0, tax = 0, grand_total = 0. Preserve the printed zeros.
