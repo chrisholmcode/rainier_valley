@@ -3,6 +3,8 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 ## Subtype: AGENCY ORDER (printed manifest)
 
 - "FOOD LIFELINE" logo upper-left, "AGENCY ORDER" header upper-right.
+- ROUTING GUARD (check FIRST): This supplier applies ONLY to the printed AGENCY ORDER manifest that has a machine-printed **Gross Weight** column. If the document instead has a handwritten **Pounds** column (with Donor / Address / Agency / Date fields), it is NOT food_lifeline — set `supplier = "grocery_rescue"` and stop using this prompt. Do NOT read weight from a handwritten Pounds column here.
+- WEIGHT SOURCE (this supplier only): `approx_weight` may ONLY be populated from the printed **Gross Weight** column. If there is no printed Gross Weight column, leave `approx_weight` blank — never infer or transcribe a handwritten pounds value into it.
 - Printed line items in columns. No money changes hands; all dollar totals are $0.
 - document_type = "manifest". supplier = "food_lifeline". donor_org = null. is_donation = true.
 - Columns: Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight.
