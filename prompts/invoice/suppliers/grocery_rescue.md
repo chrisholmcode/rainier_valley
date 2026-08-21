@@ -76,6 +76,10 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
+> **Leading-digit & superseded-value guard (high-correction area on busy cells):**
+> - **Do not drop a leading digit.** After picking the final value, re-scan the cell left-to-right and confirm the number of digits you emitted matches the number of digits actually written for that entry. Grocery rescue weights are commonly 3 digits (100–199); if you read a 2-digit value (e.g. "45", "50") in a cell that plausibly shows a leading "1", emit the 3-digit reading (e.g. "145"), and if unsure report both in `quantity_raw`, set confidence ≤ 0.6, and add a source_warning `"leading digit uncertain: read as <X>, may be <1X>"`.
+> - **A crossed-out or fully-superseded value is NOT a final value.** If EVERY numeral in the cell is struck through / crossed out (no clean surviving number), the row has no accepted weight: set approx_weight = null, quantity = null, still copy the crossed-out digits into quantity_raw, notes = "all values crossed out — no final weight; needs reviewer", confidence ≤ 0.6. The "never leave quantity blank" rule applies only when a *surviving, non-struck* numeral is legible — do NOT promote a crossed-out number to the final quantity just to avoid a blank.
+
 ### Totals and fees on grocery rescue forms
 
 - subtotal = null, tax = null, grand_total = null. The "Total:" box in the lower-right is usually blank — leave totals null unless a number is clearly written.
