@@ -19,6 +19,7 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - Totals: subtotal = 0, tax = 0, grand_total = 0. Preserve the printed zeros.
 - fees[] = [].
 - Ignore handwritten storage allocations (e.g., "F-1", "C-3", "D-1") and receipt checkmarks.
+- If this document has a **Pounds** column (handwritten grocery-rescue layout), the number in the Pounds column IS the line `quantity` (e.g., Pounds "16" => quantity = 16), and `unit` = "lb". Never leave `quantity` blank when a Pounds value is legible. (Routing note: such handwritten Donor/Address/Agency/Date slips should be handled by `supplier = "grocery_rescue"`; apply this pounds→quantity mapping there as well.)
 
 ## Not this supplier
 
