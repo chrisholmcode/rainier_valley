@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Leading-digit caution (equally important):** do NOT DROP a legible leading digit — "145" is not "45", "151" is not "51". Before committing a value, count the digits you actually see in the cell and make sure your `approx_weight` has the same digit count. If a leading digit is faint, cut off at the cell edge, or overlaps a gridline, that is an ambiguous read: emit your best full-length reading, set confidence ≤ 0.6, and add a `source_warning: "Pounds digit count uncertain — read as <value>, verify leading digit against slip"`.
+>
+> **Do not invent or borrow values.** The "REQUIRED / never leave blank" rules apply ONLY to a cell that genuinely contains legible writing. If a Pounds cell is empty, or the only numeral you see plausibly belongs to an adjacent row (e.g. a value drifting across the row line), do NOT copy a value in to satisfy the "always extract" rule — follow the empty-cell rule (`approx_weight = null`, notes "no value on form") or, if attribution is unclear, emit your best reading with confidence ≤ 0.6 and a `source_warning: "Pounds value may belong to adjacent row — verify"`. It is better to flag one cell for review than to fabricate a weight or attach it to the wrong category.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
