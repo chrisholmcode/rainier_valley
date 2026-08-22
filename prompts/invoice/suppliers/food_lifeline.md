@@ -22,5 +22,6 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). Tell-tale sign: the "line items" are printed **category labels** (e.g., "Bakery", "Produce", "Canned/Dry Goods", "Meat/Protein", "Dairy") each with a blank Pounds cell to hand-fill — NOT product Descriptions with Item No. codes. If you see these category labels, this is `grocery_rescue`; do not extract them here.
+  - If (and only if) you nonetheless populate `item_name_raw` from such a category row, copy the FULL label verbatim including any slash-joined form ("Canned/Dry Goods", not "Canned"), and leave `item_name_raw` **blank** for any category row whose Pounds/Quantity cell is empty (no line item was recorded).
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
