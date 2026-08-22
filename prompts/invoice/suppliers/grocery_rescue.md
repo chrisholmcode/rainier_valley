@@ -66,6 +66,11 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
 
+> **Before choosing approx_weight, run this 3-step check (these are the most-corrected cells on this supplier):**
+> 1. **Enumerate & mark crossouts.** List every discrete number in the cell in `quantity_raw`, and explicitly note which are struck through / overwritten. A crossed-out or superseded number is NEVER the answer — if the "last written" number is itself crossed out, do not take it (this causes false values like emitting an intermediate "51" that a reviewer then deletes).
+> 2. **Leading-digit sanity.** If your reading is a 2-digit number that looks small or oddly out of range for a grocery pickup (and other rows are 3-digit), re-examine for a dropped leading digit — e.g. "145" misread as "45". Prefer the fuller reading and lower confidence ≤ 0.6 with a source_warning if unsure.
+> 3. **Sum vs. last-value.** Only take the LAST number (Rule 5) when the numbers are clearly a running tally in one column; if they are stacked separate weighings (Rule 4), SUM them. If you cannot tell whether a trailing number is a real final value or a crossed-out intermediate, report both in quantity_raw, set confidence ≤ 0.6, and add a source_warning rather than guessing.
+
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
 1. **Single clean number** (e.g., "183") => approx_weight = 183.
