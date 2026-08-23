@@ -40,6 +40,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Prepared/Perishable | produce | |
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
+- **Row-label alignment (do NOT template-fill from memory):** The label list above is the *expected* set of rows, but you MUST read each row's `item_name_raw` from the label physically printed/written on that row of THIS slip — never paste labels from the table above in fixed order. Before assigning any Pounds value, locate the row whose printed label sits on the same horizontal line as that value, and attach the weight to THAT label. If the slip's rows are in a different order, are missing, or a weight is ambiguous about which row it belongs to, follow the slip — not the canonical order. If a row you emit does not visually correspond to a label on the slip, set its weight fields null (blank-row rules) rather than guessing. When the slip's row order or label wording differs from the table above, add a source_warning `"row order/label differs from standard form — verify item_name_raw↔weight alignment"`.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
