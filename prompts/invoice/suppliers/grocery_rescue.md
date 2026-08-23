@@ -74,7 +74,11 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+**Digit-count re-read (leading-digit drops are a top correction on this supplier).** Before finalizing any 2-digit weight, explicitly check whether a leading digit may have been missed: grocery-rescue rows are frequently three-digit weights (100–199). If a cell could plausibly read as either "45" or "145" (a small leading "1", a tick, or ink that runs off the left edge of the cell), prefer the three-digit reading, set confidence ≤ 0.6, and add a source_warning `"pounds leading digit uncertain: read as <your reading> — verify against slip"`. Never emit a 2-digit value when a leading "1" is plausibly present.
+
+**Do NOT invent a quantity on a marginal cell.** If the only writing in a Pounds cell is a stray mark, a single ambiguous digit, or a number that appears to bleed over from an adjacent row/column, do NOT confidently emit it as this row's quantity. Emit your best reading with confidence ≤ 0.6 AND a source_warning `"pounds cell marginal/possibly stray — verify or clear: read as <value>"` so a reviewer can either confirm the number or blank the row. When genuinely unsure between "a real value" and "no value," lean toward flagging rather than guessing.
+
+If you cannot resolve which tally pattern applies, take the LAST clearly-written number (per pattern 5), set confidence ≤ 0.6, and add a source_warning explaining the ambiguity — do NOT default to the largest number, as that systematically over- or mis-reads adjustments.
 
 ### Totals and fees on grocery rescue forms
 
