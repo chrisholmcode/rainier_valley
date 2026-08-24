@@ -41,7 +41,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
 - Common fields for every row:
-  - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
+  - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy"). **Read this from the label physically printed on THAT row of the slip — do NOT recite it from the ordered list from memory.** The 10 rows are a fixed skeleton, but a blank row, a skipped line, or the hatched temp columns can make you drift by one row. Before emitting each line, anchor on the actual printed label next to the Pounds value you are transcribing and confirm it matches; if the printed label and its position in the fixed order disagree, trust the printed label. Never pair a Pounds value with the label from a neighboring (off-by-one) row.
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
   - category = per the table above.
