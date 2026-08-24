@@ -1,4 +1,4 @@
-Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled grocery rescue slips are now a separate supplier (`grocery_rescue`) — if this document is the handwritten Donor / Address / Agency / Date form with a Pounds column, set `supplier = "grocery_rescue"` and follow that supplier's prompt instead.
+Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled grocery rescue slips are now a separate supplier (`grocery_rescue`) — if this document is the handwritten Donor / Address / Agency / Date form with a Pounds column, set `supplier = "grocery_rescue"` and follow that supplier's prompt instead. FALLBACK: if such a handwritten slip is nonetheless processed under this supplier, do NOT leave `quantity_raw` blank — read the handwritten number in the **Pounds** column verbatim into `quantity_raw` (e.g., a slip showing "24" in the Pounds column => `quantity_raw = 24`). The Pounds column is the source for `quantity_raw` on these handwritten slips (this differs from the printed AGENCY ORDER, where the Quantity column maps to quantity).
 
 ## Subtype: AGENCY ORDER (printed manifest)
 
