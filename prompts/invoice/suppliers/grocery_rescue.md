@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Digit-count check (leading digits):** After reading each number, re-count its digits against the visible ink width. Grocery rescue pounds are frequently 3-digit values (100–300 lb); a suspiciously small reading (e.g., "45", "50") next to a wide ink mark likely dropped a leading digit ("145", "150"). If the digit count is uncertain, emit your best reading, set confidence ≤ 0.6, put every candidate in `quantity_raw`, and add a `source_warning`: `"pounds digit-count unclear: read as <value>, may have leading digit — verify against slip"`.
+>
+> **Do NOT invent a value on an empty/void cell:** Only extract a number if it is clearly a Pounds entry for THAT row. Do NOT promote stray marks, temp-column ink bleeding across the column line, or a fully crossed-out/voided value into `quantity`. If the cell has only faint stray marks or the sole number is struck through with nothing remaining, treat it as empty (`approx_weight = null, quantity = null, quantity_raw = null`, notes = "no clear value on form"), rather than emitting a phantom number.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
