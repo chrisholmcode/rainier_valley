@@ -65,6 +65,11 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Per-cell verification checklist (run for EVERY row before finalizing `approx_weight`/`quantity`):**
+> 1. **Full-number re-read (no dropped leading digit):** re-read the chosen number's contiguous digit run left-to-right and confirm you captured every digit. A cropped photo or a digit near the cell edge can hide a leading digit — if the value looks implausibly small for a grocery-rescue pickup, suspect a dropped leading digit (e.g., "45" that is really "145") and re-examine.
+> 2. **Row-to-cell alignment:** confirm the number you are reading is horizontally aligned with THIS row's label. Do NOT pull a value from an adjacent row, a stray tally mark, or the margin. **If this specific row's Pounds cell contains no writing, emit `approx_weight = quantity = quantity_raw = null` even when numbers are visible in nearby rows.**
+> 3. **Ambiguous trailing digit:** if the last digit could be read two ways (e.g., "50" vs "51", smudged/overwritten), do NOT guess silently — emit your best reading, set confidence ≤ 0.7, and add a `source_warning`: `"pounds trailing digit unclear: read as <value> — please verify against slip"`.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
