@@ -22,5 +22,8 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
+- **ROUTING GUARD (check FIRST, before extracting any weight).** The Food Lifeline logo appears on BOTH the printed AGENCY ORDER manifest AND the handwritten grocery-rescue slip — do NOT decide the supplier from the logo. Decide from the layout:
+  - If the document has a printed line-item table with a column literally headed **"Gross Weight"** → this is `food_lifeline`; use Gross Weight for approx_weight as described above.
+  - If the document is handwritten and has a column headed **"Pounds"** (per-category, e.g. next to Produce/Meat/Bakery rows) → this is NOT `food_lifeline`. Set `supplier = "grocery_rescue"`, STOP using this prompt, and do not emit any `approx_weight` under food_lifeline. `food_lifeline` has NO field labeled "Pounds"; a "pounds→approx_weight" field means you are on the wrong supplier.
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
