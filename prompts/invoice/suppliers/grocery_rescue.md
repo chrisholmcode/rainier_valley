@@ -65,6 +65,11 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Leading-digit and magnitude caution (grocery_rescue handwriting is messy).**
+> - Do NOT drop a faint or partially-formed leading digit. A hundreds-range value can look like a tens value when the first digit is light (e.g., "145" misread as "45", "151" misread as "51"). Before committing, ask whether a leading "1" (or other digit) may be present. If the leading digit is uncertain, report both readings in `quantity_raw`, set confidence ≤ 0.6, and add a `source_warning`: `"approx_weight leading digit unclear: read as <value> but may be <alt> — please verify against slip"`.
+> - Do NOT emit a value into a cell that is effectively empty or whose numeral actually belongs to an adjacent row/column. If you are not confident the numeral sits in THIS row's Pounds cell, set approx_weight/quantity/quantity_raw = null, confidence ≤ 0.6, and add a `source_warning`: `"Pounds cell ambiguous/possibly blank — please verify"` rather than guessing.
+> - When magnitude is genuinely ambiguous, prefer flagging for review over the "pick the larger value" shortcut — a wrong confident number costs more than a review.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
