@@ -43,6 +43,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
+  - **Anchor each label to the row you actually read — never shift.** item_name_raw / item_name_normalized MUST come from the printed label physically on the SAME line as the Pounds value you extract for that row. The predefined 10-row ordering is a completeness checklist ONLY — do not assign a label from the template order if the label you actually read on that line is different. Because these categories are consecutive on the form (…Dairy/Juice/Alt. Dairy → Frozen Foods → Meat…), a single skipped or misread row causes every label below it to slide by one; guard against this by re-reading the printed row label next to each Pounds cell and matching it, not by counting position. If the label you read and its expected position disagree, trust the label you read, keep the Pounds value with THAT label, and lower confidence to ≤ 0.7.
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
