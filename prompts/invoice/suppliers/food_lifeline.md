@@ -1,5 +1,7 @@
 Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled grocery rescue slips are now a separate supplier (`grocery_rescue`) — if this document is the handwritten Donor / Address / Agency / Date form with a Pounds column, set `supplier = "grocery_rescue"` and follow that supplier's prompt instead.
 
+ROUTING GATE (check FIRST): If the document has a **handwritten Pounds column** (values like 24, 16, 170 written by hand, and NO printed "Quantity" / "Cubic Feet" / "Unit Fee" columns), STOP — this is `grocery_rescue`, not food_lifeline. Set `supplier = "grocery_rescue"` and follow that prompt. In grocery_rescue, each handwritten Pounds figure is that line's `quantity_raw` (the numeric pounds, captured verbatim) and must NEVER be left blank. Only continue with the food_lifeline AGENCY ORDER manifest rules below if you actually see the PRINTED column layout (Item No. | Description | Unit | Quantity | Cubic Feet | Unit Fee | Total Fee | Gross Weight).
+
 ## Subtype: AGENCY ORDER (printed manifest)
 
 - "FOOD LIFELINE" logo upper-left, "AGENCY ORDER" header upper-right.
