@@ -22,5 +22,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 
 ## Not this supplier
 
-- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+- Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt). If for any reason you do NOT reroute (e.g., the form's identity is ambiguous or a Pounds value is present but no `grocery_rescue` routing fires), you MUST still read the handwritten number in the Pounds column into `quantity_raw` verbatim (e.g., 24, 16, 170) — never leave `quantity_raw` blank when a Pounds value is legible. The handwritten Pounds figure is a written quantity; do not confuse it with the printed manifest's separate "Quantity" column.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
