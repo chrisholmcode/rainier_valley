@@ -12,6 +12,7 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
   - Other suffixes (e.g., `-EFAP`, `-CSFP`) => capture the suffix into notes verbatim.
 - Description => item_name_raw verbatim. When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
+- If this slip has NO printed "Quantity" column but instead a **Pounds** column (the handwritten grocery-rescue-style variant), take the numeric value written in the Pounds column for each line and populate `quantity` with it (e.g., a row showing Pounds = 16 => quantity = 16). Do NOT leave `quantity` blank just because the printed "Quantity" column is absent. Also set unit = "lb" for these rows.
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
 - delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
 - invoice_or_order_number: Use the **Agency Order No** value in the upper-right (e.g., "ACR-XXXXXX").
