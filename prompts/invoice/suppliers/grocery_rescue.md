@@ -44,7 +44,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
-  - category = per the table above.
+  - category = the value paired with **the row label you actually read on that line** — look it up in the predefined table by matching the printed label, NOT by counting position in the list. **Row-shift guard:** before finalizing, re-read each Pounds value together with the label printed *on the same physical line* and confirm the category matches THAT label. A common failure here is off-by-one: attaching a value to the row directly above or below its true label (e.g., writing `dairy` for the Frozen Foods row, `frozen` for the Meat row, or `shelf_stable` for the Dairy row). If a value seems to land on the wrong row, trace the horizontal line back to its printed label and re-align before emitting.
 - **Rows with a non-empty Pounds cell:**
   > ⚠️ **All three of `approx_weight`, `quantity`, and `quantity_raw` are REQUIRED and must be non-null on any row where any numeral is legible in the Pounds cell.** These are the three most-corrected fields in production. If you can read even one number, extract it — never leave them blank. `quantity` must always equal `approx_weight` on rescue forms.
   - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below. **NEVER leave `approx_weight` blank when any numeral is legible.** If the number is hard to read, extract your best guess, lower `confidence` to ≤ 0.6, and add a `source_warning`. Only set `approx_weight = null` when the cell contains **absolutely no writing**.
