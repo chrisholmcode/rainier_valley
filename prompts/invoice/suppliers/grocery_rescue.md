@@ -3,6 +3,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 - "FOOD LIFELINE" logo upper-left. Form fields: Donor | Address | Agency | Date. Then a 3-column table: Product/Description | Pick Up Temp (F) | Drop Off Temp (F) | Pounds (lb).
 - This is a hand-filled grocery rescue donation form. Goods come FROM a grocery store, Food Lifeline brokers the pickup, the food bank receives them.
 - document_type = "manifest". supplier = "grocery_rescue". is_donation = true.
+  - ⚠️ **`supplier` MUST be `"grocery_rescue"` — NEVER `"food_lifeline"`.** The slip shows a "FOOD LIFELINE" logo upper-left, but that logo is NOT the supplier value for these rescue forms. Do not copy the visible logo text into `supplier`. `food_lifeline` is a different bucket (printed Agency Order manifests only) and must never be emitted for a handwritten grocery-rescue pickup form.
 - **donor_org**: Read the **Donor** field at the top. Grocery rescue only picks up from **5 fixed locations**. Map whatever is written on the slip to one of these exact short codes — do not invent new ones.
 
   | Slip variants (any of these) | donor_org (exact) |
