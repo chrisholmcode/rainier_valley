@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Preserve ALL digits — do not drop a leading or trailing digit.** Count the digits in the written number and carry every one of them: "145" is NOT "45", "51" is NOT "5" or "50". If a leading hundreds/tens digit is faint or partly cut off, still include it, set confidence ≤ 0.6, and add a `source_warning` noting the uncertain digit — never silently emit the shorter number.
+>
+> **Row-binding check — bind each numeral to the row it physically sits in.** On this dense hand-filled table it is easy to pull a value up or down into the wrong row. Before assigning any Pounds value, trace horizontally from the row label to confirm the numeral is on that row's line. If a cell is genuinely blank, leave it blank (per the empty-cell rule) rather than borrowing a neighbor's number — a number that belongs to an adjacent row must go to that row, not to the empty one. When the vertical alignment is unclear, lower confidence to ≤ 0.6 and add a `source_warning` rather than guessing which row owns the value.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
