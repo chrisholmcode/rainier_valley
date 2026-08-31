@@ -74,6 +74,10 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
+6. **Final value crossed out => treat as blank.** If the LAST number in a running tally is itself struck through / crossed out (and no clean value remains after it), the row's final count is effectively unrecorded: set approx_weight = null, quantity = null, quantity_raw = the visible crossed-out digits (so the reviewer sees what was there), notes = "final tally value crossed out — no accepted weight". Do NOT resurrect an earlier or crossed-out number as the final count.
+
+**Re-read guard (leading/trailing digit check):** Whichever number you select as approx_weight, re-read it digit-by-digit against the cell and confirm you have captured its FULL width — grocery rescue quantities are frequently 3 digits (100–199) and a faint leading "1" is easily dropped (e.g., reading "45" when the cell says "145"). Do not truncate a leading digit, and do not misread the final digit (e.g., "51" vs "50"). When the leading/trailing digit is faint or ambiguous, prefer the fuller/larger reading, put every candidate in quantity_raw, and lower confidence to ≤ 0.6.
+
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
 ### Totals and fees on grocery rescue forms
