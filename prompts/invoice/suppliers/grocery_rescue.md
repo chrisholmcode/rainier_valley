@@ -40,6 +40,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Prepared/Perishable | produce | |
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
+- ⚠️ **Row-anchoring (label↔value alignment).** Do NOT read row labels from this canonical list and independently read Pounds values — that causes off-by-one drift where a weight gets attached to the row *above* the one it actually sits on. Instead, for EACH Pounds value, trace horizontally left along the SAME printed line of the image to find the Product/Description label that physically shares that row, and use *that* label as `item_name_raw`. The pre-printed labels appear in the fixed order above, so use that order only as a consistency check: after extraction, verify your emitted labels still appear in the canonical sequence with no row skipped or duplicated. If a value's row cannot be visually aligned to a label (smudge, faint gridline), lower confidence to ≤ 0.6 and add a `source_warning` `"row alignment uncertain — verify label↔Pounds pairing against slip"` rather than guessing the adjacent label.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
