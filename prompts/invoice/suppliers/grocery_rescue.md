@@ -65,6 +65,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
+>
+> **Leading-digit check (common miss on this supplier):** grocery-rescue weights are frequently 3 digits (100–300 lb). Before finalizing, re-scan the LEFT edge of the cell for a faint or crowded leading digit — a value that looks like "45" is often "145", and a cell you were about to leave blank may hold a real number like "56". Never drop a leading digit, and never leave approx_weight blank when any numeral is legible after this re-scan.
+>
+> **Do not emit in-progress tally steps as final.** If the cell shows multiple numbers and you cannot confidently identify which is the committed FINAL count (vs. an intermediate counting step), do NOT force an intermediate value into `approx_weight`. Instead emit your best reading of the final value only if one is clearly the last/circled/uncrossed value; otherwise set confidence ≤ 0.6 and add a `source_warning`: `"pounds cell ambiguous — could not isolate final weight from tally, please verify"` so a reviewer can confirm or clear the value rather than trusting a stray intermediate.
 
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
