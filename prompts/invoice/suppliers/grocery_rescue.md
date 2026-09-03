@@ -66,6 +66,11 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
 
+> **Final-value verification (do this on EVERY non-empty Pounds cell — these are the most-corrected fields):**
+> 1. **Transcribe each number with its FULL digit count.** After you pick the final value, re-scan the leftmost edge of that number: is there a faint or partially-cropped leading digit you skipped? A "45" where the cell physically shows a "1" in front is "145", not "45". Never emit a value that is missing its leading digit. If a leading digit is ambiguous, keep the larger reading, lower confidence to ≤ 0.6, and add a `source_warning`.
+> 2. **Keep-vs-blank decision.** Only emit a value if a number survives as the *accepted final count*. If EVERY number in the cell is crossed out / struck through / superseded with nothing clean remaining, the cell has no accepted value → `approx_weight = null`, `quantity = null`, `quantity_raw` may still record what was written, notes = "all entries crossed out — no accepted value". Do NOT emit a crossed-out tally entry as the quantity.
+> 3. **Never blank a legible number.** Conversely, if a clean final number IS present, you must extract it — do not leave the row blank just because the cell also contains earlier tally marks.
+>
 The Pounds cell is often hand-filled while counting; you'll see one of these patterns:
 
 1. **Single clean number** (e.g., "183") => approx_weight = 183.
