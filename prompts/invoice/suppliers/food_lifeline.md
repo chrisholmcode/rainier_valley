@@ -23,4 +23,5 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 ## Not this supplier
 
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
+  - DISAMBIGUATION GATE (check this FIRST, before extracting any weight): If the document is handwritten and has a **Pounds** column with small per-category values (typically single- or low-double-digit numbers like 14, 16, 21, 24), it is NOT this supplier. Do NOT extract `approx_weight` under the food_lifeline schema — re-route to `supplier = "grocery_rescue"` and follow that prompt. The food_lifeline AGENCY ORDER manifest is always **printed** with a **Gross Weight** column of line-total pounds; if you see "Pounds" (not "Gross Weight") in handwriting, stop and re-route.
 - "northwest HARVEST" (Auburn warehouse, "Warehouse Posted Shipment" header) → `supplier = "nw_harvest"`.
