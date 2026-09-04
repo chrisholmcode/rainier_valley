@@ -10,6 +10,7 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
   - Suffix `-TEFA` => TEFAP federal commodity (USDA). Note in line `notes`: "funding: TEFAP".
   - Suffix `-CITY` => City Fund donation. Note in line `notes`: "funding: CITY".
   - Other suffixes (e.g., `-EFAP`, `-CSFP`) => capture the suffix into notes verbatim.
+- Category/section header rows (e.g., "Bakery", "Canned", "Canned/Dry Goods", "Produce", "Dairy") group the line items beneath them. They have NO Item No., Quantity, or Gross Weight of their own. Do NOT emit a header row as a line item and do NOT put its text in `item_name_raw` — leave `item_name_raw` blank for such a row and skip it. Only rows with a real Item No. and a product Description are line items. If you are ever unsure whether a row is a header or an item, and it lacks an Item No./Quantity, treat it as a header and skip it.
 - Description => item_name_raw verbatim. When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
