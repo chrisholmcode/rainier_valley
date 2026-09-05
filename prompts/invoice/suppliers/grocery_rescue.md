@@ -46,7 +46,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - unit = "lb".
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
-  > ⚠️ **All three of `approx_weight`, `quantity`, and `quantity_raw` are REQUIRED and must be non-null on any row where any numeral is legible in the Pounds cell.** These are the three most-corrected fields in production. If you can read even one number, extract it — never leave them blank. `quantity` must always equal `approx_weight` on rescue forms.
+  > ⚠️ **All three of `approx_weight`, `quantity`, and `
   - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below. **NEVER leave `approx_weight` blank when any numeral is legible.** If the number is hard to read, extract your best guess, lower `confidence` to ≤ 0.6, and add a `source_warning`. Only set `approx_weight = null` when the cell contains **absolutely no writing**.
   - quantity = **REQUIRED — always set equal to `approx_weight` whenever `approx_weight` is non-null.** The Pounds cell is both the weight and the billed quantity. Example: Pounds cell reads "17" → `approx_weight = 17`, `quantity = 17`.
   - quantity_raw = **REQUIRED — never leave blank for a non-empty cell.** Copy every visible digit/number from the Pounds cell exactly as written, preserving all numbers including crossed-out ones and earlier tally values (e.g., a cell showing "70 79" → `quantity_raw = "70 79"`; a clean single value "24" → `quantity_raw = "24"`). Even a lone clean number must be emitted here.
