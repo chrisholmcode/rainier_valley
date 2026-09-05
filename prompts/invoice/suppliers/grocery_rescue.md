@@ -42,6 +42,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
+    - **Row-alignment anti-drift rule (prevents off-by-one label errors):** The 10 predefined rows always appear in the FIXED order listed in the "Predefined category rows" table. Emit item_name_raw straight from that canonical sequence — do NOT re-read the label sitting next to each Pounds value, because vertical misregistration makes it easy to pair a Pounds value with the label one row ABOVE its true row. When you place a Pounds value, count rows top-to-bottom against the fixed list and confirm the value's baseline lines up with the intended label. If a Pounds value looks like it sits between two printed labels, it belongs to the row it aligns with by baseline; assign it to that slot rather than the row above it.
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
   - unit = "lb".
   - category = per the table above.
