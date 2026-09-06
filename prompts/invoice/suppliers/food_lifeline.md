@@ -13,7 +13,9 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - Description => item_name_raw verbatim. When normalizing for item_name_normalized, strip the leading source-program prefix and the trailing `FB` markers — "TEFAP FB Chicken Drumsticks (1115795) FB" => "Chicken Drumsticks". The number in parentheses is a USDA item code; keep it out of the normalized name.
 - Quantity column => quantity. Unit column => unit (lowercase "Case" => "case"). Gross Weight => approx_weight (TOTAL pounds for the line, not per-case).
 - Category: derive from item name. Produce (Bok Choy, Zucchini, Pears, Grapefruit) => "produce". Meat (Chicken Drumsticks) => "meat_protein". Pantry / canned (Peanut Butter, Pinto Beans, Rice) => "shelf_stable".
-- delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value (YYYY-MM-DD).
+- delivery_date and invoice_date: Food Lifeline AGENCY ORDER manifests carry a single **Ship Date** field in the upper-left. Populate BOTH `invoice_date` and `delivery_date` with that value, output as strict `YYYY-MM-DD`.
+  - The Ship Date is printed in a compact non-ISO form (e.g., `7/7/26` or `07-JUL-26`). Read the MONTH carefully — do not confuse it with the adjacent day digit, and do not round `07` up to `08`. When in doubt, cross-check against the slip's filename/date and the Agency Order context.
+  - VALIDATE before emitting: the month segment MUST be a real two-digit month `01`–`12` and the day MUST be `01`–`31`. Never emit a zero, single-digit, or missing month (e.g., `2026-0-07` and `2026-00-07` are invalid). Example: a Ship Date of `7/7/26` => `2026-07-07` (NOT `2026-08-07`, NOT `2026-0-07`).
 - invoice_or_order_number: Use the **Agency Order No** value in the upper-right (e.g., "ACR-XXXXXX").
 - destination_org: Use the **Sold To** name (typically "Rainier Valley Food Bank").
 - Totals: subtotal = 0, tax = 0, grand_total = 0. Preserve the printed zeros.
