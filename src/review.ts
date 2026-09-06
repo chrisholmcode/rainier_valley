@@ -248,6 +248,15 @@ th.sortable:hover { color: var(--primary); }
 .toast.error { background: var(--danger); }
 `;
 
+function formatUploadedBy(raw: string | null): string {
+  if (!raw) return `<span class="muted">—</span>`;
+  // Emails: show the local part; Slack user IDs (U…): show as-is; everything
+  // else (e.g. "web-upload", "grocery-rescue-upload"): show as-is.
+  const atIdx = raw.indexOf("@");
+  const display = atIdx > 0 ? raw.slice(0, atIdx) : raw;
+  return `<span title="${escapeHtml(raw)}">${escapeHtml(display)}</span>`;
+}
+
 function renderSlipRow(s: SlipSummary, threshold: number): string {
   const enc = encodeSlipKey(s.slipKey);
   const uploadedIso = s.created_at ? s.created_at.slice(0, 10) : "";
@@ -262,10 +271,12 @@ function renderSlipRow(s: SlipSummary, threshold: number): string {
     ? escapeHtml(poundsRaw.toLocaleString())
     : `<span class="muted">—</span>`;
   const confSort = s.minConfidence === null ? "" : String(s.minConfidence);
+  const uploader = formatUploadedBy(s.uploaded_by);
   return `<tr>
     <td>${statusBadge(s)}</td>
     <td class="hide-mobile" data-sort="${escapeHtml(approvedIso)}">${approvedOn}</td>
     <td class="hide-mobile" data-sort="${escapeHtml(uploadedIso)}">${uploaded}</td>
+    <td class="hide-mobile" data-sort="${escapeHtml(s.uploaded_by ?? "")}">${uploader}</td>
     <td data-sort="${escapeHtml(deliveryIso)}">${date}</td>
     <td>${donorOrSupplier(s)}</td>
     <td>${invoice}</td>
@@ -283,6 +294,7 @@ function renderSlipTable(slips: SlipSummary[], threshold: number): string {
       <th data-sort-type="text">Status</th>
       <th class="hide-mobile" data-sort-type="date">Approved</th>
       <th class="hide-mobile" data-sort-type="date">Uploaded</th>
+      <th class="hide-mobile" data-sort-type="text">Uploaded by</th>
       <th data-sort-type="date">Delivery date</th>
       <th data-sort-type="text">Donor / Supplier</th>
       <th data-sort-type="text">Invoice #</th>
@@ -375,8 +387,8 @@ ${FONT_HEAD_LINKS}
     <a class="${queueCls}" href="/review?tab=queue">Inbound Queue</a>
     <a class="${historyCls}" href="/review?tab=history">Inbound History</a>
     <a class="btn" href="/review?tab=outbound">Outbound</a>
-    <a class="btn" href="/review/upload">Bulk Upload</a>
-    <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue</a>
+    <a class="btn" href="/review/upload">Image/PDF Uploads</a>
+    <a class="btn" href="/review/upload/grocery-rescue">Excel Uploads</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -511,8 +523,8 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/review?tab=queue">Inbound Queue</a>
     <a class="btn" href="/review?tab=history">Inbound History</a>
     <a class="btn" href="/review?tab=outbound">Outbound</a>
-    <a class="btn" href="/review/upload">Bulk Upload</a>
-    <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue</a>
+    <a class="btn" href="/review/upload">Image/PDF Uploads</a>
+    <a class="btn" href="/review/upload/grocery-rescue">Excel Uploads</a>
     <a class="btn active" href="/review?tab=suggestions">Prompt Suggestions${pendingCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>
@@ -721,16 +733,20 @@ export function buildSlipDetailHtml(params: {
   const slipKeyEnc = encodeSlipKey(slip.slipKey);
   const proxyUrl = `/review/photo?slip=${slipKeyEnc}`;
   const isPdf = (slip.photo_url ?? "").toLowerCase().includes(".pdf");
-  const photoBlock = slip.photo_url
+  const hasFetchablePhoto = !!slip.photo_url && /^https?:\/\//.test(slip.photo_url);
+  const isWorkbookSynth = (slip.photo_url ?? "").startsWith("xlsx-upload://");
+  const photoBlock = hasFetchablePhoto
     ? `${isPdf
         ? `<iframe src="${escapeHtml(proxyUrl)}" title="slip photo"></iframe>`
         : `<img src="${escapeHtml(proxyUrl)}" alt="slip photo" onerror="this.style.display='none'">`}
        <p class="muted" style="font-size:12px; margin-top:8px;">
          Proxied through the bot using the Slack token.
          <a href="${escapeHtml(proxyUrl)}" target="_blank" rel="noopener">Open in new tab</a>
-         · <a href="${escapeHtml(slip.photo_url)}" target="_blank" rel="noopener">Slack source</a>
+         · <a href="${escapeHtml(slip.photo_url!)}" target="_blank" rel="noopener">Slack source</a>
        </p>`
-    : `<p class="muted">No photo on this slip.</p>`;
+    : isWorkbookSynth
+      ? `<p class="muted">No photo — this slip was imported from the RVFB Grocery Rescue workbook.</p>`
+      : `<p class="muted">No photo on this slip.</p>`;
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
@@ -1090,8 +1106,8 @@ ${FONT_HEAD_LINKS}
     <a class="btn" href="/review?tab=queue">Inbound Queue</a>
     <a class="btn" href="/review?tab=history">Inbound History</a>
     <a class="btn active" href="/review?tab=outbound">Outbound</a>
-    <a class="btn" href="/review/upload">Bulk Upload</a>
-    <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue</a>
+    <a class="btn" href="/review/upload">Image/PDF Uploads</a>
+    <a class="btn" href="/review/upload/grocery-rescue">Excel Uploads</a>
     <a class="btn" href="/review?tab=suggestions">Prompt Suggestions${pendingSuggestionCount > 0 ? ` <span class="badge badge-pending" style="margin-left:6px;">${pendingSuggestionCount}</span>` : ""}</a>
     <a class="btn" href="/dashboard?view=daily&range=1w">← Dashboard</a>
   </div>

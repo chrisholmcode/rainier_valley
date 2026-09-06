@@ -372,7 +372,7 @@ export async function handleBulkUploadOneRequest(
 
 const BULK_UPLOAD_HTML = `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>${env.TENANT_SHORT} Bulk Upload</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Image/PDF Uploads</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 <style>
@@ -462,12 +462,12 @@ const BULK_UPLOAD_HTML = `<!DOCTYPE html>
   }
 </style>
 </head><body><div class="container">
-<h1>Bulk Slip Upload</h1>
-<div class="meta">Drop a stack of invoice or whiteboard photos here to log them without going through Slack.</div>
+<h1>Image/PDF Uploads</h1>
+<div class="meta">Drop a stack of invoice or whiteboard photos (or PDFs) here to log them without going through Slack. Grocery-rescue photos go here too.</div>
 <div class="tabs">
   <a class="btn" href="/review?tab=queue">← Inbound Queue</a>
-  <a class="btn active" href="/review/upload">Bulk Upload</a>
-  <a class="btn" href="/review/upload/grocery-rescue">Grocery Rescue Upload</a>
+  <a class="btn active" href="/review/upload">Image/PDF Uploads</a>
+  <a class="btn" href="/review/upload/grocery-rescue">Excel Uploads</a>
   <a class="btn" href="/dashboard?view=daily&range=1w">Dashboard</a>
 </div>
 

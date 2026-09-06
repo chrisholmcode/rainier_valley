@@ -12,10 +12,7 @@ Document format: Printed invoice with the "Grand Central Bakery" header.
 - delivery_date and invoice_date: Grand Central invoices carry a single **Date** field in the upper-right header block. Convert MM/DD/YY to YYYY-MM-DD and populate BOTH `invoice_date` and `delivery_date` with that value.
 - invoice_or_order_number: Use the **Invoice** value in the upper-right header (e.g., "1159427").
 - destination_org: Use the **Customer** field value (e.g., "Rainier Valley Food Bank - Donation"), kept verbatim including the suffix.
-- **is_donation**: The Customer field has a trailing suffix that names the acquisition type:
-  - `Rainier Valley Food Bank - Donation` → is_donation = true
-  - `Rainier Valley Food Bank - Purchased` → is_donation = false
-  - If no recognizable suffix is present, leave is_donation = null.
+- **is_donation**: Always `true` for Grand Central Bakery, regardless of the Customer suffix and regardless of any dollar amounts shown on the invoice. Grand Central ships to RVFB as a donor; printed prices/totals are informational only.
 - Totals:
   - Subtotal => subtotal
   - Taxes => tax
