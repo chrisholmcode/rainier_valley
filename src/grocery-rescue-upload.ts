@@ -747,7 +747,7 @@ export async function handleGroceryRescueUploadPageRequest(res: ServerResponse):
 
 const GROCERY_RESCUE_UPLOAD_HTML = `<!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><title>${env.TENANT_SHORT} Grocery Rescue Upload</title>
+<meta charset="UTF-8"><title>${env.TENANT_SHORT} Excel Uploads</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 <style>
@@ -801,12 +801,12 @@ const GROCERY_RESCUE_UPLOAD_HTML = `<!DOCTYPE html>
   code { background: #f3f4f6; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
 </style>
 </head><body><div class="container">
-<h1>Grocery Rescue Upload</h1>
-<div class="meta">Skip the per-slip photo pipeline: drop the RVFB "Grocery Rescue Data" workbook (or a single-month CSV) and each pickup row becomes one slip in the Inbound Delivery Log.</div>
+<h1>Excel Uploads</h1>
+<div class="meta">For the RVFB "Grocery Rescue Data" workbook only: drop the .xlsx (or a single-month CSV export) and each pickup row becomes one slip in the Inbound Delivery Log. For invoice or whiteboard photos, use Image/PDF Uploads.</div>
 <div class="tabs">
   <a class="btn" href="/review?tab=queue">← Inbound Queue</a>
-  <a class="btn" href="/review/upload">Bulk Upload (photos)</a>
-  <a class="btn active" href="/review/upload/grocery-rescue">Grocery Rescue Upload</a>
+  <a class="btn" href="/review/upload">Image/PDF Uploads</a>
+  <a class="btn active" href="/review/upload/grocery-rescue">Excel Uploads</a>
   <a class="btn" href="/dashboard?view=daily&range=1w">Dashboard</a>
 </div>
 

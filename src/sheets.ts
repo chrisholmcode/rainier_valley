@@ -596,7 +596,7 @@ export const SUMMARY_SHEET_HEADERS = [
   "photo_url"
 ];
 
-const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline", "grocery_rescue", "hayton_farms"]);
+const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline", "grocery_rescue", "hayton_farms", "grand_central"]);
 
 interface SummaryRollup {
   weight_lb: number | null;
@@ -696,7 +696,7 @@ function rollupExtraction(extraction: ExtractionResult): SummaryRollup {
     food_type: foodType,
     is_food: isFood,
     cost,
-    donation: extraction.is_donation ?? DONATION_SUPPLIERS.has(extraction.supplier)
+    donation: DONATION_SUPPLIERS.has(extraction.supplier) || (extraction.is_donation ?? false)
   };
 }
 

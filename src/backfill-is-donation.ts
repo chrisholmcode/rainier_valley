@@ -19,19 +19,13 @@ const auth: GoogleAuth = env.GOOGLE_SERVICE_ACCOUNT_JSON
   ? new GoogleAuth({ credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON), scopes: ["https://www.googleapis.com/auth/spreadsheets"] })
   : new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
 
-const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline", "grocery_rescue"]);
+const DONATION_SUPPLIERS = new Set<string>(["nw_harvest", "food_lifeline", "grocery_rescue", "hayton_farms", "grand_central"]);
 const PURCHASED_SUPPLIERS = new Set<string>(["carusos", "charlies", "costco", "pacific", "terrebonne", "weigelt"]);
 
-function deriveIsDonation(supplier: string, destinationOrg: string | null): boolean | null {
+function deriveIsDonation(supplier: string, _destinationOrg: string | null): boolean | null {
   const s = supplier?.toLowerCase().trim() ?? "";
   if (DONATION_SUPPLIERS.has(s)) return true;
   if (PURCHASED_SUPPLIERS.has(s)) return false;
-  if (s === "grand_central") {
-    const dest = (destinationOrg ?? "").toLowerCase();
-    if (dest.includes("donation")) return true;
-    if (dest.includes("purchased") || dest.includes("purchase")) return false;
-    return false;
-  }
   return null;
 }
 
