@@ -20,6 +20,12 @@ Supplier: Food Lifeline (AGENCY ORDER — printed manifest). NOTE: hand-filled g
 - fees[] = [].
 - Ignore handwritten storage allocations (e.g., "F-1", "C-3", "D-1") and receipt checkmarks.
 
+## Subtype: HANDWRITTEN SLIP (fallback — Pounds column)
+
+- If this document is NOT the printed AGENCY ORDER manifest but the handwritten Donor / Address / Agency / Date form with a **Pounds** column, prefer routing to `grocery_rescue`. However, if it is still processed here, you MUST read each handwritten Pounds figure into `quantity_raw` for that line — do not leave `quantity_raw` blank.
+- The handwritten number in the Pounds column (e.g., "24", "16", "170") => `quantity_raw` verbatim (digits only, no unit). One value per line item.
+- Never emit a blank `quantity_raw` when a Pounds figure is legibly written on the slip.
+
 ## Not this supplier
 
 - Handwritten Food Lifeline slip with Donor / Address / Agency / Date fields and a per-category Pounds column → `supplier = "grocery_rescue"` (separate prompt).
