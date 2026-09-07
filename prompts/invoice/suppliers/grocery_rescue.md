@@ -13,6 +13,8 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
   | `HG`, `Homegrown`, `HomeGrown`, `Home Grown` | `HG` |
 
+  **Safeway disambiguation (do NOT default to SWY-GEN):** `SWY-GEN` stands for the **Genesee** store and `SWY-RB` for the **Rainier Beach** store — `GEN` is a location code, NOT a "generic/default Safeway." A bare "Safeway" or an ambiguous suffix must NOT be auto-mapped to `SWY-GEN`. Only emit `SWY-GEN` when the slip clearly says **Genesee** (or `SWY-GEN`, `Safeway-G`, `Gen-Safeway`, `Safeway-Genesee`), and only emit `SWY-RB` when it clearly says **Rainier Beach** (or `SWY-RB`, `Safeway RB`, `RB-Safeway`, `Safeway-Rainier`). If it just says "Safeway" with no legible Genesee/Rainier-Beach cue, set donor_org=null and warn — do not guess between the two.
+
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
