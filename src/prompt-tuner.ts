@@ -35,6 +35,10 @@
 //                                                 # clean on main.
 //   npm run tune:prompts -- --open-pr --pr-dry-run  # do everything except push + gh
 //                                                   # pr create; logs what would happen.
+//   npm run tune:prompts -- --no-orchestrate      # skip the orchestrator pass — file every
+//                                                 # raw diagnosis without meta-review. Escape
+//                                                 # hatch for A/B comparison; orchestrator is
+//                                                 # ON by default.
 
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleAuth } from "google-auth-library";
@@ -82,15 +86,18 @@ type Args = {
   noLlm: boolean; json: boolean; maxExamples: number;
   writeSuggestions: boolean;
   openPr: boolean; maxPrs: number; prDryRun: boolean;
+  noOrchestrate: boolean;
 };
 
 function parseArgs(argv: string[]): Args {
   const envWrite = process.env.TUNER_WRITE_SUGGESTIONS === "1" || process.env.TUNER_WRITE_SUGGESTIONS === "true";
   const envOpenPr = process.env.TUNER_OPEN_PR === "1" || process.env.TUNER_OPEN_PR === "true";
+  const envNoOrch = process.env.TUNER_NO_ORCHESTRATE === "1" || process.env.TUNER_NO_ORCHESTRATE === "true";
   const a: Args = {
     limit: 500, minCluster: 2, supplier: null, noLlm: false, json: false, maxExamples: 5,
     writeSuggestions: envWrite,
-    openPr: envOpenPr, maxPrs: 3, prDryRun: false
+    openPr: envOpenPr, maxPrs: 3, prDryRun: false,
+    noOrchestrate: envNoOrch
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -104,6 +111,7 @@ function parseArgs(argv: string[]): Args {
     else if (arg === "--open-pr") a.openPr = true;
     else if (arg === "--max-prs") a.maxPrs = parseInt(argv[++i], 10);
     else if (arg === "--pr-dry-run") a.prDryRun = true;
+    else if (arg === "--no-orchestrate") a.noOrchestrate = true;
   }
   return a;
 }
@@ -245,12 +253,280 @@ Diagnose the root cause of this recurring error and propose a MINIMAL, LOCALIZED
   return input as Diagnosis;
 }
 
+// ── Orchestrator pass (default ON, opt-out with --no-orchestrate) ──────────
+//
+// After every cluster has been diagnosed in isolation, one meta-call sees ALL
+// diagnoses together plus the current text of every touched supplier prompt
+// file and any pending agent-tuner suggestions on the same (supplier,field)
+// pairs. Its job is to catch failure modes that a single-cluster diagnosis
+// can't see: contradictions across diagnoses, symptoms that are really a
+// classifier/routing issue, edits that drift from the stated root cause, and
+// same-file diagnoses that should be merged into one clean PR.
+//
+// Per decision, the orchestrator emits one of:
+//   - keep    → diagnosis stands, flows through the normal write/PR pipeline
+//   - drop    → diagnosis suppressed; a `rejected` row is appended to Prompt
+//               Suggestions under submitted_by=agent-orchestrator so drops
+//               are auditable in `/review?tab=suggestions`
+//   - revise  → orchestrator supplies a replacement diagnosis, which then
+//               flows through the keep pipeline
+//   - bundle  → grouped with other bundle-tagged diagnoses that target the
+//               same supplier prompt file; a second `mergeBundle` call emits
+//               one clean search/replace for the group, which then flows
+//               through the keep pipeline as a single suggestion + single PR
+
+const ORCHESTRATOR_TOOL = "submit_orchestrator_decisions";
+const ORCHESTRATOR_SCHEMA = {
+  type: "object",
+  properties: {
+    decisions: {
+      type: "array",
+      description: "One decision per input diagnosis, indexed by the same `id` shown in the prompt.",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "number", description: "The 0-based index of the diagnosis this decision applies to." },
+          action: { type: "string", enum: ["keep", "drop", "revise", "bundle"] },
+          reason: { type: "string", description: "Concise justification for the chosen action. For drops, this is the visible audit note. Always required." },
+          bundle_group: { type: "string", description: "For action=bundle only: a short identifier (e.g. \"weight-fields\") shared across every diagnosis that should merge into one PR. All members MUST target the same supplier prompt file — cross-supplier bundles are invalid and will be unbundled." },
+          revised_root_cause: { type: "string", description: "For action=revise only." },
+          revised_target_section: { type: "string", description: "For action=revise only." },
+          revised_proposed_edit: { type: "string", description: "For action=revise only." },
+          revised_regression_risk: { type: "string", description: "For action=revise only." },
+          revised_confidence: { type: "string", enum: ["high", "medium", "low"], description: "For action=revise only." },
+          revised_search_text: { type: "string", description: "For action=revise only. Same rules as diagnose: exactly one match, blank if not automatable." },
+          revised_replace_text: { type: "string", description: "For action=revise only. Blank whenever revised_search_text is blank." }
+        },
+        required: ["id", "action", "reason"]
+      }
+    }
+  },
+  required: ["decisions"]
+} as const;
+
+type OrchestratorAction = "keep" | "drop" | "revise" | "bundle";
+type RawDecision = {
+  id: number; action: OrchestratorAction; reason: string;
+  bundle_group?: string;
+  revised_root_cause?: string; revised_target_section?: string;
+  revised_proposed_edit?: string; revised_regression_risk?: string;
+  revised_confidence?: string;
+  revised_search_text?: string; revised_replace_text?: string;
+};
+
+type Decision =
+  | { id: number; action: "keep"; reason: string }
+  | { id: number; action: "drop"; reason: string }
+  | { id: number; action: "revise"; reason: string; revised: Diagnosis }
+  | { id: number; action: "bundle"; reason: string; bundleGroup: string };
+
+function renderDiagnosisForOrchestrator(item: { cluster: Cluster; diagnosis: Diagnosis }, id: number): string {
+  const d = item.diagnosis;
+  const supplierFile = INVOICE_SUPPLIERS.includes(item.cluster.supplier as never)
+    ? `prompts/invoice/suppliers/${item.cluster.supplier}.md` : "(no tunable file)";
+  const swap = (d.search_text ?? "").trim().length > 0
+    ? `search_text: |\n${(d.search_text ?? "").split("\n").map((l) => `  ${l}`).join("\n")}\nreplace_text: |\n${(d.replace_text ?? "").split("\n").map((l) => `  ${l}`).join("\n")}`
+    : "(no automatable search/replace — Claude declined)";
+  return [
+    `=== id ${id} ===`,
+    `supplier: ${item.cluster.supplier}  field: ${item.cluster.field}  cluster_size: ${item.cluster.corrections.length}  confidence: ${d.confidence}`,
+    `file: ${supplierFile}`,
+    `root_cause: ${d.root_cause}`,
+    `target_section: ${d.target_section}`,
+    `proposed_edit: ${d.proposed_edit}`,
+    `regression_risk: ${d.regression_risk}`,
+    swap
+  ].join("\n");
+}
+
+async function orchestrate(
+  items: Array<{ cluster: Cluster; diagnosis: Diagnosis }>,
+  pendingAgentSigs: Set<string>
+): Promise<Decision[]> {
+  // Load every supplier prompt file this batch touches, once each.
+  const filesTouched = new Map<string, string>();
+  for (const item of items) {
+    if (!INVOICE_SUPPLIERS.includes(item.cluster.supplier as never)) continue;
+    const path = SUPPLIER_PROMPT(item.cluster.supplier);
+    if (filesTouched.has(item.cluster.supplier)) continue;
+    if (!existsSync(path)) continue;
+    filesTouched.set(item.cluster.supplier, readFileSync(path, "utf8"));
+  }
+
+  const diagnosesBlock = items.map((it, id) => renderDiagnosisForOrchestrator(it, id)).join("\n\n");
+  const filesBlock = Array.from(filesTouched.entries()).map(([supplier, body]) =>
+    `--- BEGIN prompts/invoice/suppliers/${supplier}.md ---\n${body}\n--- END prompts/invoice/suppliers/${supplier}.md ---`
+  ).join("\n\n");
+  const pendingBlock = pendingAgentSigs.size === 0
+    ? "(none)"
+    : Array.from(pendingAgentSigs).map((s) => `- ${s}`).join("\n");
+
+  const userPrompt = `You are the orchestrator for a batch of prompt-tuning diagnoses. Each was generated in isolation from one cluster of reviewer corrections. Your job is to ensure the batch — as a whole — makes sense before any of it becomes a Prompt Suggestion or a PR.
+
+For each diagnosis, choose exactly one action:
+- "keep": diagnosis is correct, minimal, and stands on its own. It will be filed as-is.
+- "drop": diagnosis should NOT proceed. Common reasons: (a) it's a symptom of a routing/classifier issue and no supplier-prompt edit will fix it, (b) it contradicts another diagnosis in this batch or a pending agent-tuner suggestion, (c) the proposed_edit drifts from the stated root_cause, (d) the change would clearly regress unrelated slips. Always include a specific reason — it becomes the visible audit note.
+- "revise": diagnosis is on the right track but must be reworked. Provide the FULL replacement fields (revised_root_cause, revised_target_section, revised_proposed_edit, revised_regression_risk, revised_confidence, and if possible revised_search_text + revised_replace_text). The revision will proceed as if it were the original.
+- "bundle": diagnosis should merge with other bundle-tagged diagnoses into a single PR. Use bundle_group to share an identifier across every member. **Bundles are only valid when all members target the same supplier prompt file** — cross-supplier bundles will be unbundled back to "keep". Prefer bundling only when the proposed edits touch adjacent or overlapping regions of the same file.
+
+Be conservative on drops: only drop when you can name a concrete failure. Be conservative on bundles: only bundle when a single coherent edit is clearly possible.
+
+Diagnoses to review (${items.length} total):
+
+${diagnosesBlock}
+
+Current supplier prompt files touched by this batch:
+
+${filesBlock}
+
+Pending agent-tuner suggestions already on the sheet for these (supplier,field) pairs:
+${pendingBlock}
+
+Call ${ORCHESTRATOR_TOOL} with exactly one decision per diagnosis, indexed by \`id\`.`;
+
+  const response = await client.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 8000,
+    tools: [{ name: ORCHESTRATOR_TOOL, description: "Submit per-diagnosis orchestrator decisions for the batch.", input_schema: ORCHESTRATOR_SCHEMA as never }],
+    tool_choice: { type: "tool", name: ORCHESTRATOR_TOOL },
+    messages: [{ role: "user", content: userPrompt }]
+  });
+
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    console.warn("orchestrator: no tool_use in response; falling back to keep-all");
+    return items.map((_, id) => ({ id, action: "keep" as const, reason: "orchestrator returned no tool_use" }));
+  }
+  const raw = ((toolUse.input as { decisions?: RawDecision[] }).decisions ?? []);
+  const byId = new Map<number, RawDecision>();
+  for (const d of raw) byId.set(d.id, d);
+
+  // Detect cross-supplier bundle groups and demote them to keep.
+  const bundleSuppliers = new Map<string, Set<string>>();
+  for (const d of raw) {
+    if (d.action !== "bundle" || !d.bundle_group) continue;
+    const item = items[d.id];
+    if (!item) continue;
+    if (!bundleSuppliers.has(d.bundle_group)) bundleSuppliers.set(d.bundle_group, new Set());
+    bundleSuppliers.get(d.bundle_group)!.add(item.cluster.supplier);
+  }
+  const invalidBundles = new Set<string>();
+  for (const [group, suppliers] of bundleSuppliers) {
+    if (suppliers.size > 1) invalidBundles.add(group);
+  }
+
+  const decisions: Decision[] = items.map((_, id) => {
+    const raw = byId.get(id);
+    if (!raw) return { id, action: "keep" as const, reason: "orchestrator omitted this id; defaulted to keep" };
+    if (raw.action === "keep") return { id, action: "keep", reason: raw.reason || "kept" };
+    if (raw.action === "drop") return { id, action: "drop", reason: raw.reason || "(no reason given)" };
+    if (raw.action === "bundle") {
+      const group = raw.bundle_group?.trim();
+      if (!group) return { id, action: "keep", reason: "orchestrator marked bundle with no bundle_group; defaulted to keep" };
+      if (invalidBundles.has(group)) return { id, action: "keep", reason: `orchestrator proposed cross-supplier bundle "${group}"; demoted to keep` };
+      return { id, action: "bundle", reason: raw.reason || "bundled", bundleGroup: group };
+    }
+    // revise: require the full set of fields (search/replace optional)
+    const required: Array<keyof RawDecision> = [
+      "revised_root_cause", "revised_target_section", "revised_proposed_edit",
+      "revised_regression_risk", "revised_confidence"
+    ];
+    for (const key of required) {
+      if (typeof raw[key] !== "string" || !((raw[key] as string).length > 0)) {
+        return { id, action: "keep", reason: `orchestrator marked revise but missing field "${key}"; defaulted to keep` };
+      }
+    }
+    const revised: Diagnosis = {
+      root_cause: raw.revised_root_cause!,
+      target_section: raw.revised_target_section!,
+      proposed_edit: raw.revised_proposed_edit!,
+      regression_risk: raw.revised_regression_risk!,
+      confidence: raw.revised_confidence!,
+      search_text: raw.revised_search_text ?? "",
+      replace_text: raw.revised_replace_text ?? ""
+    };
+    return { id, action: "revise", reason: raw.reason || "revised", revised };
+  });
+
+  return decisions;
+}
+
+// Second orchestrator call: given a set of bundled diagnoses that target the
+// same supplier prompt file, ask Claude to emit ONE clean, minimal edit that
+// addresses all of them. If a single clean swap isn't possible, Claude may
+// leave search_text/replace_text blank — the bundle will still be filed as a
+// suggestion but won't auto-open a PR.
+const MERGE_TOOL = "submit_merged_edit";
+const MERGE_SCHEMA = DIAGNOSE_SCHEMA;
+
+async function mergeBundle(params: {
+  supplier: string;
+  filePath: string;
+  members: Array<{ cluster: Cluster; diagnosis: Diagnosis; id: number }>;
+  groupLabel: string;
+}): Promise<Diagnosis | null> {
+  const current = readFileSync(params.filePath, "utf8");
+  const membersBlock = params.members.map(({ cluster, diagnosis, id }) =>
+    [
+      `=== id ${id} (field: ${cluster.field}, ${cluster.corrections.length} corrections, confidence: ${diagnosis.confidence}) ===`,
+      `root_cause: ${diagnosis.root_cause}`,
+      `target_section: ${diagnosis.target_section}`,
+      `proposed_edit: ${diagnosis.proposed_edit}`,
+      `regression_risk: ${diagnosis.regression_risk}`
+    ].join("\n")
+  ).join("\n\n");
+
+  const userPrompt = `The orchestrator bundled ${params.members.length} prompt-tuning diagnoses (group "${params.groupLabel}") that all target the same supplier prompt file. Emit ONE clean, minimal edit that addresses ALL of them.
+
+Supplier: ${params.supplier}
+File: prompts/invoice/suppliers/${params.supplier}.md
+
+--- BEGIN PROMPT ---
+${current}
+--- END PROMPT ---
+
+Bundled diagnoses:
+
+${membersBlock}
+
+Rules:
+- Prefer a SINGLE search_text/replace_text pair that resolves every member's failure mode.
+- search_text must match the file EXACTLY ONCE (byte-for-byte, whitespace preserved). Include enough surrounding context if the natural target appears multiple times.
+- Keep the edit minimal and localized. Don't rewrite whole sections.
+- If a single clean edit is NOT possible (e.g. members touch non-adjacent parts of the file), leave search_text and replace_text empty. root_cause should then explain why the bundle needs a manual restructure.
+
+Then call ${MERGE_TOOL} with the merged diagnosis.`;
+
+  const response = await client.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 4000,
+    tools: [{ name: MERGE_TOOL, description: "Submit the merged edit for a bundled group of diagnoses.", input_schema: MERGE_SCHEMA as never }],
+    tool_choice: { type: "tool", name: MERGE_TOOL },
+    messages: [{ role: "user", content: userPrompt }]
+  });
+
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") return null;
+  const input = toolUse.input as Partial<Diagnosis>;
+  const required: Array<keyof Diagnosis> = ["root_cause", "target_section", "proposed_edit", "regression_risk", "confidence"];
+  for (const key of required) {
+    if (typeof input[key] !== "string" || (input[key] as string).length === 0) return null;
+  }
+  return input as Diagnosis;
+}
+
+function bundledFieldLabel(fields: string[]): string {
+  // Deterministic label so signatures and branch names are stable across runs.
+  return [...new Set(fields)].sort().join("+");
+}
+
 // ── Prompt Suggestions write path (opt-in, --write-suggestions) ─────────────
 //
 // Mirrors sheets.ts::appendPromptSuggestion column layout deliberately — this
 // script never imports from the CODEOWNERS-gated sheets.ts to keep the tuning
 // loop's blast radius bounded.
 const SUGGESTED_BY = "agent-tuner";
+const ORCHESTRATOR_SUBMITTED_BY = "agent-orchestrator";
 const P = { created_at: 0, submitted_by: 1, supplier: 2, slip_photo_url: 3, suggestion_text: 4, status: 5 };
 
 function suggestionSignature(supplier: string, field: string): string {
@@ -261,21 +537,34 @@ function formatSuggestionText(cluster: Cluster, d: Diagnosis): string {
   // The signature comment lets us dedupe: on subsequent runs we skip any
   // (supplier,field) that already has a pending agent-tuner suggestion.
   const sig = suggestionSignature(cluster.supplier, cluster.field);
+  return formatBundleOrSingleText({ signature: sig, field: cluster.field, count: cluster.corrections.length, diagnosis: d });
+}
+
+function formatBundleOrSingleText(params: {
+  signature: string;
+  field: string;
+  count: number;
+  diagnosis: Diagnosis;
+  bundleGroup?: string;
+}): string {
+  const header = params.bundleGroup
+    ? `**Bundle:** \`${params.bundleGroup}\` · **Fields:** \`${params.field}\` · **Corrections merged:** ${params.count} · **Confidence:** ${params.diagnosis.confidence}`
+    : `**Field:** \`${params.field}\` · **Corrections in cluster:** ${params.count} · **Confidence:** ${params.diagnosis.confidence}`;
   return [
-    `<!-- signature: ${sig} -->`,
-    `**Field:** \`${cluster.field}\` · **Corrections in cluster:** ${cluster.corrections.length} · **Confidence:** ${d.confidence}`,
+    `<!-- signature: ${params.signature} -->`,
+    header,
     ``,
     `**Root cause**`,
-    d.root_cause,
+    params.diagnosis.root_cause,
     ``,
     `**Target section**`,
-    d.target_section,
+    params.diagnosis.target_section,
     ``,
     `**Proposed edit**`,
-    d.proposed_edit,
+    params.diagnosis.proposed_edit,
     ``,
     `**Regression risk**`,
-    d.regression_risk
+    params.diagnosis.regression_risk
   ].join("\n");
 }
 
@@ -328,6 +617,57 @@ async function notifyAdmin(params: { supplier: string; field: string; count: num
   } catch (err) {
     console.warn(`admin DM error: ${(err as Error).message}`);
   }
+}
+
+// ── Orchestrator rejection audit rows ──────────────────────────────────────
+//
+// When the orchestrator drops a diagnosis, we append a `rejected` row under
+// submitted_by=agent-orchestrator so the drop is visible + auditable in
+// /review?tab=suggestions. Deduped on rejection signature so repeat runs don't
+// re-file the same drop. To force reconsideration, delete the rejection row.
+
+function rejectionSignature(supplier: string, field: string): string {
+  return `agent-orchestrator:reject:${supplier}:${field}`;
+}
+
+async function loadOrchestratorRejectionSignatures(): Promise<Set<string>> {
+  const rows = await readTab(env.PROMPT_SUGGESTIONS_WORKSHEET_NAME, "A2:I").catch(() => [] as string[][]);
+  const sigs = new Set<string>();
+  for (const r of rows) {
+    if ((r[P.submitted_by] ?? "") !== ORCHESTRATOR_SUBMITTED_BY) continue;
+    const text = r[P.suggestion_text] ?? "";
+    const m = text.match(/<!-- signature:\s*(\S+?)\s*-->/);
+    if (m) sigs.add(m[1]);
+  }
+  return sigs;
+}
+
+function formatRejectionText(cluster: Cluster, d: Diagnosis, reason: string): string {
+  const sig = rejectionSignature(cluster.supplier, cluster.field);
+  return [
+    `<!-- signature: ${sig} -->`,
+    `**Field:** \`${cluster.field}\` · **Corrections in cluster:** ${cluster.corrections.length} · **Original confidence:** ${d.confidence}`,
+    ``,
+    `**Orchestrator drop reason**`,
+    reason,
+    ``,
+    `**Original root cause**`,
+    d.root_cause,
+    ``,
+    `**Original proposed edit**`,
+    d.proposed_edit
+  ].join("\n");
+}
+
+async function appendRejection(params: { supplier: string; slipPhotoUrl: string | null; text: string }): Promise<void> {
+  const createdAt = new Date().toISOString();
+  const row = [createdAt, ORCHESTRATOR_SUBMITTED_BY, params.supplier, params.slipPhotoUrl ?? "", params.text, "rejected", "", "", ""];
+  await sheetsApi.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.PROMPT_SUGGESTIONS_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [row] }
+  });
 }
 
 // ── Auto-open PR path (--open-pr) ──────────────────────────────────────────
@@ -453,11 +793,11 @@ async function openTunerPr(params: {
   return { status: "opened", branch, url };
 }
 
-function printClusterHeader(cluster: Cluster): void {
-  const tunable = INVOICE_SUPPLIERS.includes(cluster.supplier as never);
+function printClusterHeader(supplier: string, field: string, count: number, tunable: boolean, badgeExtra?: string): void {
   const badge = tunable ? "" : "  [no supplier prompt — outbound/unknown, counts only]";
+  const extra = badgeExtra ? `  ${badgeExtra}` : "";
   console.log(`\n${"─".repeat(72)}`);
-  console.log(`▶ ${cluster.supplier} · ${cluster.field} — ${cluster.corrections.length} corrections${badge}`);
+  console.log(`▶ ${supplier} · ${field} — ${count} corrections${badge}${extra}`);
 }
 
 function printDiagnosis(d: Diagnosis): void {
@@ -467,6 +807,21 @@ function printDiagnosis(d: Diagnosis): void {
   console.log(`\n  REGRESSION RISK:\n    ${d.regression_risk.replace(/\n/g, "\n    ")}`);
 }
 
+type WriteStatus = "written" | "skipped-dedupe" | "skipped-no-diagnosis" | "rejection-written" | "rejection-skipped-dedupe" | "merge-failed" | "not-written";
+
+type Outcome = {
+  supplier: string;
+  field: string;
+  count: number;
+  kind: "single" | "bundle-leader" | "bundle-member";
+  orchestrator: { action: OrchestratorAction; reason: string } | null;
+  bundleGroup?: string;
+  bundleMemberIds?: number[];
+  diagnosis: Diagnosis | null;
+  wrote: WriteStatus;
+  pr: PrResult | null;
+};
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const corrections = await loadCorrections(args.limit);
@@ -474,98 +829,283 @@ async function main(): Promise<void> {
 
   if (!args.json) {
     console.log(`Loaded ${corrections.length} corrections; ${clusters.length} cluster(s) at or above min-cluster=${args.minCluster}.`);
+    console.log(`Orchestrator: ${args.noOrchestrate ? "OFF (raw diagnoses will be filed directly)" : "ON (default)"}.`);
   }
 
-  // Only fetch existing signatures when we might actually write.
-  const existingSigs = args.writeSuggestions && !args.noLlm ? await loadPendingAgentSignatures() : new Set<string>();
-  if (args.writeSuggestions && !args.json) {
-    console.log(`Write mode ON — ${existingSigs.size} existing pending agent-tuner suggestion(s) will be skipped for dedupe.`);
+  const willWrite = args.writeSuggestions && !args.noLlm;
+  const existingSigs = willWrite ? await loadPendingAgentSignatures() : new Set<string>();
+  const rejectionSigs = willWrite ? await loadOrchestratorRejectionSignatures() : new Set<string>();
+  if (willWrite && !args.json) {
+    console.log(`Write mode ON — ${existingSigs.size} pending agent-tuner suggestion(s) and ${rejectionSigs.size} orchestrator rejection(s) will be skipped for dedupe.`);
   }
 
-  const results: Array<Cluster & {
-    diagnosis: Diagnosis | null;
-    wrote: "written" | "skipped-dedupe" | "skipped-no-diagnosis" | "not-written";
-    pr: PrResult | null;
-  }> = [];
-  let prsOpened = 0;
+  // ── Phase 1: diagnose every cluster in isolation ───────────────────────
+  type DiagnosedItem = { cluster: Cluster; diagnosis: Diagnosis };
+  const diagnosed: DiagnosedItem[] = [];
+  const undiagnosed: Cluster[] = [];
   for (const cluster of clusters) {
+    if (args.noLlm) { undiagnosed.push(cluster); continue; }
     let diagnosis: Diagnosis | null = null;
-    if (!args.noLlm) {
-      try {
-        diagnosis = await diagnose(cluster, args.maxExamples);
-      } catch (err) {
-        if (!args.json) console.error(`  ! diagnosis failed for ${cluster.supplier}/${cluster.field}: ${(err as Error).message}`);
-      }
+    try {
+      diagnosis = await diagnose(cluster, args.maxExamples);
+    } catch (err) {
+      if (!args.json) console.error(`  ! diagnosis failed for ${cluster.supplier}/${cluster.field}: ${(err as Error).message}`);
     }
+    if (diagnosis) diagnosed.push({ cluster, diagnosis });
+    else undiagnosed.push(cluster);
+  }
 
-    let wrote: "written" | "skipped-dedupe" | "skipped-no-diagnosis" | "not-written" = "not-written";
-    if (args.writeSuggestions && diagnosis) {
-      const sig = suggestionSignature(cluster.supplier, cluster.field);
-      if (existingSigs.has(sig)) {
+  // ── Phase 2: orchestrator meta-review ──────────────────────────────────
+  let decisions: Decision[];
+  if (args.noOrchestrate || diagnosed.length === 0) {
+    decisions = diagnosed.map((_, id) => ({ id, action: "keep" as const, reason: args.noOrchestrate ? "orchestrator disabled" : "orchestrator skipped (no diagnoses)" }));
+  } else {
+    try {
+      decisions = await orchestrate(diagnosed, existingSigs);
+    } catch (err) {
+      if (!args.json) console.error(`  ! orchestrator failed; falling back to keep-all: ${(err as Error).message}`);
+      decisions = diagnosed.map((_, id) => ({ id, action: "keep" as const, reason: "orchestrator errored; kept" }));
+    }
+  }
+
+  // ── Phase 3: execute per decision ──────────────────────────────────────
+  // Group bundle decisions by (supplier, bundleGroup). Orphan groups (size 1)
+  // are demoted to keep so we never hold up a single-member "bundle."
+  const bundleGroups = new Map<string, { supplier: string; group: string; memberIds: number[] }>();
+  for (const dec of decisions) {
+    if (dec.action !== "bundle") continue;
+    const item = diagnosed[dec.id];
+    const key = `${item.cluster.supplier}::${dec.bundleGroup}`;
+    if (!bundleGroups.has(key)) bundleGroups.set(key, { supplier: item.cluster.supplier, group: dec.bundleGroup, memberIds: [] });
+    bundleGroups.get(key)!.memberIds.push(dec.id);
+  }
+  const orphanIds = new Set<number>();
+  for (const [key, grp] of bundleGroups) {
+    if (grp.memberIds.length < 2) {
+      for (const id of grp.memberIds) orphanIds.add(id);
+      bundleGroups.delete(key);
+    }
+  }
+
+  const outcomes: Outcome[] = [];
+  let prsOpened = 0;
+
+  const writeAndPr = async (opts: {
+    supplier: string; field: string; count: number;
+    diagnosis: Diagnosis;
+    slipPhotoUrl: string | null;
+    signature: string;
+    kind: Outcome["kind"];
+    orchestrator: Outcome["orchestrator"];
+    bundleGroup?: string;
+    bundleMemberIds?: number[];
+    clusterForPr: Cluster;   // Cluster shape passed to openTunerPr (supplier + field + corrections length)
+  }): Promise<Outcome> => {
+    let wrote: WriteStatus = "not-written";
+    if (args.writeSuggestions) {
+      if (existingSigs.has(opts.signature)) {
         wrote = "skipped-dedupe";
       } else {
-        const text = formatSuggestionText(cluster, diagnosis);
-        const slipPhotoUrl = cluster.corrections[0]?.slipKey || null;
+        const text = formatBundleOrSingleText({ signature: opts.signature, field: opts.field, count: opts.count, diagnosis: opts.diagnosis, bundleGroup: opts.bundleGroup });
         try {
-          await appendSuggestion({ supplier: cluster.supplier, slipPhotoUrl, text });
-          await notifyAdmin({ supplier: cluster.supplier, field: cluster.field, count: cluster.corrections.length, text, slipPhotoUrl });
-          existingSigs.add(sig);
+          await appendSuggestion({ supplier: opts.supplier, slipPhotoUrl: opts.slipPhotoUrl, text });
+          await notifyAdmin({ supplier: opts.supplier, field: opts.field, count: opts.count, text, slipPhotoUrl: opts.slipPhotoUrl });
+          existingSigs.add(opts.signature);
           wrote = "written";
         } catch (err) {
-          if (!args.json) console.error(`  ! write failed for ${cluster.supplier}/${cluster.field}: ${(err as Error).message}`);
+          if (!args.json) console.error(`  ! write failed for ${opts.supplier}/${opts.field}: ${(err as Error).message}`);
         }
       }
-    } else if (args.writeSuggestions && !diagnosis) {
-      wrote = "skipped-no-diagnosis";
     }
-
     let pr: PrResult | null = null;
-    if (args.openPr && diagnosis) {
+    if (args.openPr) {
       if (prsOpened >= args.maxPrs) {
         pr = { status: "skipped", reason: `--max-prs limit (${args.maxPrs}) reached for this run` };
       } else {
         try {
-          pr = await openTunerPr({ cluster, diagnosis, dryRun: args.prDryRun });
+          pr = await openTunerPr({ cluster: opts.clusterForPr, diagnosis: opts.diagnosis, dryRun: args.prDryRun });
           if (pr.status === "opened") prsOpened++;
         } catch (err) {
           pr = { status: "skipped", reason: `open PR failed: ${(err as Error).message}` };
         }
       }
     }
+    return {
+      supplier: opts.supplier, field: opts.field, count: opts.count,
+      kind: opts.kind, orchestrator: opts.orchestrator,
+      bundleGroup: opts.bundleGroup, bundleMemberIds: opts.bundleMemberIds,
+      diagnosis: opts.diagnosis, wrote, pr
+    };
+  };
 
-    results.push({ ...cluster, diagnosis, wrote, pr });
+  // Process singles first (keeps + revises + demoted orphans), then bundles.
+  for (const dec of decisions) {
+    const item = diagnosed[dec.id];
+    const isOrphan = orphanIds.has(dec.id);
+    const effective = isOrphan
+      ? { ...dec, action: "keep" as const, reason: `${dec.reason} (orphan bundle demoted to keep)` }
+      : dec;
 
-    if (!args.json) {
-      printClusterHeader(cluster);
-      if (diagnosis) printDiagnosis(diagnosis);
-      else if (!args.noLlm) console.log(`  (no auto-diagnosis — no tunable supplier prompt for this cluster)`);
+    if (effective.action === "bundle") continue; // handled below
+
+    if (effective.action === "drop") {
+      const sig = rejectionSignature(item.cluster.supplier, item.cluster.field);
+      let wrote: WriteStatus = "not-written";
       if (args.writeSuggestions) {
-        const label = wrote === "written" ? "✅ suggestion filed + admin DM sent"
-          : wrote === "skipped-dedupe" ? "⏭ skipped (pending suggestion already exists)"
-          : wrote === "skipped-no-diagnosis" ? "⏭ skipped (no diagnosis)"
-          : "";
-        if (label) console.log(`\n  ${label}`);
+        if (rejectionSigs.has(sig)) {
+          wrote = "rejection-skipped-dedupe";
+        } else {
+          try {
+            const text = formatRejectionText(item.cluster, item.diagnosis, effective.reason);
+            const slipPhotoUrl = item.cluster.corrections[0]?.slipKey || null;
+            await appendRejection({ supplier: item.cluster.supplier, slipPhotoUrl, text });
+            rejectionSigs.add(sig);
+            wrote = "rejection-written";
+          } catch (err) {
+            if (!args.json) console.error(`  ! rejection write failed for ${item.cluster.supplier}/${item.cluster.field}: ${(err as Error).message}`);
+          }
+        }
       }
-      if (args.openPr && pr) {
-        const label = pr.status === "opened"
-          ? `🚀 PR opened: ${pr.url} (branch ${pr.branch})`
-          : `⏭ PR skipped: ${pr.reason}`;
-        console.log(`\n  ${label}`);
-      }
+      outcomes.push({
+        supplier: item.cluster.supplier, field: item.cluster.field, count: item.cluster.corrections.length,
+        kind: "single", orchestrator: { action: "drop", reason: effective.reason },
+        diagnosis: item.diagnosis, wrote, pr: null
+      });
+      continue;
+    }
+
+    const finalDiagnosis = effective.action === "revise" ? effective.revised : item.diagnosis;
+    const orchestratorRecord = { action: effective.action, reason: effective.reason };
+    const outcome = await writeAndPr({
+      supplier: item.cluster.supplier,
+      field: item.cluster.field,
+      count: item.cluster.corrections.length,
+      diagnosis: finalDiagnosis,
+      slipPhotoUrl: item.cluster.corrections[0]?.slipKey || null,
+      signature: suggestionSignature(item.cluster.supplier, item.cluster.field),
+      kind: "single",
+      orchestrator: orchestratorRecord,
+      clusterForPr: item.cluster
+    });
+    outcomes.push(outcome);
+  }
+
+  // Bundles: one merge call per group, then one write/PR per group.
+  for (const grp of bundleGroups.values()) {
+    const members = grp.memberIds.map((id) => ({ ...diagnosed[id], id }));
+    const path = SUPPLIER_PROMPT(grp.supplier);
+    let merged: Diagnosis | null = null;
+    try {
+      merged = await mergeBundle({ supplier: grp.supplier, filePath: path, members, groupLabel: grp.group });
+    } catch (err) {
+      if (!args.json) console.error(`  ! merge failed for bundle ${grp.supplier}/${grp.group}: ${(err as Error).message}`);
+    }
+    const fields = members.map((m) => m.cluster.field);
+    const combinedField = bundledFieldLabel(fields);
+    const totalCount = members.reduce((s, m) => s + m.cluster.corrections.length, 0);
+    const signature = `agent-tuner:${grp.supplier}:bundle:${combinedField}`;
+
+    if (!merged) {
+      outcomes.push({
+        supplier: grp.supplier, field: `bundle:${combinedField}`, count: totalCount,
+        kind: "bundle-leader",
+        orchestrator: { action: "bundle", reason: `bundle "${grp.group}"` },
+        bundleGroup: grp.group, bundleMemberIds: grp.memberIds,
+        diagnosis: null, wrote: "merge-failed", pr: null
+      });
+    } else {
+      const syntheticCluster: Cluster = {
+        supplier: grp.supplier,
+        field: `bundle-${combinedField}`,
+        corrections: members.flatMap((m) => m.cluster.corrections)
+      };
+      const outcome = await writeAndPr({
+        supplier: grp.supplier, field: `bundle:${combinedField}`, count: totalCount,
+        diagnosis: merged,
+        slipPhotoUrl: members[0].cluster.corrections[0]?.slipKey || null,
+        signature,
+        kind: "bundle-leader",
+        orchestrator: { action: "bundle", reason: `bundle "${grp.group}"` },
+        bundleGroup: grp.group, bundleMemberIds: grp.memberIds,
+        clusterForPr: syntheticCluster
+      });
+      outcomes.push(outcome);
+    }
+    // Add member breadcrumbs for the console + JSON audit trail
+    for (const m of members) {
+      outcomes.push({
+        supplier: m.cluster.supplier, field: m.cluster.field, count: m.cluster.corrections.length,
+        kind: "bundle-member",
+        orchestrator: { action: "bundle", reason: `merged into bundle "${grp.group}"` },
+        bundleGroup: grp.group,
+        diagnosis: m.diagnosis, wrote: "not-written", pr: null
+      });
     }
   }
 
+  // Undiagnosed clusters → note them so the audit trail is complete.
+  for (const cluster of undiagnosed) {
+    outcomes.push({
+      supplier: cluster.supplier, field: cluster.field, count: cluster.corrections.length,
+      kind: "single", orchestrator: null,
+      diagnosis: null,
+      wrote: args.writeSuggestions ? "skipped-no-diagnosis" : "not-written",
+      pr: null
+    });
+  }
+
+  // ── Print ──────────────────────────────────────────────────────────────
   if (args.json) {
-    console.log(JSON.stringify(results.map((r) => ({
-      supplier: r.supplier, field: r.field, count: r.corrections.length,
-      diagnosis: r.diagnosis, wrote: r.wrote, pr: r.pr
+    console.log(JSON.stringify(outcomes.map((o) => ({
+      supplier: o.supplier, field: o.field, count: o.count, kind: o.kind,
+      orchestrator: o.orchestrator, bundle_group: o.bundleGroup,
+      bundle_member_ids: o.bundleMemberIds,
+      diagnosis: o.diagnosis, wrote: o.wrote, pr: o.pr
     })), null, 2));
   } else {
-    const written = results.filter((r) => r.wrote === "written").length;
-    const dedup = results.filter((r) => r.wrote === "skipped-dedupe").length;
-    const prOpened = results.filter((r) => r.pr?.status === "opened").length;
-    const prSkipped = results.filter((r) => r.pr?.status === "skipped").length;
+    for (const o of outcomes) {
+      const tunable = INVOICE_SUPPLIERS.includes(o.supplier as never);
+      const badgeExtra = o.kind === "bundle-leader" ? `[bundle merged from ${o.bundleMemberIds?.length ?? 0} clusters]`
+        : o.kind === "bundle-member" ? `[merged into bundle "${o.bundleGroup}"]`
+        : o.orchestrator?.action === "drop" ? `[orchestrator DROP]`
+        : o.orchestrator?.action === "revise" ? `[orchestrator REVISED]`
+        : undefined;
+      printClusterHeader(o.supplier, o.field, o.count, tunable, badgeExtra);
+      if (o.orchestrator) {
+        console.log(`\n  ORCHESTRATOR (${o.orchestrator.action.toUpperCase()}): ${o.orchestrator.reason}`);
+      }
+      if (o.kind === "bundle-member") continue; // member details are on the leader
+      if (o.diagnosis) printDiagnosis(o.diagnosis);
+      else if (o.wrote === "merge-failed") console.log(`  (bundle merge failed — no automatable edit was produced)`);
+      else if (!args.noLlm && !o.orchestrator) console.log(`  (no auto-diagnosis — no tunable supplier prompt for this cluster)`);
+      if (args.writeSuggestions) {
+        const label = o.wrote === "written" ? "✅ suggestion filed + admin DM sent"
+          : o.wrote === "skipped-dedupe" ? "⏭ skipped (pending suggestion already exists)"
+          : o.wrote === "skipped-no-diagnosis" ? "⏭ skipped (no diagnosis)"
+          : o.wrote === "rejection-written" ? "🗑 rejection audit row filed"
+          : o.wrote === "rejection-skipped-dedupe" ? "⏭ rejection skipped (already audited on a prior run)"
+          : o.wrote === "merge-failed" ? "⏭ bundle merge failed — nothing filed"
+          : "";
+        if (label) console.log(`\n  ${label}`);
+      }
+      if (args.openPr && o.pr) {
+        const label = o.pr.status === "opened"
+          ? `🚀 PR opened: ${o.pr.url} (branch ${o.pr.branch})`
+          : `⏭ PR skipped: ${o.pr.reason}`;
+        console.log(`\n  ${label}`);
+      }
+    }
+
+    const written = outcomes.filter((o) => o.wrote === "written").length;
+    const dedup = outcomes.filter((o) => o.wrote === "skipped-dedupe").length;
+    const rejected = outcomes.filter((o) => o.wrote === "rejection-written").length;
+    const rejectedDedup = outcomes.filter((o) => o.wrote === "rejection-skipped-dedupe").length;
+    const bundles = outcomes.filter((o) => o.kind === "bundle-leader").length;
+    const revised = outcomes.filter((o) => o.orchestrator?.action === "revise").length;
+    const prOpened = outcomes.filter((o) => o.pr?.status === "opened").length;
+    const prSkipped = outcomes.filter((o) => o.pr?.status === "skipped").length;
     const lines: string[] = [];
+    if (!args.noOrchestrate) lines.push(`Orchestrator: ${bundles} bundle(s), ${revised} revision(s), ${rejected} drop(s) filed as audit rows (${rejectedDedup} dedup'd).`);
     if (args.writeSuggestions) lines.push(`${written} suggestion(s) filed, ${dedup} skipped as duplicates.`);
     if (args.openPr)           lines.push(`${prOpened} PR(s) opened, ${prSkipped} skipped.`);
     if (lines.length === 0)    lines.push(`Nothing was written — review the proposals above, then rerun with --write-suggestions and/or --open-pr.`);
