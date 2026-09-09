@@ -13,6 +13,11 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
   | `HG`, `Homegrown`, `HomeGrown`, `Home Grown` | `HG` |
 
+  - **⚠️ Safeway branch disambiguation (SWY-RB vs SWY-GEN) — high-error area.** The two Safeway codes share the `SWY-` prefix and are frequently confused; `SWY-GEN` is NOT a generic/default Safeway. Do NOT default to `SWY-GEN` (or any Safeway code) when the branch is unclear.
+    - Only emit `SWY-GEN` when the slip **explicitly** signals Genesee (`SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee`).
+    - Only emit `SWY-RB` when the slip **explicitly** signals Rainier Beach (`SWY-RB`, `Safeway-RB`, `Safeway RB`, `RB-Safeway`, `Safeway Rainier Beach`, `Safeway-Rainier`).
+    - If the Donor field shows a bare "Safeway" with no legible branch suffix, or the suffix is smudged/ambiguous so you cannot cleanly tell Genesee from Rainier Beach, do NOT guess: set donor_org=null (which leaves invoice_or_order_number null), lower slip confidence, and add source_warning `"Safeway branch ambiguous: could not distinguish SWY-RB vs SWY-GEN — verbatim '<value>'"`.
+
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
