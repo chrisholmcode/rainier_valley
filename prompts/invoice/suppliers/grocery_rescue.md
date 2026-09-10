@@ -13,6 +13,8 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
   | `HG`, `Homegrown`, `HomeGrown`, `Home Grown` | `HG` |
 
+  - **Safeway disambiguation (SWY-RB vs. SWY-GEN — read the suffix, never default):** The two Safeway stores share the `SWY-`/`Safeway-` prefix and differ ONLY by the location suffix. Do NOT default to either one. Read the suffix explicitly: `RB` / `Rainier` / `Rainier Beach` → `SWY-RB`; `GEN` / `G` / `Genesee` → `SWY-GEN`. A bare "Safeway" with no clear RB/Genesee indicator, or a smudged/illegible Safeway suffix, must NOT be silently mapped to `SWY-GEN` (or `SWY-RB`) — instead set donor_org=null, lower confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` for reviewer correction. Because `invoice_or_order_number` is synthesized from donor_org, a wrong Safeway code propagates straight into the order number — so slow down on this pair the way you would for QFC-MI vs. QFC-BWY.
+
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
