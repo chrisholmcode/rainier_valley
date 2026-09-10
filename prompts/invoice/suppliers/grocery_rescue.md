@@ -74,7 +74,18 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+**Decision procedure (apply in order — do this BEFORE writing approx_weight):**
+1. Enumerate every discrete number in the cell left-to-right / top-to-bottom into `quantity_raw` (e.g. "104 42 24 0").
+2. If exactly one number survives after removing crossed-out ones → use it (pattern 1/3).
+3. If one number is circled/boxed → use it (pattern 2).
+4. If numbers are stacked with NO crossouts AND clearly increasing pallet-by-pallet → sum them (pattern 4).
+5. **Otherwise (any descending or non-monotonic sequence, the common case) → this is a running tally: take the LAST number written, even if it is smaller than earlier ones — including when the last value is `0`.** Do NOT pick the largest, do NOT re-read intermediate values as the answer. Note "running tally; taking last value" and set confidence ≤ 0.6.
+
+Do NOT emit a partial/intermediate tally number (e.g. writing "42" or "104" when the sequence ends in "24" or "0"). The answer is always the final entry, never a midpoint of the sequence.
+
+If after this procedure you still cannot resolve which pattern applies, take the LAST clearly-legible number (consistent with rule 5, not the largest), set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+
+Example (running tally): a cell hand-filled while re-counting reads "104 42 24 0" → `quantity_raw = "104 42 24 0"`, `approx_weight = 0`, `quantity = 0`, notes "running tally 104→42→24→0, taking last value 0", confidence 0.6.
 
 ### Totals and fees on grocery rescue forms
 
