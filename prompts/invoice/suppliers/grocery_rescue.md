@@ -72,9 +72,10 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 2. **Multiple numbers, last one circled or boxed** => the circled/boxed number is the final count. approx_weight = circled value.
 3. **Earlier numbers crossed out, final number clean** (e.g., "32~~13~~" or "13" crossed out, "32" not) => approx_weight = the non-crossed final number.
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
-5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
+5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written in reading order (40 in this case), regardless of whether it is the largest, smallest, or zero. Note "running tally; taking last value" in line notes and lower confidence to 0.6.
+   - **The final entry wins even when it is small or 0.** A cell like "4 42 104 24 0" resolves to approx_weight = 0 (quantity = 0, quantity_raw = "4 42 104 24 0", notes = "running tally 4→42→104→24→0, taking 0 as last value"). A trailing "0" is a deliberate correction meaning the count settled at zero — do NOT fall back to an earlier/larger number, and do NOT treat "0" as if the cell were blank (a written 0 is a value, not an empty cell).
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+If you cannot resolve which pattern applies, set approx_weight to the LAST legible number in reading order (NOT the largest — the last entry supersedes earlier ones on a running tally), set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
 ### Totals and fees on grocery rescue forms
 
