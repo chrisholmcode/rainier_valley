@@ -718,7 +718,12 @@ export function normalizeRescueSlip(extraction: ExtractionResult): void {
 
 export function ensureRescueSkeleton(extraction: ExtractionResult): void {
   if (extraction.supplier !== "grocery_rescue") return;
-  if (!extraction.donor_org || !extraction.donor_org.trim()) return;
+  // Do NOT guard on donor_org here. When the extractor can't map the donor to
+  // a canonical bucket it leaves donor_org null, but the paper form still has
+  // all 10 categories — we want the skeleton so reviewers see a full slip. A
+  // reviewer edit that later fixes donor_org will synthesize the invoice_id
+  // across all 10 rows in one shot; without the skeleton, 7 rows would be
+  // permanently missing and the smoke invariant would fire (see PR #94).
 
   const items = extraction.line_items;
   const output: typeof items = [];
