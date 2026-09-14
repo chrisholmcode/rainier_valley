@@ -143,9 +143,9 @@ export function aggregate(
   inboundRows: DeliverySheetRow[],
   outboundRows: EodSheetRow[],
   view: View,
-  periods: number
+  bucketList: Array<{ key: string; startDate: string; endDate: string }>
 ): Bucket[] {
-  const range = view === "daily" ? dailyRange(periods) : weeklyRange(periods);
+  const range = bucketList;
   const buckets = new Map<string, Bucket>();
   for (const r of range) {
     buckets.set(r.key, {
@@ -308,9 +308,19 @@ function coverageCell(bucket: Bucket): string {
 
 export type Range = "1w" | "4w";
 
+// A dashboard window is one of: a recent rolling range (last 7d / 28d), a
+// specific calendar month, or an explicit custom [from, to] span. The URL
+// param combo determines which is active: `month=YYYY-MM` wins over
+// `from`/`to`, both win over `range`. Kept as a discriminated union so the
+// bucket generator + label helpers stay type-safe.
+export type WindowSpec =
+  | { kind: "recent"; range: Range }
+  | { kind: "month"; month: string; from: string; to: string }
+  | { kind: "custom"; from: string; to: string };
+
 interface ViewOption {
   view: View;
-  range: Range;
+  spec: WindowSpec;
 }
 
 function periodsFor(view: View, range: Range): number {
@@ -318,8 +328,78 @@ function periodsFor(view: View, range: Range): number {
   return range === "1w" ? 1 : 4;
 }
 
-function exportWindowDays(range: Range): number {
-  return range === "1w" ? 7 : 28;
+function daysInMonthOf(month: string): number {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+export function monthToRange(month: string): { from: string; to: string } {
+  const days = daysInMonthOf(month);
+  return { from: `${month}-01`, to: `${month}-${String(days).padStart(2, "0")}` };
+}
+
+function dailyRangeBetween(from: string, to: string): Array<{ key: string; startDate: string; endDate: string }> {
+  const start = parseDate(from);
+  const end = parseDate(to);
+  const out: Array<{ key: string; startDate: string; endDate: string }> = [];
+  for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
+    const d = ymd(new Date(t));
+    out.push({ key: d, startDate: d, endDate: d });
+  }
+  return out;
+}
+
+// Weekly buckets whose Sunday start is inside [from, to]. Selecting August
+// gives you the Sundays that land in August (Aug 2, 9, 16, 23, 30 for 2026),
+// each labeled as its full Sun–Sat span even if the tail leaks into September.
+function weeklyRangeBetween(from: string, to: string): Array<{ key: string; startDate: string; endDate: string }> {
+  const start = parseDate(from);
+  const end = parseDate(to);
+  const firstSunday = new Date(start.getTime() + ((7 - start.getUTCDay()) % 7) * 86400000);
+  const out: Array<{ key: string; startDate: string; endDate: string }> = [];
+  for (let t = firstSunday.getTime(); t <= end.getTime(); t += 7 * 86400000) {
+    const startStr = ymd(new Date(t));
+    const endStr = ymd(new Date(t + 6 * 86400000));
+    out.push({ key: startStr, startDate: startStr, endDate: endStr });
+  }
+  return out;
+}
+
+export function resolveBuckets(view: View, spec: WindowSpec): Array<{ key: string; startDate: string; endDate: string }> {
+  if (spec.kind === "recent") {
+    const periods = periodsFor(view, spec.range);
+    return view === "daily" ? dailyRange(periods) : weeklyRange(periods);
+  }
+  return view === "daily"
+    ? dailyRangeBetween(spec.from, spec.to)
+    : weeklyRangeBetween(spec.from, spec.to);
+}
+
+function specWindow(spec: WindowSpec): { from: string; to: string } {
+  if (spec.kind === "recent") {
+    const days = spec.range === "1w" ? 7 : 28;
+    const to = todayInTz();
+    const from = addDays(to, -(days - 1));
+    return { from, to };
+  }
+  return { from: spec.from, to: spec.to };
+}
+
+function specToQuery(spec: WindowSpec): string {
+  if (spec.kind === "recent") return `range=${spec.range}`;
+  if (spec.kind === "month") return `month=${spec.month}`;
+  return `from=${spec.from}&amp;to=${spec.to}`;
+}
+
+function windowLabel(spec: WindowSpec): string {
+  if (spec.kind === "recent") {
+    return spec.range === "1w" ? "Last 7 days" : "Last 28 days";
+  }
+  if (spec.kind === "month") {
+    const [y, m] = spec.month.split("-").map(Number);
+    return `${MONTH_NAMES[m - 1]} ${y}`;
+  }
+  return `${spec.from} to ${spec.to}`;
 }
 
 function csvField(v: string | number | null | undefined): string {
@@ -330,14 +410,14 @@ function csvField(v: string | number | null | undefined): string {
 }
 
 export function buildCsvExport(params: {
-  range: Range;
+  spec: WindowSpec;
   inboundRows: DeliverySheetRow[];
   outboundRows: EodSheetRow[];
   program: ProgramType | null;
 }): { filename: string; csv: string } {
-  const { range, inboundRows, outboundRows, program } = params;
-  const days = exportWindowDays(range);
-  const dates = dailyRange(days).map((r) => r.startDate);
+  const { spec, inboundRows, outboundRows, program } = params;
+  const win = specWindow(spec);
+  const dates = dailyRangeBetween(win.from, win.to).map((r) => r.startDate);
   const dateSet = new Set(dates);
   const startDate = dates[0];
   const endDate = dates[dates.length - 1];
@@ -424,31 +504,19 @@ function programSuffix(program: ProgramType | null): string {
   return program ? `&amp;program=${program}` : "";
 }
 
-function rangeButtons(active: ViewOption, _token: string, program: ProgramType | null): string {
-  const progParam = programSuffix(program);
-  const opts: Array<{ label: string; range: Range }> = [
-    { label: "1 week", range: "1w" },
-    { label: "4 weeks", range: "4w" }
-  ];
-  return opts
-    .map((o) => {
-      const cls = o.range === active.range ? "btn active" : "btn";
-      return `<a class="${cls}" href="?view=${active.view}&amp;range=${o.range}${progParam}">${o.label}</a>`;
-    })
-    .join("");
-}
-
 function viewButtons(active: ViewOption, _token: string, program: ProgramType | null): string {
   const progParam = programSuffix(program);
+  const specParam = specToQuery(active.spec);
   const dailyCls = active.view === "daily" ? "btn active" : "btn";
   const weeklyCls = active.view === "weekly" ? "btn active" : "btn";
   return `
-    <a class="${dailyCls}" href="?view=daily&amp;range=${active.range}${progParam}">Daily</a>
-    <a class="${weeklyCls}" href="?view=weekly&amp;range=${active.range}${progParam}">Weekly</a>
+    <a class="${dailyCls}" href="?view=daily&amp;${specParam}${progParam}">Daily</a>
+    <a class="${weeklyCls}" href="?view=weekly&amp;${specParam}${progParam}">Weekly</a>
   `;
 }
 
 function programButtons(active: ViewOption, _token: string, activeProgram: ProgramType | null): string {
+  const specParam = specToQuery(active.spec);
   const opts: Array<{ label: string; value: ProgramType | null }> = [
     { label: "All", value: null },
     { label: "Home Delivery", value: "home_delivery" },
@@ -460,9 +528,80 @@ function programButtons(active: ViewOption, _token: string, activeProgram: Progr
       const isActive = (o.value ?? null) === (activeProgram ?? null);
       const cls = isActive ? "btn active" : "btn";
       const progParam = o.value ? `&amp;program=${o.value}` : "";
-      return `<a class="${cls}" href="?view=${active.view}&amp;range=${active.range}${progParam}">${o.label}</a>`;
+      return `<a class="${cls}" href="?view=${active.view}&amp;${specParam}${progParam}">${o.label}</a>`;
     })
     .join("");
+}
+
+// Period picker consolidates the old "1w / 4w" range buttons with a month
+// dropdown so users can pull up historical months without needing a separate
+// control. Emits URLs via specToQuery so back/forward + bookmarks work.
+function periodPicker(active: ViewOption, program: ProgramType | null): string {
+  const progParam = programSuffix(program);
+  const months = rescueMonthOptions();
+  const spec = active.spec;
+
+  const options: Array<{ value: string; label: string; selected: boolean }> = [];
+  options.push({ value: "range:1w", label: "Last 7 days", selected: spec.kind === "recent" && spec.range === "1w" });
+  options.push({ value: "range:4w", label: "Last 28 days", selected: spec.kind === "recent" && spec.range === "4w" });
+  for (const m of months) {
+    options.push({
+      value: `month:${m.value}`,
+      label: m.label,
+      selected: spec.kind === "month" && spec.month === m.value
+    });
+  }
+  options.push({ value: "custom", label: "Custom range…", selected: spec.kind === "custom" });
+
+  const optionHtml = options
+    .map((o) => `<option value="${o.value}"${o.selected ? " selected" : ""}>${escapeHtml(o.label)}</option>`)
+    .join("");
+
+  const customFrom = spec.kind === "custom" ? spec.from : "";
+  const customTo = spec.kind === "custom" ? spec.to : "";
+  const customHidden = spec.kind === "custom" ? "" : " hidden";
+
+  return `
+<span class="period-picker">
+  <select id="period-select" class="period-select">${optionHtml}</select>
+  <span id="period-custom" class="period-custom"${customHidden}>
+    <input type="date" id="period-from" class="period-date" value="${escapeHtml(customFrom)}">
+    <span class="period-dash">→</span>
+    <input type="date" id="period-to" class="period-date" value="${escapeHtml(customTo)}">
+    <button type="button" id="period-apply" class="btn btn-secondary">Apply</button>
+  </span>
+</span>
+<script>
+(function(){
+  var sel = document.getElementById('period-select');
+  var custom = document.getElementById('period-custom');
+  var fromEl = document.getElementById('period-from');
+  var toEl = document.getElementById('period-to');
+  var apply = document.getElementById('period-apply');
+  var view = ${JSON.stringify(active.view)};
+  var progParam = ${JSON.stringify(progParam.replace(/&amp;/g, "&"))};
+  function jumpTo(query) {
+    var url = '?view=' + view + '&' + query + progParam;
+    window.location.href = url;
+  }
+  sel.addEventListener('change', function(){
+    var val = sel.value;
+    if (val === 'custom') {
+      custom.hidden = false;
+      return;
+    }
+    custom.hidden = true;
+    if (val.indexOf('range:') === 0) jumpTo('range=' + encodeURIComponent(val.slice(6)));
+    else if (val.indexOf('month:') === 0) jumpTo('month=' + encodeURIComponent(val.slice(6)));
+  });
+  apply.addEventListener('click', function(){
+    var f = fromEl.value, t = toEl.value;
+    if (!f || !t) return;
+    if (f > t) { var tmp = f; f = t; t = tmp; }
+    jumpTo('from=' + encodeURIComponent(f) + '&to=' + encodeURIComponent(t));
+  });
+})();
+</script>`;
 }
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -542,16 +681,16 @@ function rescueExportControl(): string {
 
 export function buildDashboardHtml(params: {
   view: View;
-  range: Range;
+  spec: WindowSpec;
   program: ProgramType | null;
   token: string;
   inboundRows: DeliverySheetRow[];
   outboundRows: EodSheetRow[];
   generatedAt: Date;
 }): string {
-  const { view, range, program, token, inboundRows, outboundRows, generatedAt } = params;
-  const periods = periodsFor(view, range);
-  const buckets = aggregate(inboundRows, outboundRows, view, periods);
+  const { view, spec, program, token, inboundRows, outboundRows, generatedAt } = params;
+  const bucketList = resolveBuckets(view, spec);
+  const buckets = aggregate(inboundRows, outboundRows, view, bucketList);
   const generatedLabel = generatedAt.toLocaleString("en-US", {
     timeZone: TZ,
     month: "short",
@@ -595,8 +734,8 @@ export function buildDashboardHtml(params: {
   const totalUnweighed = buckets.reduce((s, b) => s + b.inboundUnweighedRows, 0);
   const totalInboundRows = totalWeighed + totalUnweighed;
 
-  const active: ViewOption = { view, range };
-  const periodWord = view === "daily" ? (periods === 1 ? "day" : "days") : (periods === 1 ? "week" : "weeks");
+  const active: ViewOption = { view, spec };
+  const windowLbl = windowLabel(spec);
   const bucketWord = view === "daily" ? "day" : "week";
   const inboundPoundsLabel = view === "daily" ? "Inbound — pounds" : "Inbound — pounds (week)";
   const outboundCasesLabel = view === "daily" ? "Outbound — cases" : "Outbound — cases (week)";
@@ -619,6 +758,18 @@ thead th:first-child { text-align: left; }
 .col-date    { font-size: 13px; font-weight: 600; color: var(--ink); }
 .chart-wrap  { position: relative; height: 320px; }
 
+.period-picker { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.period-select, .period-date {
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 7px 10px; line-height: 1;
+}
+.period-select { padding-right: 24px; }
+.period-custom { display: inline-flex; gap: 6px; align-items: center; }
+.period-custom[hidden] { display: none; }
+.period-dash { color: var(--muted); font-size: 12px; }
+
 .rescue-export { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .rescue-select, .rescue-date {
   font-family: inherit; font-size: 13px; font-weight: 500;
@@ -638,13 +789,13 @@ thead th:first-child { text-align: left; }
 <header class="page">
   <div>
     <h1>${env.TENANT_SHORT} Dashboard</h1>
-    <div class="meta">Last ${periods} ${periodWord} · Generated ${escapeHtml(generatedLabel)} PT</div>
+    <div class="meta">${escapeHtml(windowLbl)} · Generated ${escapeHtml(generatedLabel)} PT</div>
   </div>
   <div class="toolbar">
     <div class="btn-group">${viewButtons(active, token, program)}</div>
-    <div class="btn-group">${rangeButtons(active, token, program)}</div>
+    ${periodPicker(active, program)}
     <div class="btn-group">${programButtons(active, token, program)}</div>
-    <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
+    <a class="btn btn-export" href="?view=${view}&amp;${specToQuery(spec)}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
     ${rescueExportControl()}
     <a class="btn" href="/coverage">Slip coverage →</a>
     <a class="btn" href="/review">Review queue →</a>
