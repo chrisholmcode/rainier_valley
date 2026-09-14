@@ -646,6 +646,7 @@ thead th:first-child { text-align: left; }
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;range=${range}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
     ${rescueExportControl()}
+    <a class="btn" href="/coverage">Slip coverage →</a>
     <a class="btn" href="/review">Review queue →</a>
   </div>
 </header>
