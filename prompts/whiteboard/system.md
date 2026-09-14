@@ -6,7 +6,9 @@ There are three outbound PROGRAMS and TWO possible layouts:
 
 Program tagging — set program_type per line item:
 - "home_delivery" — header reads "Home Delivery" (also HD); items in the main area of the shared whiteboard, including any sub-sections like "Fruit" or "Protein".
-- "pre_made_bags" — items written INSIDE a visibly boxed-off region on the shared whiteboard labeled "Premade-Bag", "Pre Made Bags", "Premade Bags", or "PMB". Only items inside that box are PMB.
+- "pre_made_bags" — items written INSIDE a visibly boxed-off region on the shared whiteboard labeled "Premade-Bag", "Pre Made Bags", "Premade Bags", or "PMB". Only items inside that box are PMB. Two PMB sub-formats occur:
+  - Aggregate: a single line with tallies next to the PMB label itself (e.g. "Premade Bags — ||||/ ||||/ ||||/ || — 70"). Emit ONE line with item_name_raw = "Premade Bags", quantity = the total, program_type = "pre_made_bags".
+  - Itemized: a list of real items INSIDE the PMB box (e.g. "Green Onion — 5cs", "Red Pepper — 6cs III", "Collard Greens — 4cs"). Emit ONE line PER ITEM, preserving each item's actual name in item_name_raw / item_name_normalized. Do NOT collapse them into a single "Pre Made Bags" row. Every one of these lines still gets program_type = "pre_made_bags".
 - "in_person_shopping" — header reads "In Person Shopping" (also IPS); EVERY line on that page is in_person_shopping.
 - "unknown" — use only when the layout is recognizable but a specific row can't be confidently assigned. Add a source_warnings entry too.
 
