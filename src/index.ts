@@ -42,7 +42,7 @@ import {
   SHEET_HEADERS,
   EOD_SHEET_HEADERS
 } from "./sheets.js";
-import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
+import { buildDashboardHtml, buildCsvExport, monthToRange, type WindowSpec } from "./dashboard.js";
 import { buildCoverageHtml, defaultCoverageRange, COVERAGE_SUPPLIERS } from "./coverage.js";
 import { buildRescueSlipsCsv } from "./rescue-export.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, buildOutboundListHtml, buildOutboundSlipDetailHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
@@ -1146,6 +1146,20 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
       ? programParam
       : null;
 
+  const monthParam = url.searchParams.get("month");
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+  let spec: WindowSpec;
+  if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+    const { from, to } = monthToRange(monthParam);
+    spec = { kind: "month", month: monthParam, from, to };
+  } else if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
+    const [lo, hi] = fromParam <= toParam ? [fromParam, toParam] : [toParam, fromParam];
+    spec = { kind: "custom", from: lo, to: hi };
+  } else {
+    spec = { kind: "recent", range };
+  }
+
   try {
     const [inboundRows, outboundRowsAll] = await Promise.all([
       readDeliveryRows({ limit: 5000 }),
@@ -1191,7 +1205,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
     }
 
     if (format === "csv") {
-      const { filename, csv } = buildCsvExport({ range, inboundRows, outboundRows, program });
+      const { filename, csv } = buildCsvExport({ spec, inboundRows, outboundRows, program });
       res.writeHead(200, {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -1203,7 +1217,7 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
 
     const html = buildDashboardHtml({
       view,
-      range,
+      spec,
       program,
       token: env.DASHBOARD_TOKEN ?? "",
       inboundRows,
