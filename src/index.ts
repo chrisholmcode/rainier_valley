@@ -43,6 +43,7 @@ import {
   EOD_SHEET_HEADERS
 } from "./sheets.js";
 import { buildDashboardHtml, buildCsvExport } from "./dashboard.js";
+import { buildCoverageHtml, defaultCoverageRange, COVERAGE_SUPPLIERS } from "./coverage.js";
 import { buildRescueSlipsCsv } from "./rescue-export.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, buildOutboundListHtml, buildOutboundSlipDetailHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
 import { buildLandingHtml } from "./landing.js";
@@ -1218,6 +1219,52 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
   }
 }
 
+// Slip-coverage matrix: dates (Y) × per-supplier locations (X). Shows gaps so
+// the team can locate missing slips and enter them into Loadslip. For
+// grocery_rescue the X axis is the 5 donor_org stores; for every other
+// supplier it collapses to a single "slip received" column.
+async function handleCoverageRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+
+  const supplierParam = url.searchParams.get("supplier") ?? "grocery_rescue";
+  const supplier = (COVERAGE_SUPPLIERS as string[]).includes(supplierParam) ? supplierParam : "grocery_rescue";
+
+  const preset = url.searchParams.get("preset");
+  const dflt = defaultCoverageRange();
+  let from = url.searchParams.get("from") || dflt.from;
+  let to = url.searchParams.get("to") || dflt.to;
+  if (preset === "7d" || preset === "30d" || preset === "90d") {
+    const days = preset === "7d" ? 7 : preset === "30d" ? 30 : 90;
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(new Date());
+    const [y, m, d] = today.split("-").map(Number);
+    const back = new Date(Date.UTC(y, m - 1, d) - (days - 1) * 86400000);
+    from = `${back.getUTCFullYear()}-${String(back.getUTCMonth() + 1).padStart(2, "0")}-${String(back.getUTCDate()).padStart(2, "0")}`;
+    to = today;
+  }
+  if (from > to) [from, to] = [to, from];
+
+  try {
+    const inboundRows = await readDeliveryRows({ supplier, limit: 100000 });
+    const html = buildCoverageHtml({
+      supplier,
+      from,
+      to,
+      inboundRows,
+      generatedAt: new Date()
+    });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(html);
+  } catch (err) {
+    console.error("Coverage error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
 // Export grocery rescue slips as a Food Lifeline bulk-import CSV.
 // Query params: `from` and `to` (YYYY-MM-DD). Default window = last 7 days
 // ending today (America/Los_Angeles). One CSV row per (donor, pickup date).
@@ -2173,6 +2220,11 @@ function startHttpServer(): void {
 
     if (req.method === "GET" && path === "/dashboard") {
       await handleDashboardRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/coverage") {
+      await handleCoverageRequest(req, res);
       return;
     }
 
