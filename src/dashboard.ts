@@ -627,56 +627,12 @@ function rescueMonthOptions(): Array<{ value: string; label: string; from: strin
   return opts;
 }
 
-function rescueExportControl(): string {
-  const opts = rescueMonthOptions();
-  const first = opts[0];
-  const optionHtml = opts
-    .map((o) => `<option value="${o.value}" data-from="${o.from}" data-to="${o.to}">${o.label}</option>`)
-    .join("") + `<option value="custom">Custom range…</option>`;
-  return `
-<span class="rescue-export">
-  <select id="rescue-month" class="rescue-select">${optionHtml}</select>
-  <span id="rescue-custom" class="rescue-custom" hidden>
-    <input type="date" id="rescue-from" class="rescue-date">
-    <span class="rescue-dash">→</span>
-    <input type="date" id="rescue-to" class="rescue-date">
-  </span>
-  <a class="btn btn-export" id="rescue-export-btn" href="/export/grocery-rescue?from=${first.from}&amp;to=${first.to}" download>↓ Grocery rescue slips (Food Lifeline)</a>
-</span>
-<script>
-(function(){
-  var sel = document.getElementById('rescue-month');
-  var custom = document.getElementById('rescue-custom');
-  var fromEl = document.getElementById('rescue-from');
-  var toEl = document.getElementById('rescue-to');
-  var btn = document.getElementById('rescue-export-btn');
-  function update(){
-    var f, t;
-    if (sel.value === 'custom') {
-      custom.hidden = false;
-      f = fromEl.value; t = toEl.value;
-    } else {
-      custom.hidden = true;
-      var opt = sel.options[sel.selectedIndex];
-      f = opt.getAttribute('data-from');
-      t = opt.getAttribute('data-to');
-    }
-    if (f && t) {
-      btn.href = '/export/grocery-rescue?from=' + encodeURIComponent(f) + '&to=' + encodeURIComponent(t);
-      btn.style.pointerEvents = '';
-      btn.style.opacity = '';
-    } else {
-      btn.removeAttribute('href');
-      btn.style.pointerEvents = 'none';
-      btn.style.opacity = '0.5';
-    }
-  }
-  sel.addEventListener('change', update);
-  fromEl.addEventListener('change', update);
-  toEl.addEventListener('change', update);
-  update();
-})();
-</script>`;
+// Rescue-export button — inherits the dashboard's currently-selected Period
+// so users don't have to pick the month twice. The href regenerates on every
+// render via specWindow.
+function rescueExportControl(spec: WindowSpec): string {
+  const win = specWindow(spec);
+  return `<a class="btn btn-export" href="/export/grocery-rescue?from=${escapeHtml(win.from)}&amp;to=${escapeHtml(win.to)}" download>↓ Grocery rescue slips (Food Lifeline)</a>`;
 }
 
 export function buildDashboardHtml(params: {
@@ -769,18 +725,6 @@ thead th:first-child { text-align: left; }
 .period-custom { display: inline-flex; gap: 6px; align-items: center; }
 .period-custom[hidden] { display: none; }
 .period-dash { color: var(--muted); font-size: 12px; }
-
-.rescue-export { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.rescue-select, .rescue-date {
-  font-family: inherit; font-size: 13px; font-weight: 500;
-  color: var(--ink); background: var(--card);
-  border: 1px solid var(--line); border-radius: var(--radius-md);
-  padding: 7px 10px; line-height: 1;
-}
-.rescue-select { padding-right: 24px; }
-.rescue-custom { display: inline-flex; gap: 6px; align-items: center; }
-.rescue-custom[hidden] { display: none; }
-.rescue-dash { color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -796,7 +740,7 @@ thead th:first-child { text-align: left; }
     ${periodPicker(active, program)}
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;${specToQuery(spec)}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
-    ${rescueExportControl()}
+    ${rescueExportControl(spec)}
     <a class="btn" href="/coverage">Slip coverage →</a>
     <a class="btn" href="/review">Review queue →</a>
   </div>
