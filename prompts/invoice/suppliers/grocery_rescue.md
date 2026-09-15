@@ -13,6 +13,8 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
   | `HG`, `Homegrown`, `HomeGrown`, `Home Grown` | `HG` |
 
+  **Two-Safeway disambiguation (read before mapping any Safeway slip):** `SWY-RB` (Rainier Beach) and `SWY-GEN` (Genesee) are the only two Safeway locations and share the `Safeway`/`SWY` stem — do NOT guess between them, and NEVER default an ambiguous Safeway to `SWY-GEN`. Only emit `SWY-GEN` when the slip clearly shows a **Genesee-specific marker** (`GEN`, `Genesee`, `-G`). Only emit `SWY-RB` when the slip clearly shows a **Rainier-Beach-specific marker** (`RB`, `Rainier`, `Rainier Beach`). If the Donor field shows only a bare `Safeway`/`SWY` (or the RB/Gen suffix is illegible), set donor_org=null, lower slip confidence, and add a source_warning `"donor_org ambiguous Safeway: <verbatim value>"` — do not fall back to either Safeway code. Because `invoice_or_order_number` is synthesized as `<donor_org>-<delivery_date>`, a null/ambiguous donor_org here means `invoice_or_order_number` stays null too (per that rule below).
+
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
