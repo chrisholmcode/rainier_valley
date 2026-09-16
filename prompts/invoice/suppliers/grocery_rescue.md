@@ -13,6 +13,8 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | `SWY-GEN`, `Safeway-G`, `Safeway Gen`, `Gen-Safeway`, `Safeway Genesee`, `Safeway-Genesee` | `SWY-GEN` |
   | `HG`, `Homegrown`, `HomeGrown`, `Home Grown` | `HG` |
 
+  - **Safeway suffix caution (SWY-RB vs SWY-GEN):** These two share the `SWY-`/`Safeway ` prefix and are the single most-corrected donor_org confusion on this supplier. `RB` = **Rainier Beach**, `GEN` = **Genesee** — they are different stores. **Do NOT default to `SWY-GEN`.** Read the suffix letter-by-letter: `RB`/`R.B.`/`Rainier` → `SWY-RB`; `GEN`/`G`/`Genesee` → `SWY-GEN`. If the slip just says "Safeway" with no suffix, or the suffix after `SWY-`/`Safeway ` is smudged, partially legible, or you are choosing between RB and GEN, do NOT guess — set donor_org=null, leave invoice_or_order_number null, lower slip confidence, and add source_warning `"donor_org Safeway suffix unclear: read as <your reading>, could be SWY-RB or SWY-GEN — please verify"`. Because `invoice_or_order_number` is synthesized from `donor_org`, a wrong suffix here corrupts the shipment ID too.
+
   If the Donor field is illegible or doesn't clearly match one of these five, set donor_org=null, lower slip confidence, and add a source_warning `"donor_org unrecognized: <verbatim value>"` so a reviewer can correct it. Never emit a donor_org outside the five values above.
 
   - **Donor and Date fields are sometimes swapped by staff.** Identify each value by its shape: a date pattern (M/D, M/D/YY, MM-DD-YY) goes to delivery_date; a store-suffix code (letters with a hyphen-suffix, no slashes) goes to donor_org. Use whichever field actually contains each value.
