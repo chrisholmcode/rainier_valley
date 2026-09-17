@@ -1929,7 +1929,10 @@ async function handleReviewApproveRequest(req: IncomingMessage, res: ServerRespo
 
 // ── Outbound review handlers ────────────────────────────────────────────────
 
-const EOD_SLIP_LEVEL_FIELDS = new Set(["date"]);
+// program_type is dual-purpose: the slip-level dropdown fans it out to every
+// row (typical case — one whiteboard = one program), and the per-row dropdown
+// stays available for the rare mixed-program slip.
+const EOD_SLIP_LEVEL_FIELDS = new Set(["date", "program_type"]);
 const EOD_ROW_LEVEL_FIELDS = new Set([
   "item_name_raw",
   "item_name_normalized",

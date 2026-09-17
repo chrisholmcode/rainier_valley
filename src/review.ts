@@ -622,7 +622,7 @@ function selectInput(name: string, value: string | null, rowIndex: number, optio
   </select>`;
 }
 
-function textInput(name: string, value: string | null, rowIndex: number, type: "text" | "number" = "text"): string {
+function textInput(name: string, value: string | null, rowIndex: number, type: "text" | "number" | "date" = "text"): string {
   const v = value == null ? "" : value;
   return `<input type="${type}" value="${escapeHtml(String(v))}" data-row="${rowIndex}" data-field="${escapeHtml(name)}" oninput="markEdit(this)">`;
 }
@@ -1301,12 +1301,13 @@ export function buildOutboundSlipDetailHtml(params: {
     <h3 style="margin-top:0;">Slip-level fields</h3>
     <dl>
       <dt>source</dt><dd><span class="source-chip source-${escapeHtml(slip.source)}">${escapeHtml(slip.source)}</span></dd>
-      <dt>date</dt><dd>${textInput("date", slip.date, slipMetaRowIndex)}</dd>
+      <dt>date</dt><dd>${textInput("date", slip.date, slipMetaRowIndex, "date")}</dd>
+      <dt>program</dt><dd>${selectInput("program_type", slip.program_type, slipMetaRowIndex, EOD_PROGRAM_OPTIONS)}</dd>
       <dt>recorded_by</dt><dd class="muted">${escapeHtml(slip.recorded_by ?? "—")}</dd>
       <dt>recorded_at</dt><dd class="muted">${escapeHtml(slip.recorded_at.slice(0, 16).replace("T", " "))}</dd>
       <dt>rows</dt><dd>${slip.rowCount}</dd>
     </dl>
-    <p class="muted" style="margin-top:12px; font-size:12px;">Editing date updates every row of this slip.</p>
+    <p class="muted" style="margin-top:12px; font-size:12px;">Editing date or program updates every row of this slip. Per-row overrides still work in the table below.</p>
   </div>`;
 
   const lineRows = rows.map((r) => {
@@ -1317,7 +1318,6 @@ export function buildOutboundSlipDetailHtml(params: {
       <td>${textInput("quantity_raw", r.quantity_raw, r.rowIndex)}</td>
       <td>${selectInput("unit", r.unit, r.rowIndex, EOD_UNIT_OPTIONS)}</td>
       <td>${selectInput("category", r.category, r.rowIndex, CATEGORY_OPTIONS)}</td>
-      <td>${selectInput("program_type", r.program_type, r.rowIndex, EOD_PROGRAM_OPTIONS)}</td>
       <td>${textInput("confidence", r.confidence, r.rowIndex, "number")}</td>
       <td>${textInput("notes", r.notes, r.rowIndex)}</td>
     </tr>`;
@@ -1367,7 +1367,7 @@ ${FONT_HEAD_LINKS}
         <thead><tr>
           <th>Raw name</th><th>Normalized</th>
           <th>Qty</th><th>Qty raw</th>
-          <th>Unit</th><th>Category</th><th>Program</th>
+          <th>Unit</th><th>Category</th>
           <th>Conf</th><th>Notes</th>
         </tr></thead>
         <tbody>${lineRows}</tbody>
