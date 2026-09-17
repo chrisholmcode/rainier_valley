@@ -5,13 +5,37 @@
 //   3. click it → detail page URL contains /product/{productId}
 //   4. parse "Net Weight X.XXXX Lb" from the detail page
 // Output: out/caruso-weights.json  (merged with catalog by a follow-up step)
+//
+// Input file selection (in order):
+//   --input=<path>         explicit path (relative to cwd), reads either an
+//                          array or an object with { ctOnlySkus | targetSkus }
+//   default:               out/rvfb-caruso-skus.json (ctOnlySkus)
+// Output override:
+//   --output=<path>        write results here instead of out/caruso-weights.json
 
 import { chromium } from "playwright";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const RVFB_SKUS_PATH = path.join("out", "rvfb-caruso-skus.json");
-const OUT_PATH = path.join("out", "caruso-weights.json");
+function parseArgs() {
+  const args = process.argv.slice(2);
+  let input = path.join("out", "rvfb-caruso-skus.json");
+  let output = path.join("out", "caruso-weights.json");
+  for (const a of args) {
+    if (a.startsWith("--input=")) input = a.slice("--input=".length);
+    else if (a.startsWith("--output=")) output = a.slice("--output=".length);
+  }
+  return { input, output };
+}
+
+function extractTargetSkus(parsed) {
+  if (Array.isArray(parsed)) return parsed;
+  if (Array.isArray(parsed.targetSkus)) return parsed.targetSkus;
+  if (Array.isArray(parsed.ctOnlySkus)) return parsed.ctOnlySkus;
+  throw new Error("input file must be an array or contain targetSkus/ctOnlySkus");
+}
+
+const { input: INPUT_PATH, output: OUT_PATH } = parseArgs();
 const BASE = "https://carusoproduce.cutanddry.com/catalog/CarusoProduceInc?verifiedVendorId=271724692&categoryId=1";
 
 async function scrapeOne(page, sku) {
@@ -19,27 +43,30 @@ async function scrapeOne(page, sku) {
   await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 45_000 });
   await page.waitForTimeout(1500);
 
-  // Find the card whose pack/sku line ends in `#{sku}`.
-  const clicked = await page.evaluate((sku) => {
+  // Find the card whose pack/sku line ends in `#{sku}`. Capture the pack
+  // string (everything before " | #{sku}") before clicking so we can populate
+  // packSize when merging brand-new SKUs into the catalog.
+  const cardInfo = await page.evaluate((sku) => {
     const packNodes = Array.from(document.querySelectorAll("[class*='_1evg3oy']"));
     for (const pn of packNodes) {
       const txt = (pn.textContent || "").trim();
       if (txt.endsWith(`#${sku}`)) {
-        // Walk up to a clickable card container and click it.
+        const packMatch = txt.match(/^(.*?)\s*\|\s*#\s*\S+\s*$/);
+        const packSize = packMatch ? packMatch[1].trim() : null;
         let el = pn.parentElement;
         for (let i = 0; i < 6 && el; i++) {
           if (el.querySelector("[class*='_3quvq7']")) {
             el.querySelector("[class*='_3quvq7']").click();
-            return true;
+            return { clicked: true, packSize };
           }
           el = el.parentElement;
         }
       }
     }
-    return false;
+    return { clicked: false, packSize: null };
   }, sku);
 
-  if (!clicked) return { sku, ok: false, reason: "no-card-found" };
+  if (!cardInfo.clicked) return { sku, ok: false, reason: "no-card-found" };
 
   // Wait for navigation to the detail page.
   try {
@@ -65,6 +92,7 @@ async function scrapeOne(page, sku) {
     productId,
     confirmedSku: skuMatch?.[1] ?? null,
     name: nameGuess?.trim() ?? null,
+    packSize: cardInfo.packSize,
     weightRaw: weightMatch ? `${weightMatch[1]} ${weightMatch[2]}` : null,
     weightLb: weightMatch ? toLb(parseFloat(weightMatch[1]), weightMatch[2]) : null
   };
@@ -80,9 +108,11 @@ function toLb(value, unit) {
 }
 
 async function main() {
-  const rvfb = JSON.parse(await readFile(RVFB_SKUS_PATH, "utf8"));
-  const targets = rvfb.ctOnlySkus ?? [];
-  console.log(`Targets: ${targets.length} CT-only RVFB SKUs`);
+  const parsed = JSON.parse(await readFile(INPUT_PATH, "utf8"));
+  const targets = extractTargetSkus(parsed);
+  console.log(`input: ${INPUT_PATH}`);
+  console.log(`output: ${OUT_PATH}`);
+  console.log(`Targets: ${targets.length} SKU(s)`);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
