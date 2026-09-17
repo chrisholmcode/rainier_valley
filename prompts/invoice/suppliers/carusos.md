@@ -14,3 +14,6 @@ Document format: Printed invoice with columns ORDERED | SHIPPED | ITEM CODE | DE
 - delivery_date and invoice_date: Caruso's invoices carry a single date, labeled **SHIP DATE** in the upper-right header block. Populate BOTH `delivery_date` and `invoice_date` with that date (converted to YYYY-MM-DD).
 - Filter out: Fuel surcharge, delivery fees (put in fees[] array)
 - Ignore handwritten time notations at top of page.
+- **is_donation:**
+  - Set `is_donation = true` when the printed To / Ship To / Sold To block contains "Donation Canby" (or the word "Donation" appearing as part of the customer/ship-to name — Caruso uses this as an internal marker for donated shipments out of their Canby warehouse). This applies even if the invoice shows prices and a nonzero total — those are informational on donation slips.
+  - Otherwise `is_donation = false` on Caruso invoices (paid deliveries are the default).
