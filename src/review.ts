@@ -1,5 +1,5 @@
 import type { DeliverySheetRow, EodSheetRow, PromptSuggestionRow } from "./types.js";
-import type { SlipSummary, EodSlipSummary } from "./sheets.js";
+import type { SlipSummary, EodSlipSummary, SupplierRow } from "./sheets.js";
 import { RESCUE_CATEGORIES, RESCUE_DONOR_CANONICAL } from "./extraction.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 import { env } from "./config.js";
@@ -599,8 +599,20 @@ const UNIT_OPTIONS = ["case", "ct", "lb", "oz", "ea", "bushel", "other"];
 const DOC_TYPE_OPTIONS = ["invoice", "manifest", "warehouse_posted_shipment", "dock_photo", "unknown"];
 // Alphabetical so reviewers can scan; keeps the extraction enum as source
 // of truth for the actual valid set (mirrored here to avoid pulling
-// extraction.ts into review's import graph).
+// extraction.ts into review's import graph). The Suppliers sheet extends
+// this list at runtime via `buildSlipDetailHtml`'s `dynamicSuppliers` param.
 const SUPPLIER_OPTIONS = ["carusos", "charlies", "costco", "food_lifeline", "grand_central", "grocery_rescue", "nw_harvest", "pacific", "terrebonne", "weigelt", "unknown"];
+
+const ADD_SUPPLIER_SENTINEL = "__add_new_supplier__";
+
+function supplierSelect(name: string, value: string | null, rowIndex: number, options: string[]): string {
+  const opts = options.map((o) => `<option value="${escapeHtml(o)}"${value === o ? " selected" : ""}>${escapeHtml(supplierDisplay(o))}</option>`).join("");
+  return `<select id="supplier-select" data-row="${rowIndex}" data-field="${escapeHtml(name)}" onchange="onSupplierChange(this)">
+    <option value=""${!value ? " selected" : ""}>—</option>
+    ${opts}
+    <option value="${ADD_SUPPLIER_SENTINEL}">➕ Add new supplier…</option>
+  </select>`;
+}
 
 function selectInput(name: string, value: string | null, rowIndex: number, options: string[]): string {
   const opts = options.map((o) => `<option value="${escapeHtml(o)}"${value === o ? " selected" : ""}>${escapeHtml(o)}</option>`).join("");
@@ -638,14 +650,48 @@ export function buildSlipDetailHtml(params: {
   token: string;
   supplierPrompt: string | null;
   systemPrompt: string | null;
+  dynamicSuppliers: SupplierRow[];
 }): string {
-  const { slip, rows, supplierPrompt, systemPrompt } = params;
+  const { slip, rows, supplierPrompt, systemPrompt, dynamicSuppliers } = params;
   const slipMetaRowIndex = rows[0]?.rowIndex ?? 0;
+
+  // Dedupe by key against the seed list; keep dynamic suppliers alphabetical
+  // alongside the seed set so reviewers scan one list.
+  const mergedSupplierOptions = Array.from(
+    new Set([...SUPPLIER_OPTIONS, ...dynamicSuppliers.map((s) => s.supplier_key)])
+  ).sort((a, b) => {
+    if (a === "unknown") return 1;
+    if (b === "unknown") return -1;
+    return a.localeCompare(b);
+  });
+  // Preserved so the client-side "add" form can decide whether an add-time
+  // is_donation fanout is redundant with an existing entry.
+  const dynamicSuppliersForClient = dynamicSuppliers.map((s) => ({
+    key: s.supplier_key,
+    display: s.display_name,
+    donation: s.default_is_donation
+  }));
 
   const slipMeta = `<div class="slip-meta">
     <h3 style="margin-top:0;">Slip-level fields</h3>
     <dl>
-      <dt>supplier</dt><dd>${selectInput("supplier", slip.supplier, slipMetaRowIndex, SUPPLIER_OPTIONS)}</dd>
+      <dt>supplier</dt><dd>${supplierSelect("supplier", slip.supplier, slipMetaRowIndex, mergedSupplierOptions)}
+        <div id="add-supplier-form" style="display:none; margin-top:8px; padding:12px; border:1px solid #ddd; border-radius:6px; background:#fafafa;">
+          <div style="font-weight:600; margin-bottom:8px; font-size:13px;">Add a new supplier</div>
+          <label style="display:block; font-size:12px; margin-bottom:4px;">Display name</label>
+          <input type="text" id="add-supplier-name" placeholder="e.g. Present Tense Farms" style="width:100%; margin-bottom:8px;">
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px; margin-right:12px;">Default:</label>
+            <label style="font-size:13px; margin-right:12px;"><input type="radio" name="add-supplier-donation" value="false" checked> Purchase</label>
+            <label style="font-size:13px;"><input type="radio" name="add-supplier-donation" value="true"> Donation</label>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" onclick="submitNewSupplier()">Add + apply to this slip</button>
+            <button class="btn" onclick="cancelAddSupplier()">Cancel</button>
+          </div>
+          <p class="muted" style="font-size:11px; margin:8px 0 0;">Slug is derived automatically (e.g. "Present Tense Farms" → <code>present_tense_farms</code>). Applies the new supplier + is_donation to this slip.</p>
+        </div>
+      </dd>
       <dt>document_type</dt><dd>${selectInput("document_type", slip.document_type, slipMetaRowIndex, DOC_TYPE_OPTIONS)}</dd>
       <dt>invoice_date</dt><dd>${textInput("invoice_date", slip.invoice_date, slipMetaRowIndex)}</dd>
       <dt>delivery_date</dt><dd>${textInput("delivery_date", slip.delivery_date, slipMetaRowIndex)}</dd>
@@ -844,6 +890,73 @@ ${FONT_HEAD_LINKS}
 </div>
 <script>
 const SLIP_KEY_B64 = ${JSON.stringify(slipKeyEnc)};
+const DYNAMIC_SUPPLIERS = ${JSON.stringify(dynamicSuppliersForClient)};
+const ADD_SUPPLIER_SENTINEL = ${JSON.stringify(ADD_SUPPLIER_SENTINEL)};
+let SUPPLIER_PREV_VALUE = (function() {
+  const el = document.getElementById('supplier-select');
+  return el ? el.value : '';
+})();
+
+function onSupplierChange(el) {
+  if (el.value === ADD_SUPPLIER_SENTINEL) {
+    document.getElementById('add-supplier-form').style.display = '';
+    document.getElementById('add-supplier-name').focus();
+    el.value = SUPPLIER_PREV_VALUE;
+    return;
+  }
+  SUPPLIER_PREV_VALUE = el.value;
+  markEdit(el);
+}
+
+function cancelAddSupplier() {
+  document.getElementById('add-supplier-form').style.display = 'none';
+  document.getElementById('add-supplier-name').value = '';
+}
+
+async function submitNewSupplier() {
+  const name = document.getElementById('add-supplier-name').value.trim();
+  if (!name) { showToast('Display name is required', true); return; }
+  const donationEl = document.querySelector('input[name="add-supplier-donation"]:checked');
+  const defaultIsDonation = donationEl ? donationEl.value === 'true' : false;
+  const rowIndex = parseInt(document.getElementById('supplier-select').dataset.row, 10);
+  try {
+    const res = await fetch('/api/suppliers/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slip: SLIP_KEY_B64,
+        display_name: name,
+        default_is_donation: defaultIsDonation,
+        row_index: rowIndex
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const body = await res.json();
+    const sel = document.getElementById('supplier-select');
+    const key = body.supplier_key;
+    let opt = Array.from(sel.options).find((o) => o.value === key);
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = key;
+      sel.insertBefore(opt, sel.options[sel.options.length - 1]);
+    }
+    sel.value = key;
+    sel.dataset.original = key;
+    sel.classList.remove('dirty');
+    SUPPLIER_PREV_VALUE = key;
+    DYNAMIC_SUPPLIERS.push({ key, display: name, donation: defaultIsDonation });
+    const donationSel = document.querySelector('select[data-field="is_donation"]');
+    if (donationSel) {
+      donationSel.value = defaultIsDonation ? 'true' : 'false';
+      donationSel.dataset.original = donationSel.value;
+    }
+    cancelAddSupplier();
+    showToast(body.duplicate ? 'Supplier already existed — applied' : 'Supplier added + applied');
+  } catch (e) {
+    showToast('Add failed: ' + e.message, true);
+  }
+}
 
 function showToast(msg, isError) {
   const t = document.getElementById('toast');

@@ -1165,6 +1165,113 @@ export async function findProcessedEmailByMessageId(messageId: string): Promise<
   return null;
 }
 
+// ── Suppliers (reviewer-added) ───────────────────────────────────────────────
+//
+// The static `SUPPLIER_OPTIONS` list in `review.ts` is the seed set — the
+// canonical set of suppliers we've written extraction prompts for. This tab
+// is the *extension* mechanism reviewers reach for when a slip shows up from
+// a supplier not in the seed set (e.g. a new farm). Rows land here, the
+// review dropdown unions them with the seed set, and `is_donation` on the
+// current slip is written at add-time.
+//
+// We intentionally do NOT plumb dynamic suppliers into `extraction.ts`'s zod
+// enum — new-supplier slips still come out of extraction as `unknown` and a
+// reviewer flips them via the dropdown. That's the trigger that
+// backpopulates `is_donation` from `default_is_donation`.
+
+export const SUPPLIERS_HEADERS = [
+  "created_at",
+  "supplier_key",
+  "display_name",
+  "default_is_donation",
+  "created_by"
+];
+
+export interface SupplierRow {
+  supplier_key: string;
+  display_name: string;
+  default_is_donation: boolean;
+  created_by: string;
+  created_at: string;
+}
+
+export async function ensureSuppliersHeader(): Promise<void> {
+  await ensureHeader(env.SUPPLIERS_WORKSHEET_NAME, SUPPLIERS_HEADERS);
+}
+
+// "Present Tense Farms" -> "present_tense_farms". Matches the shape of the
+// hardcoded seed keys (all lowercase snake_case).
+export function slugifySupplierName(displayName: string): string {
+  return displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+export async function readSuppliers(): Promise<SupplierRow[]> {
+  await ensureSuppliersHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const resp = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.SUPPLIERS_WORKSHEET_NAME}!A2:E`
+  });
+  const rows = resp.data.values ?? [];
+  const out: SupplierRow[] = [];
+  for (const r of rows) {
+    if (!r || !r[1]) continue;
+    out.push({
+      created_at: String(r[0] ?? ""),
+      supplier_key: String(r[1] ?? ""),
+      display_name: String(r[2] ?? ""),
+      default_is_donation: /^(true|1|yes)$/i.test(String(r[3] ?? "")),
+      created_by: String(r[4] ?? "")
+    });
+  }
+  return out;
+}
+
+export async function appendSupplier(params: {
+  displayName: string;
+  defaultIsDonation: boolean;
+  createdBy: string;
+}): Promise<{ supplier: SupplierRow; duplicate: boolean }> {
+  await ensureSuppliersHeader();
+  const displayName = params.displayName.trim();
+  if (!displayName) throw new Error("display name required");
+  const key = slugifySupplierName(displayName);
+  if (!key) throw new Error("display name has no alphanumeric characters");
+
+  const existing = await readSuppliers();
+  const dup = existing.find((s) => s.supplier_key === key);
+  if (dup) return { supplier: dup, duplicate: true };
+
+  const createdAt = new Date().toISOString();
+  const row = [
+    createdAt,
+    key,
+    displayName,
+    params.defaultIsDonation ? "true" : "false",
+    params.createdBy
+  ];
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.SUPPLIERS_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [row] }
+  });
+  return {
+    supplier: {
+      created_at: createdAt,
+      supplier_key: key,
+      display_name: displayName,
+      default_is_donation: params.defaultIsDonation,
+      created_by: params.createdBy
+    },
+    duplicate: false
+  };
+}
+
 // ── Prompt Suggestions ──────────────────────────────────────────────────────
 
 export const PROMPT_SUGGESTIONS_HEADERS = [

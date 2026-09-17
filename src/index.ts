@@ -39,6 +39,10 @@ import {
   rescueDedupeKey,
   readCrateById,
   markCrateConsumed,
+  readSuppliers,
+  appendSupplier,
+  slugifySupplierName,
+  ensureSuppliersHeader,
   SHEET_HEADERS,
   EOD_SHEET_HEADERS
 } from "./sheets.js";
@@ -1407,12 +1411,19 @@ async function handleSlipDetailRequest(req: IncomingMessage, res: ServerResponse
       return;
     }
     const [slip] = groupSlips(slipRows);
+    const dynamicSuppliers = await readSuppliers().catch((e) => {
+      // Non-fatal — falls back to the seed list. Log so a broken sheet
+      // permission doesn't silently hide the "add" flow.
+      console.warn("[review] readSuppliers failed:", (e as Error).message);
+      return [];
+    });
     const html = buildSlipDetailHtml({
       slip,
       rows: slipRows,
       token: env.DASHBOARD_TOKEN ?? "",
       supplierPrompt: getInvoiceSupplierPrompt(slip.supplier ?? "unknown"),
-      systemPrompt: getInvoiceSystemPrompt()
+      systemPrompt: getInvoiceSystemPrompt(),
+      dynamicSuppliers
     });
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
     res.end(html);
@@ -1686,6 +1697,119 @@ async function handlePromptViewRequest(req: IncomingMessage, res: ServerResponse
   }
   res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
   res.end(prompt);
+}
+
+// Reviewer added a supplier from the slip-detail dropdown. Appends to the
+// Suppliers tab (dedupe by slugified key) and applies the new supplier +
+// default is_donation to every row of the current slip via the same
+// updateSheetCells + appendCorrectionRows machinery the /api/review/edit
+// path uses. Returns 200 with the supplier_key so the client can select it.
+async function handleAddSupplierRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await reviewAuth(req, res);
+  if (!url) return;
+  try {
+    const body = (await readJsonBody(req)) as {
+      slip?: string;
+      display_name?: string;
+      default_is_donation?: boolean;
+      row_index?: number;
+    };
+    const slipEnc = body.slip ?? "";
+    const displayName = (body.display_name ?? "").trim();
+    const defaultIsDonation = body.default_is_donation === true;
+    const rowIndex = Number(body.row_index);
+    if (!slipEnc || !displayName) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("Missing slip or display_name");
+      return;
+    }
+    if (displayName.length > 80) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("display_name too long (max 80 chars)");
+      return;
+    }
+    const key = slugifySupplierName(displayName);
+    if (!key) {
+      res.writeHead(400, { "Content-Type": "text/plain" });
+      res.end("display_name must contain alphanumeric characters");
+      return;
+    }
+
+    await ensureSuppliersHeader();
+    await ensureSheetHeader();
+
+    const createdBy = (await requestUserEmail(req)) ?? "review-ui";
+    const { supplier, duplicate } = await appendSupplier({
+      displayName,
+      defaultIsDonation,
+      createdBy
+    });
+
+    // Apply supplier + is_donation to every row of the current slip. We
+    // deliberately don't rely on the client sending two /api/review/edit
+    // calls — that would race + surface as two toasts. Batch it here.
+    const slipKey = decodeSlipKey(slipEnc);
+    const rows = await readDeliveryRows({ limit: 5000 });
+    const slipRows = rows.filter((r) => r.photo_url === slipKey);
+    if (slipRows.length === 0) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Slip not found");
+      return;
+    }
+
+    const newIsDonation = defaultIsDonation ? "true" : "false";
+    const cellUpdates: Array<{ rowIndex: number; columnName: string; newValue: string | null }> = [];
+    const corrections: CorrectionEntry[] = [];
+    const user = (req.headers["x-review-user"] as string) || createdBy;
+    for (const target of slipRows) {
+      for (const f of [
+        { field: "supplier", value: supplier.supplier_key },
+        { field: "is_donation", value: newIsDonation }
+      ]) {
+        const oldValue = (target as unknown as Record<string, string | null>)[f.field];
+        if (oldValue === f.value) continue;
+        cellUpdates.push({
+          rowIndex: target.rowIndex,
+          columnName: f.field,
+          newValue: f.value
+        });
+        corrections.push({
+          user,
+          slipKey,
+          sheet: env.GOOGLE_WORKSHEET_NAME,
+          rowIndex: target.rowIndex,
+          field: f.field,
+          oldValue,
+          newValue: f.value,
+          reason: duplicate ? "supplier picker: existing" : "supplier picker: new"
+        });
+      }
+    }
+    if (cellUpdates.length > 0) {
+      await updateSheetCells({ worksheetName: env.GOOGLE_WORKSHEET_NAME, updates: cellUpdates });
+      await appendCorrectionRows(corrections);
+      await clearSlipApproval(slipRows.map((r) => r.rowIndex));
+      const fresh = await readDeliveryRows({ limit: 5000 });
+      const freshSlipRows = fresh.filter((r) => r.photo_url === slipKey);
+      await recomputeSummaryForSlip(freshSlipRows);
+    }
+
+    console.log(`supplier added key=${supplier.supplier_key} donation=${defaultIsDonation} by=${createdBy} duplicate=${duplicate} slip_updates=${cellUpdates.length}`);
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      ok: true,
+      supplier_key: supplier.supplier_key,
+      display_name: supplier.display_name,
+      default_is_donation: supplier.default_is_donation,
+      duplicate,
+      row_index: rowIndex
+    }));
+  } catch (err) {
+    console.error("Add supplier error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end((err as Error).message);
+  }
 }
 
 async function handleReviewSuggestRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -2343,6 +2467,11 @@ function startHttpServer(): void {
 
     if (req.method === "POST" && path === "/api/review/suggest") {
       await handleReviewSuggestRequest(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/suppliers/add") {
+      await handleAddSupplierRequest(req, res);
       return;
     }
 

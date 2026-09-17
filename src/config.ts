@@ -19,6 +19,7 @@ const EnvSchema = z.object({
   EXTRACTION_TRACES_WORKSHEET_NAME: z.string().default("Extraction Traces"),
   PROMPT_SUGGESTIONS_WORKSHEET_NAME: z.string().default("Prompt Suggestions"),
   PROCESSED_EMAILS_WORKSHEET_NAME: z.string().default("Processed Emails"),
+  SUPPLIERS_WORKSHEET_NAME: z.string().default("Suppliers"),
   CRATES_WORKSHEET_NAME: z.string().default("Crates"),
   // Email intake (POST /api/inbound-email). Endpoint returns 503 unless BOTH
   // are set — no half-configured state. Allowlist patterns: exact address
