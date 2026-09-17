@@ -149,10 +149,10 @@ describe("ensureRescueSkeleton", () => {
     assert.equal(e.line_items.length, 0);
   });
 
-  it("no-ops when donor_org is empty", () => {
+  it("fills the skeleton even when donor_org is empty (PR #94 — reviewer corrects donor later)", () => {
     const e = extraction({ supplier: "grocery_rescue", donor_org: "" });
     ensureRescueSkeleton(e);
-    assert.equal(e.line_items.length, 0);
+    assert.equal(e.line_items.length, 10, "should fill all 10 categories regardless of donor_org");
   });
 
   it("fills all 10 categories from an empty extraction", () => {
