@@ -1,9 +1,9 @@
 {
   "scrapedAt": "2026-08-14T17:34:12.654Z",
   "enrichedAt": "2026-08-14T17:34:24.986Z",
-  "totalItems": 2548,
+  "totalItems": 2549,
   "derivableWeights": 1567,
-  "needsDetailPage": 593,
+  "needsDetailPage": 587,
   "kindStats": {
     "lb_direct": 682,
     "ct_only": 619,
@@ -2322,8 +2322,8 @@
       "sku": "01435",
       "name": "LEMON CHOICE",
       "packSize": "95",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 38,
+      "weightSource": "scraped_detail",
       "kind": "other"
     },
     {
@@ -2386,8 +2386,8 @@
       "sku": "01463",
       "name": "LETTUCE CELLO ICEBERG",
       "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 45,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -2482,8 +2482,8 @@
       "sku": "01495",
       "name": "LETTUCE ROMAINE",
       "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 27,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -2674,8 +2674,8 @@
       "sku": "01700",
       "name": "AVOCADO HASS PREMIUM",
       "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 25,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -3210,8 +3210,8 @@
       "sku": "02121",
       "name": "ORANGE VALENCIA CH",
       "packSize": "56 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 38,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -8343,6 +8343,14 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "05413",
+      "name": "PEACH WHITE 2 LYR CALIF",
+      "packSize": "48/50ct TP",
+      "weightLb": 20,
+      "weightSource": "scraped_detail",
+      "kind": "other"
+    },
+    {
       "sku": "05427",
       "name": "PEACH WHITE 2 LYR NORTHWEST",
       "packSize": "40/42ct TP",
@@ -9466,8 +9474,8 @@
       "sku": "06738",
       "name": "PEPPER GREEN BELL LG CHOICE",
       "packSize": "BUSHEL",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 25,
+      "weightSource": "scraped_detail",
       "kind": "other"
     },
     {
@@ -9530,8 +9538,8 @@
       "sku": "06793",
       "name": "CORN BICOLOR NORTHWEST",
       "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 50,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -10066,8 +10074,8 @@
       "sku": "07594",
       "name": "CORN WHITE NORTHWEST",
       "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 50,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -20399,7 +20407,14 @@
       "kind": "other"
     }
   ],
-  "mergedAt": "2026-08-14T17:37:22.870Z",
+  "mergedAt": "2026-09-17T17:14:59.796Z",
   "scrapedWeightCount": 26,
-  "totalWithWeight": 1593
+  "totalWithWeight": 1602,
+  "lastMergeStats": {
+    "filled": 8,
+    "added": 1,
+    "alreadyWeighed": 0,
+    "scrapeReturnedNoWeight": 2,
+    "failed": 2
+  }
 }
