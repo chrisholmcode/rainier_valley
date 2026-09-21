@@ -58,6 +58,8 @@ All daily aggregation rules apply per row (fees, badge flags, missing financials
 
 **Headline metrics (both cards):**
 - `INBOUND_TOTAL_POUNDS` = sum of `row_pounds` across all non-fee inbound rows (see data-format.md for the pounds-derivation rule). This replaces `INBOUND_TOTAL_CASES` on the headline card.
+- `POUNDS_PURCHASED` / `POUNDS_DONATED` = purchased-vs-donated split of the total (see the "Purchased vs donated split" rule in `../rvfb-daily-report/references/data-format.md`).
+- `PURCHASE_PRICE` = `sum(line_total where !is_donated && line_total != null)` — total dollars spent on food this week. Format `1,234.56`.
 - `INBOUND_WEIGHED_ROWS` / `INBOUND_TOTAL_ROWS` = weight-coverage counts. When `unweighed > 0`, render a small "from N of M rows weighed" note under the big number.
 - `OUTBOUND_TOTAL_CASES` = sum of `quantity` across the entire week.
 - `INBOUND_LINE_ITEMS` = count of non-fee inbound rows.
@@ -67,7 +69,7 @@ All daily aggregation rules apply per row (fees, badge flags, missing financials
 - `INBOUND_SUPPLIER_COUNT` = distinct suppliers with ≥1 non-fee row.
 - `OUTBOUND_CATEGORIES` = humanized category labels present, sorted by case volume desc.
 - `DAYS_WITH_INBOUND` / `DAYS_WITH_OUTBOUND` = count of distinct dates with ≥1 row.
-- `PRE_MADE_BAGS_CASES` = sum of `quantity` for outbound rows where `program_type == "pre_made_bags"`. Shown as a dedicated stat on the outbound card (renders as `0 cases` when none).
+- `OUTBOUND_BY_PROGRAM` = `{ home_delivery, in_person_shopping, pre_made_bags, unknown } → cases`. Every program with cases > 0 becomes its own line on the outbound card, ordered by cases desc.
 
 **Top-items lists (both cards):**
 - Inbound: group by `item_name_normalized` (fall back to `item_name_raw`); sum `row_pounds` (skip rows where it's null). Take top 10, sort by pounds desc. Format: `Potatoes (312 lbs), Onions (240 lbs), …` with each `(N lbs)` wrapped in `<span class="qty">…</span>`.
@@ -75,7 +77,7 @@ All daily aggregation rules apply per row (fees, badge flags, missing financials
 
 **Day-by-day breakdown (weekly-specific section):**
 
-A 7-row table (Sun–Sat) with: date, weekday, inbound pounds, outbound cases. Days with no activity render with `0` (not empty) so the week shape is visible. Highlight the row with the highest single-day outbound in muted bold. (Net-of-in-minus-out is dropped — mixing lbs and cases isn't meaningful.)
+A 7-row table (Sun–Sat) with columns: date, weekday, inbound pounds (total), pounds purchased, pounds donated, purchase price ($), outbound cases. Days with no activity render each column as `0` (not empty) so the week shape is visible. Highlight the row with the highest single-day outbound in muted bold. (Net-of-in-minus-out is dropped — mixing lbs and cases isn't meaningful.)
 
 **Top suppliers table:**
 
@@ -115,7 +117,7 @@ Same Chrome command as the daily skill (see `../rvfb-daily-report/references/ren
 
 `ls -la ~/Downloads/rvfb_weekly_summary_*` to confirm both files. Spot-check page 1 with `Read pages: "1-2"`. Then summarize for the user:
 
-- Headline: total pounds inbound (with weight-coverage note if incomplete), total cases outbound.
+- Headline: total pounds inbound (with weight-coverage note if incomplete), pounds purchased vs donated, purchase price for the week, total cases outbound with per-program breakdown.
 - Days with activity, busiest single day.
 - Supplier mix (top 2–3 by volume).
 - Top 3 inbound items, top 3 outbound items.

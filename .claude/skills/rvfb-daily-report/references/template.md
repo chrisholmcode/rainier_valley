@@ -14,6 +14,10 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
 | `{{INBOUND_SECTION}}`    | One supplier card per group (see "Supplier section" snippet below), or the empty-state card if there are no inbound rows |
 | `{{OUTBOUND_SECTION}}`   | The whiteboard distribution card with table rows, or the empty-state card |
 | `{{INBOUND_TOTAL_POUNDS}}` | Sum of `row_pounds` across all non-fee inbound rows (see data-format.md).       |
+| `{{POUNDS_PURCHASED}}`   | `sum(row_pounds where !is_donated)` — see purchased-vs-donated split in data-format.md. |
+| `{{POUNDS_DONATED}}`     | `sum(row_pounds where is_donated)` — same split.                               |
+| `{{PURCHASE_PRICE}}`     | `sum(line_total where !is_donated && line_total != null)`. Format `1,234.56`.  |
+| `{{OUTBOUND_PROGRAM_BREAKDOWN}}` | Program-by-program cases (see snippet below).                          |
 | `{{INBOUND_WEIGHT_COVERAGE_NOTE}}` | The `<div class="note">…</div>` snippet when unweighed rows > 0, else empty. |
 | `{{SUPPLIER_POUNDS}}`    | Per-supplier `pounds_total`. Rendered inline with `{{UNIT_COUNT}}` in the subtotal row. |
 | `{{SUPPLIER_WEIGHT_COVERAGE_NOTE}}` | Inline ` <span class="note">(N of M weighed)</span>` when incomplete, else empty. |
@@ -25,6 +29,9 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
   <h3><span class="badge in">Inbound</span> Deliveries Received</h3>
   <div class="big-number in">{{INBOUND_TOTAL_POUNDS}} lbs</div>
   {{INBOUND_WEIGHT_COVERAGE_NOTE}}
+  <div class="stat"><span class="stat-label">Pounds purchased</span><span class="stat-value">{{POUNDS_PURCHASED}} lbs</span></div>
+  <div class="stat"><span class="stat-label">Pounds donated</span><span class="stat-value">{{POUNDS_DONATED}} lbs</span></div>
+  <div class="stat"><span class="stat-label">Purchase price</span><span class="stat-value">${{PURCHASE_PRICE}}</span></div>
   <div class="stat"><span class="stat-label">Line items</span><span class="stat-value">{{INBOUND_LINE_ITEMS}}</span></div>
   <div class="stat"><span class="stat-label">Suppliers</span><span class="stat-value">{{INBOUND_SUPPLIER_COUNT}} ({{INBOUND_SUPPLIER_NAMES}})</span></div>
   <div class="stat"><span class="stat-label">Combined invoice value</span><span class="stat-value">${{INBOUND_INVOICE_VALUE}}{{PARTIAL_NOTE_IF_ANY}}</span></div>
@@ -34,6 +41,8 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
   </div>
 </div>
 ```
+
+`{{POUNDS_PURCHASED}}` / `{{POUNDS_DONATED}}` follow the purchased-vs-donated split defined in `data-format.md`. `{{PURCHASE_PRICE}}` is the summed `line_total` across non-fee, non-donation rows, formatted with thousands separators and 2-decimal cents (`1,234.56`). "Combined invoice value" continues to be the grand total of every line_total including donation lines that happen to carry a paperwork price (rare, but keeps the total honest).
 
 `{{INBOUND_WEIGHT_COVERAGE_NOTE}}` = `<div class="note" style="margin: -4px 0 8px;">from {{WEIGHED_ROWS}} of {{TOTAL_INBOUND_ROWS}} rows weighed</div>` when `unweighed_rows > 0`, otherwise empty string.
 
@@ -63,11 +72,25 @@ This is the canonical template for the RVFB daily report. Substitute the `{{…}
   <div class="stat"><span class="stat-label">Source</span><span class="stat-value">Whiteboard tally</span></div>
   <div class="stat"><span class="stat-label">Categories</span><span class="stat-value">{{OUTBOUND_CATEGORIES}}</span></div>
   <div class="stat stack">
+    <span class="stat-label">Inventory by program</span>
+    <div class="item-list">{{OUTBOUND_PROGRAM_BREAKDOWN}}</div>
+  </div>
+  <div class="stat stack">
     <span class="stat-label">All items distributed</span>
     <div class="item-list">{{OUTBOUND_ITEM_LIST}}</div>
   </div>
 </div>
 ```
+
+`{{OUTBOUND_PROGRAM_BREAKDOWN}}` = one `<div>` per program with cases > 0, ordered by cases desc, e.g.:
+
+```
+Home Delivery <span class="qty">(42)</span>
+In Person Shopping <span class="qty">(31)</span>
+Pre Made Bags <span class="qty">(18)</span>
+```
+
+If every row is `unknown` / blank, render a single `<div class="empty-state">Program not tagged</div>`.
 
 ## Snippet — Supplier section (one per inbound group)
 

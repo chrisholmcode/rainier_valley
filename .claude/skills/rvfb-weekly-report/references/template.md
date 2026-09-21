@@ -16,8 +16,11 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
 | `{{ALL_OUTBOUND_TABLE}}`     | All outbound items, sorted by cases desc (snippet below)                     |
 | `{{ALL_INBOUND_TABLE}}`      | All inbound items, sorted by pounds desc (snippet below)                     |
 | `{{INBOUND_TOTAL_POUNDS}}`   | Sum of `row_pounds` for non-fee inbound rows (see data-format.md).           |
+| `{{POUNDS_PURCHASED}}` / `{{POUNDS_DONATED}}` | Purchased-vs-donated split of the weekly pounds (see SKILL.md).   |
+| `{{PURCHASE_PRICE}}`         | `sum(line_total where !is_donated && line_total != null)`. Format `1,234.56`.|
+| `{{OUTBOUND_PROGRAM_BREAKDOWN}}` | Per-program cases for the outbound card (see snippet below).             |
 | `{{INBOUND_WEIGHT_COVERAGE_NOTE}}` | Small `<div class="note">…</div>` under the headline when unweighed > 0. |
-| `{{DAY_INBOUND_POUNDS}}` / `{{DAY_OUTBOUND_CASES}}` | Per-day rollups for the day-by-day table.       |
+| `{{DAY_INBOUND_POUNDS}}` / `{{DAY_POUNDS_PURCHASED}}` / `{{DAY_POUNDS_DONATED}}` / `{{DAY_PURCHASE_PRICE}}` / `{{DAY_OUTBOUND_CASES}}` | Per-day rollups for the day-by-day table. |
 | `{{DATA_QUALITY_FOOTER}}`    | Low-confidence % and missing-financials count (snippet below)                |
 
 ## Full HTML
@@ -132,6 +135,9 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
           <th>Date</th>
           <th>Day</th>
           <th class="num"><span class="badge in">In</span> lbs</th>
+          <th class="num">Purchased lbs</th>
+          <th class="num">Donated lbs</th>
+          <th class="num">Purchase $</th>
           <th class="num"><span class="badge out">Out</span> cases</th>
         </tr>
       </thead>
@@ -222,6 +228,9 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
   <h3><span class="badge in">Inbound</span> Deliveries Received</h3>
   <div class="big-number in">{{INBOUND_TOTAL_POUNDS}} lbs{{PARTIAL_WEEK_NOTE_IF_ANY}}</div>
   {{INBOUND_WEIGHT_COVERAGE_NOTE}}
+  <div class="stat"><span class="stat-label">Pounds purchased</span><span class="stat-value">{{POUNDS_PURCHASED}} lbs</span></div>
+  <div class="stat"><span class="stat-label">Pounds donated</span><span class="stat-value">{{POUNDS_DONATED}} lbs</span></div>
+  <div class="stat"><span class="stat-label">Purchase price</span><span class="stat-value">${{PURCHASE_PRICE}}</span></div>
   <div class="stat"><span class="stat-label">Line items</span><span class="stat-value">{{INBOUND_LINE_ITEMS}}</span></div>
   <div class="stat"><span class="stat-label">Suppliers</span><span class="stat-value">{{INBOUND_SUPPLIER_COUNT}} ({{INBOUND_SUPPLIER_NAMES}})</span></div>
   <div class="stat"><span class="stat-label">Days with deliveries</span><span class="stat-value">{{DAYS_WITH_INBOUND}}</span></div>
@@ -244,14 +253,27 @@ This is the canonical template for the RVFB weekly report. Substitute the `{{…
   <div class="stat"><span class="stat-label">Line items</span><span class="stat-value">{{OUTBOUND_LINE_ITEMS}}</span></div>
   <div class="stat"><span class="stat-label">Days with distribution</span><span class="stat-value">{{DAYS_WITH_OUTBOUND}}</span></div>
   <div class="stat"><span class="stat-label">Busiest day</span><span class="stat-value">{{BUSIEST_OUTBOUND_DAY}}</span></div>
-  <div class="stat"><span class="stat-label">Pre-made bags</span><span class="stat-value">{{PRE_MADE_BAGS_CASES}} cases</span></div>
   <div class="stat"><span class="stat-label">Categories</span><span class="stat-value">{{OUTBOUND_CATEGORIES}}</span></div>
+  <div class="stat stack">
+    <span class="stat-label">Inventory by program</span>
+    <div class="item-list">{{OUTBOUND_PROGRAM_BREAKDOWN}}</div>
+  </div>
   <div class="stat stack">
     <span class="stat-label">Top items distributed</span>
     <div class="item-list">{{OUTBOUND_TOP_ITEMS}}</div>
   </div>
 </div>
 ```
+
+`{{OUTBOUND_PROGRAM_BREAKDOWN}}` = one `<div>` per program with cases > 0, ordered by cases desc:
+
+```
+Home Delivery <span class="qty">(126)</span>
+In Person Shopping <span class="qty">(94)</span>
+Pre Made Bags <span class="qty">(48)</span>
+```
+
+If every outbound row is `unknown` / blank, render `<div class="empty-state">Program not tagged</div>`. The dedicated "Pre-made bags" stat was removed in favor of this breakdown — pre-made bags shows up as one of its lines.
 
 ## Snippet — Empty card variants
 
@@ -260,10 +282,10 @@ Use the same empty-state cards as the daily template. Inbound empty-state big-nu
 ## Snippet — Day-by-day row
 
 ```html
-<tr><td>{{ISO_DATE}}</td><td>{{WEEKDAY_LABEL}}</td><td class="num">{{DAY_INBOUND_POUNDS}}</td><td class="num">{{DAY_OUTBOUND_CASES}}</td></tr>
+<tr><td>{{ISO_DATE}}</td><td>{{WEEKDAY_LABEL}}</td><td class="num">{{DAY_INBOUND_POUNDS}}</td><td class="num">{{DAY_POUNDS_PURCHASED}}</td><td class="num">{{DAY_POUNDS_DONATED}}</td><td class="num">${{DAY_PURCHASE_PRICE}}</td><td class="num">{{DAY_OUTBOUND_CASES}}</td></tr>
 ```
 
-Highlight the row with the highest single-day outbound by adding `class="peak-day"` to the `<tr>`.
+Highlight the row with the highest single-day outbound by adding `class="peak-day"` to the `<tr>`. Zero-days render every numeric column as `0`.
 
 ## Snippet — Supplier row
 
