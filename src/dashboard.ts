@@ -1,6 +1,7 @@
 import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 import { env } from "./config.js";
+import { CHAT_PANEL_CSS, CHAT_PANEL_JS, chatPanelHtml } from "./chat.js";
 
 const PROGRAM_LABEL: Record<ProgramType, string> = {
   home_delivery: "Home Delivery",
@@ -814,10 +815,13 @@ thead th:first-child { text-align: left; }
 .period-custom[hidden] { display: none; }
 .period-dash { color: var(--muted); font-size: 12px; }
 tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
+${CHAT_PANEL_CSS}
 </style>
 </head>
 <body>
 <div class="container">
+<div class="layout">
+<main class="dashboard-main">
 
 <header class="page">
   <div>
@@ -830,7 +834,7 @@ tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;${specToQuery(spec)}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
     ${rescueExportControl(spec)}
-    <a class="btn" href="/chat">Chat →</a>
+    <button class="btn" id="chat-toggle-btn" type="button">Chat</button>
     <a class="btn" href="/coverage">Slip coverage →</a>
     <a class="btn" href="/review">Review queue →</a>
   </div>
@@ -917,8 +921,12 @@ ${programRows}
 
 <footer>${env.TENANT_SHORT} Inventory · Inbound + Outbound Delivery Logs · Auto-aggregated from Google Sheets</footer>
 
+</main>
+${chatPanelHtml(env.TENANT_SHORT)}
+</div>
 </div>
 
+<script>${CHAT_PANEL_JS}</script>
 <script>
   const chartLabels = ${chartLabels};
   const inboundSeries = ${inboundSeries};
