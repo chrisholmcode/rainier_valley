@@ -85,6 +85,54 @@ const CATEGORY_COLUMN_MAP: Array<{ headerKey: string; rescueLabel: string }> = [
   { headerKey: "nonmeatprotein",      rescueLabel: "Non-Meat Protein (eggs, tofu)" }
 ];
 
+// Food Lifeline mobile-app "pickup report" export uses a long/normalized shape
+// — one row per (transaction, category) — rather than RVFB's wide monthly
+// workbook. We detect it by header signature and map the codes below into the
+// existing RESCUE_CATEGORIES / RESCUE_DONOR_CANONICAL vocabulary so the same
+// commit path can consume it.
+const FL_CATEGORY_MAP: Record<string, string> = {
+  NF:        "Nonfood",
+  BP:        "Bakery",
+  DAIRY:     "Dairy/Juice/Alt. Dairy",
+  MEAT:      "Meat",
+  MIX:       "Canned/Dry Goods",
+  FRESH:     "Produce",
+  PREPERISH: "Prepared/Perishable",
+  PRO:       "Non-Meat Protein (eggs, tofu)",
+  VEG:       "Frozen Foods"
+};
+
+// (donor-slug, store-number) → canonical. Store numbers are compared with
+// leading zeros stripped so "00806" and "806" both match. Homegrown ignores
+// the store number and matches on donor-slug alone.
+const FL_STORE_MAP: Array<{ donorSlug: string; storeNumber: string | null; canonical: string }> = [
+  { donorSlug: "qfc",       storeNumber: "806",  canonical: "QFC-MI" },
+  { donorSlug: "qfc",       storeNumber: "847",  canonical: "QFC-BWY" },
+  { donorSlug: "safeway",   storeNumber: "1965", canonical: "SWY-RB" },
+  { donorSlug: "safeway",   storeNumber: "1508", canonical: "SWY-GEN" },
+  { donorSlug: "homegrown", storeNumber: null,   canonical: "HG" }
+];
+
+function foodLifelineDonorSlug(donorRaw: string): string | null {
+  const k = donorRaw.toLowerCase();
+  if (k.includes("safeway")) return "safeway";
+  if (k.includes("qfc")) return "qfc";
+  if (k.includes("homegrown")) return "homegrown";
+  return null;
+}
+
+function foodLifelineCanonical(donorRaw: string, storeNumber: string | null): string | null {
+  const slug = foodLifelineDonorSlug(donorRaw);
+  if (!slug) return null;
+  const stripped = storeNumber ? storeNumber.replace(/^0+/, "") : null;
+  for (const entry of FL_STORE_MAP) {
+    if (entry.donorSlug !== slug) continue;
+    if (entry.storeNumber == null) return entry.canonical;
+    if (entry.storeNumber === stripped) return entry.canonical;
+  }
+  return null;
+}
+
 // Tab names on the workbook that we should NOT try to parse as monthly rows.
 const SKIP_TAB_KEYS = new Set([
   "monthlytemplate", "numbersbystore", "datadump", "summary", "yearly", "notes"
@@ -258,12 +306,133 @@ function parseSheet(tabName: string, ws: XLSX.WorkSheet): ParsedRescueRow[] {
   return out;
 }
 
+const FL_HEADER_SIGNATURE = ["lineitemid", "transactionid", "categorycode", "pounds", "donorname"];
+
+function looksLikeFoodLifelineReport(ws: XLSX.WorkSheet): boolean {
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null, raw: true });
+  if (raw.length === 0) return false;
+  const headers = (raw[0] as unknown[]).map(normKey);
+  return FL_HEADER_SIGNATURE.every((h) => headers.includes(h));
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+
+// Parse a Food Lifeline mobile-app pickup-report export. Each source row is
+// one (transaction, category) — we aggregate by (canonical donor, delivery
+// date) so multiple transactions or categories on the same day at the same
+// store roll into one slip, matching the photo-form convention where one
+// slip = one day at one store.
+function parseFoodLifelineReport(ws: XLSX.WorkSheet): ParsedRescueMonth[] {
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null, raw: true });
+  if (raw.length === 0) return [];
+  const headers = (raw[0] as unknown[]).map(normKey);
+  const idxDate = headers.indexOf("date");
+  const idxDonor = headers.indexOf("donorname");
+  const idxStore = headers.indexOf("storenumber");
+  const idxCategory = headers.indexOf("categorycode");
+  const idxPounds = headers.indexOf("pounds");
+  if (idxDate < 0 || idxDonor < 0 || idxCategory < 0 || idxPounds < 0) return [];
+
+  interface Aggregate {
+    date: string;
+    donorRaw: string;
+    donorCanonical: string | null;
+    storeNumber: string | null;
+    categoryTotals: Record<string, number>;
+    computedTotal: number;
+    warnings: Set<string>;
+    firstSourceRowNumber: number;
+  }
+
+  const byKey = new Map<string, Aggregate>();
+  for (let r = 1; r < raw.length; r++) {
+    const row = raw[r] as unknown[];
+    const date = toIsoDate(row[idxDate]);
+    const donorRaw = String(row[idxDonor] ?? "").trim();
+    const storeNumber = row[idxStore] != null ? String(row[idxStore]).trim() : null;
+    const categoryCode = String(row[idxCategory] ?? "").trim().toUpperCase();
+    const poundsRaw = row[idxPounds];
+    const pounds = typeof poundsRaw === "number" ? poundsRaw : Number(String(poundsRaw ?? "").trim());
+    if (!date || !donorRaw || !categoryCode || !Number.isFinite(pounds) || pounds === 0) continue;
+
+    const canonical = foodLifelineCanonical(donorRaw, storeNumber);
+    const rescueLabel = FL_CATEGORY_MAP[categoryCode] ?? null;
+    const key = canonical && date ? `${canonical}::${date}` : `unmapped::${donorRaw}::${storeNumber ?? ""}::${date}`;
+
+    let agg = byKey.get(key);
+    if (!agg) {
+      agg = {
+        date,
+        donorRaw,
+        donorCanonical: canonical,
+        storeNumber,
+        categoryTotals: {},
+        computedTotal: 0,
+        warnings: new Set(),
+        firstSourceRowNumber: r + 1
+      };
+      byKey.set(key, agg);
+    }
+    if (!canonical) {
+      agg.warnings.add(
+        `donor "${donorRaw}" store #${storeNumber ?? "?"} doesn't match any Food Lifeline store — row will be skipped on commit`
+      );
+    }
+    if (!rescueLabel) {
+      agg.warnings.add(`unknown category code "${categoryCode}" — ${pounds} lb not counted`);
+      continue;
+    }
+    agg.categoryTotals[rescueLabel] = (agg.categoryTotals[rescueLabel] ?? 0) + pounds;
+    agg.computedTotal += pounds;
+  }
+
+  const monthBuckets = new Map<string, ParsedRescueRow[]>();
+  for (const agg of byKey.values()) {
+    if (agg.computedTotal === 0) continue;
+    const [y, m] = agg.date.split("-");
+    const tab = `${MONTH_NAMES[Number(m) - 1]} ${y}`;
+    let bucket = monthBuckets.get(tab);
+    if (!bucket) monthBuckets.set(tab, (bucket = []));
+    bucket.push({
+      monthTab: tab,
+      sourceRowNumber: agg.firstSourceRowNumber,
+      donorRaw: agg.donorRaw,
+      donorCanonical: agg.donorCanonical,
+      storeNumber: agg.storeNumber,
+      date: agg.date,
+      categoryTotals: agg.categoryTotals,
+      workbookTotal: null,
+      computedTotal: agg.computedTotal,
+      warnings: Array.from(agg.warnings),
+      alreadyLogged: false
+    });
+  }
+
+  const out: ParsedRescueMonth[] = [];
+  for (const [tab, rows] of Array.from(monthBuckets.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+    rows.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || (a.donorCanonical ?? "").localeCompare(b.donorCanonical ?? ""));
+    out.push({ tab, rowCount: rows.length, rows });
+  }
+  return out;
+}
+
 export function parseWorkbookBuffer(buffer: Buffer, filename: string): ParsedRescueMonth[] {
   // CSV path: one flat sheet, tab name derived from filename.
   const isCsv = /\.csv$/i.test(filename);
   const workbook = isCsv
     ? XLSX.read(buffer.toString("utf8"), { type: "string", cellDates: true, raw: true })
     : XLSX.read(buffer, { type: "buffer", cellDates: true, raw: true });
+
+  // Food Lifeline mobile-app export: single sheet, distinct header signature.
+  // Handle it before the monthly-tab branch since its shape is completely
+  // different (long-form, one row per category per pickup).
+  if (workbook.SheetNames.length > 0) {
+    const firstWs = workbook.Sheets[workbook.SheetNames[0]];
+    if (looksLikeFoodLifelineReport(firstWs)) {
+      return parseFoodLifelineReport(firstWs);
+    }
+  }
 
   const months: ParsedRescueMonth[] = [];
   for (const tab of workbook.SheetNames) {
@@ -802,7 +971,7 @@ const GROCERY_RESCUE_UPLOAD_HTML = `<!DOCTYPE html>
 </style>
 </head><body><div class="container">
 <h1>Excel Uploads</h1>
-<div class="meta">For the RVFB "Grocery Rescue Data" workbook only: drop the .xlsx (or a single-month CSV export) and each pickup row becomes one slip in the Inbound Delivery Log. For invoice or whiteboard photos, use Image/PDF Uploads.</div>
+<div class="meta">Drop the RVFB "Grocery Rescue Data" workbook (.xlsx or single-month CSV export) or a Food Lifeline mobile-app "Pickup Report" CSV. Each pickup becomes one slip in the Inbound Delivery Log. For invoice or whiteboard photos, use Image/PDF Uploads.</div>
 <div class="tabs">
   <a class="btn" href="/review?tab=queue">← Inbound Queue</a>
   <a class="btn" href="/review/upload">Image/PDF Uploads</a>
@@ -813,7 +982,7 @@ const GROCERY_RESCUE_UPLOAD_HTML = `<!DOCTYPE html>
 <div class="card" id="upload-card">
   <div class="drop-zone" id="drop" role="button" tabindex="0">
     <p><strong>Tap or click to pick a workbook</strong></p>
-    <p>Accepts .xlsx (full RVFB Grocery Rescue Data workbook) or .csv (single monthly tab exported from Excel or Google Sheets)</p>
+    <p>Accepts .xlsx (full RVFB Grocery Rescue Data workbook), .csv (single monthly tab exported from Excel or Google Sheets), or a Food Lifeline mobile-app "Pickup Report" CSV export</p>
   </div>
   <input type="file" id="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
   <div class="controls">
