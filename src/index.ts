@@ -46,7 +46,14 @@ import {
   SHEET_HEADERS,
   EOD_SHEET_HEADERS
 } from "./sheets.js";
-import { buildDashboardHtml, buildCsvExport, monthToRange, type WindowSpec } from "./dashboard.js";
+import {
+  buildDashboardHtml,
+  buildCsvExport,
+  monthToRange,
+  collectInboundSlipDetails,
+  collectOutboundSessionDetails,
+  type WindowSpec
+} from "./dashboard.js";
 import { buildCoverageHtml, defaultCoverageRange, COVERAGE_SUPPLIERS } from "./coverage.js";
 import { buildRescueSlipsCsv } from "./rescue-export.js";
 import { buildReviewListHtml, buildSlipDetailHtml, buildSuggestionsListHtml, buildOutboundListHtml, buildOutboundSlipDetailHtml, decodeSlipKey, encodeSlipKey } from "./review.js";
@@ -1109,6 +1116,15 @@ async function requestUserEmail(req: IncomingMessage): Promise<string | null> {
   return jwt?.email ?? null;
 }
 
+function parseCookie(header: string | undefined, name: string): string | null {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [k, ...rest] = part.trim().split("=");
+    if (k === name) return decodeURIComponent(rest.join("="));
+  }
+  return null;
+}
+
 async function authRequest(req: IncomingMessage, res: ServerResponse): Promise<URL | null> {
   const url = new URL(req.url ?? "/", "http://localhost");
 
@@ -1119,9 +1135,18 @@ async function authRequest(req: IncomingMessage, res: ServerResponse): Promise<U
   }
 
   if (env.DASHBOARD_TOKEN) {
-    const token = url.searchParams.get("token") ?? "";
-    if (token === env.DASHBOARD_TOKEN) {
+    const qsToken = url.searchParams.get("token") ?? "";
+    if (qsToken === env.DASHBOARD_TOKEN) {
+      // Sticky cookie so downstream page links (review UI, /review/photo) that
+      // don't propagate the token param still authenticate. Prod uses CF Access
+      // and never hits this branch.
+      res.setHeader("Set-Cookie", `dashboard_token=${encodeURIComponent(env.DASHBOARD_TOKEN)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
       console.log(`auth path=token-fallback path=${url.pathname}`);
+      return url;
+    }
+    const cookieToken = parseCookie(req.headers.cookie, "dashboard_token");
+    if (cookieToken && cookieToken === env.DASHBOARD_TOKEN) {
+      console.log(`auth path=token-cookie path=${url.pathname}`);
       return url;
     }
   }
@@ -1233,6 +1258,54 @@ async function handleDashboardRequest(req: IncomingMessage, res: ServerResponse)
     res.end(html);
   } catch (err) {
     console.error("Dashboard error:", (err as Error).message);
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Internal server error");
+  }
+}
+
+// Side-panel drilldown: returns the inbound slips or outbound sessions that
+// compose a single bucket cell/chart point on /dashboard. Keeps grouping in
+// server land so the client just renders the list.
+async function handleDashboardBucketRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = await authRequest(req, res);
+  if (!url) return;
+
+  const direction = url.searchParams.get("direction");
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+  if (direction !== "inbound" && direction !== "outbound") {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("direction must be inbound or outbound");
+    return;
+  }
+  if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("from/to required as YYYY-MM-DD");
+    return;
+  }
+  const [lo, hi] = from <= to ? [from, to] : [to, from];
+
+  const programParam = url.searchParams.get("program");
+  const program: ProgramType | null =
+    programParam === "home_delivery" || programParam === "in_person_shopping" || programParam === "pre_made_bags"
+      ? programParam
+      : null;
+
+  try {
+    if (direction === "inbound") {
+      const inboundRows = await readDeliveryRows({ limit: 100000 });
+      const slips = collectInboundSlipDetails(inboundRows, lo, hi);
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ direction, from: lo, to: hi, slips }));
+      return;
+    }
+    const outAll = await readEodRows({ limit: 100000 });
+    const outboundRows = program ? outAll.filter((r) => r.program_type === program) : outAll;
+    const sessions = collectOutboundSessionDetails(outboundRows, lo, hi);
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(JSON.stringify({ direction, from: lo, to: hi, program, sessions }));
+  } catch (err) {
+    console.error("Dashboard bucket error:", (err as Error).message);
     res.writeHead(500, { "Content-Type": "text/plain" });
     res.end("Internal server error");
   }
@@ -2362,6 +2435,11 @@ function startHttpServer(): void {
 
     if (req.method === "GET" && path === "/dashboard") {
       await handleDashboardRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/dashboard/bucket") {
+      await handleDashboardBucketRequest(req, res);
       return;
     }
 
