@@ -62,7 +62,7 @@ import {
   handleGroceryRescueUploadPreviewRequest,
   handleGroceryRescueUploadCommitRequest
 } from "./grocery-rescue-upload.js";
-import { handleChatApiRequest } from "./chat.js";
+import { handleChatApiRequest, handleChatDownloadRequest } from "./chat.js";
 import { handleInboundEmailRequest } from "./email-intake.js";
 import { startEmailHeartbeat } from "./email-heartbeat.js";
 import {
@@ -2374,6 +2374,19 @@ function startHttpServer(): void {
       const authed = await authRequest(req, res);
       if (!authed) return;
       await handleChatApiRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path.startsWith("/api/chat/download/")) {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      const id = path.slice("/api/chat/download/".length);
+      if (!/^[a-f0-9]{24}$/.test(id)) {
+        res.writeHead(400, { "Content-Type": "text/plain" });
+        res.end("Invalid download id.");
+        return;
+      }
+      handleChatDownloadRequest(req, res, id);
       return;
     }
 
