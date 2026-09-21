@@ -848,8 +848,15 @@ tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
   <div class="summary-pill in">
     <div class="label">Pounds purchased</div>
     <div class="value">${formatNum(totalPoundsPurchased)}</div>
-    ${totalPurchasePrice > 0
-      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">${formatMoney(totalPurchasePrice)} spent</div>`
+    ${totalInboundPounds > 0
+      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">${Math.round((totalPoundsPurchased / totalInboundPounds) * 100)}% of inbound</div>`
+      : ""}
+  </div>
+  <div class="summary-pill in">
+    <div class="label">Purchase price</div>
+    <div class="value">${formatMoney(totalPurchasePrice)}</div>
+    ${totalPoundsPurchased > 0
+      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">$${(totalPurchasePrice / totalPoundsPurchased).toFixed(2)} / lb</div>`
       : ""}
   </div>
   <div class="summary-pill in">
