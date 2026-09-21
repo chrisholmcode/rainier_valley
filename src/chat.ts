@@ -522,160 +522,174 @@ export async function handleChatApiRequest(req: IncomingMessage, res: ServerResp
   }
 }
 
-export async function handleChatPageRequest(res: ServerResponse): Promise<void> {
-  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-  res.end(CHAT_PAGE_HTML);
+// Chat lives as an embedded panel on /dashboard (see dashboard.ts).
+// These three exports are the panel's building blocks so dashboard.ts can
+// interpolate them into its own HTML without duplicating the fetch loop.
+
+export const CHAT_PANEL_CSS = `
+.layout { display: flex; gap: 20px; align-items: flex-start; }
+.dashboard-main { flex: 1 1 auto; min-width: 0; }
+.chat-panel { display: none; flex-direction: column; width: 380px; flex-shrink: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md, 12px); padding: 14px; height: calc(100vh - 64px); position: sticky; top: 32px; align-self: flex-start; }
+body[data-chat-open="true"] .chat-panel { display: flex; }
+.chat-panel .chat-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.chat-panel .chat-head h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.chat-panel .chat-head .actions { display: flex; gap: 6px; }
+.chat-panel .chat-meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.chat-panel .examples { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.chat-panel .example { font-size: 11px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; cursor: pointer; }
+.chat-panel .example:hover { background: #fafbfc; color: var(--ink); }
+.chat-panel .messages { flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; overflow-y: auto; min-height: 0; padding-right: 4px; }
+.chat-panel .msg { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+.chat-panel .msg.user { background: #eef2ff; align-self: flex-end; max-width: 88%; }
+.chat-panel .msg.assistant { background: #fafbfc; border: 1px solid var(--line); align-self: flex-start; max-width: 95%; }
+.chat-panel .msg.assistant.thinking { color: var(--muted); font-style: italic; }
+.chat-panel .msg.error { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; align-self: flex-start; max-width: 95%; }
+.chat-panel .msg .stats { color: var(--muted); font-size: 10px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.chat-panel .composer { display: flex; gap: 6px; align-items: flex-end; background: white; border: 1px solid var(--line); border-radius: 10px; padding: 6px; }
+.chat-panel textarea { flex: 1; border: none; outline: none; font-family: inherit; font-size: 13px; resize: none; min-height: 20px; max-height: 120px; padding: 4px; color: var(--ink); background: transparent; }
+.chat-panel .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.chat-panel .btn-mini { padding: 4px 8px; font-size: 11px; }
+.chat-panel .btn-primary { background: var(--ink, #0a2540); color: white; border-color: var(--ink, #0a2540); }
+.chat-panel .btn-primary:disabled { opacity: .5; cursor: wait; }
+@media (max-width: 1200px) {
+  .chat-panel { position: fixed; top: 0; right: 0; bottom: 0; height: 100vh; width: min(400px, 92vw); z-index: 100; border-radius: 0; box-shadow: -6px 0 16px rgba(0,0,0,0.08); }
 }
+`;
 
-const CHAT_PAGE_HTML = `<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8"><title>${env.TENANT_SHORT} · Chat</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-<style>
-  :root {
-    --ink: #0a2540; --muted: #6b7280; --line: #e5e7eb; --bg: #f6f9fc;
-    --card: #ffffff; --accent: #635bff; --in: #047857; --user-bg: #eef2ff; --assistant-bg: #ffffff;
-  }
-  * { box-sizing: border-box; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 24px; -webkit-font-smoothing: antialiased; }
-  .container { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; min-height: calc(100vh - 48px); }
-  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
-  .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
-  .toolbar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .btn { display: inline-block; padding: 7px 12px; background: white; border: 1px solid var(--line); color: var(--ink); text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
-  .btn:hover { background: #fafbfc; }
-  .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
-  .btn.primary:disabled { opacity: .5; cursor: wait; }
-  .messages { flex: 1; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-  .msg { padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
-  .msg.user { background: var(--user-bg); align-self: flex-end; max-width: 78%; }
-  .msg.assistant { background: var(--assistant-bg); border: 1px solid var(--line); align-self: flex-start; max-width: 92%; }
-  .msg.assistant.thinking { color: var(--muted); font-style: italic; }
-  .msg.error { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; align-self: flex-start; max-width: 92%; }
-  .composer { display: flex; gap: 8px; align-items: flex-end; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
-  textarea { flex: 1; border: none; outline: none; font-family: inherit; font-size: 14px; resize: none; min-height: 22px; max-height: 150px; padding: 4px; color: var(--ink); background: transparent; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
-  .stats { color: var(--muted); font-size: 11px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
-  .example { font-size: 12px; color: var(--muted); background: white; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-  .example:hover { background: #fafbfc; color: var(--ink); }
-</style>
-</head><body>
-<div class="container">
-  <h1>${env.TENANT_SHORT} · Chat</h1>
-  <div class="meta">Ask questions about your inbound and outbound inventory. Answers come from the Inbound + Outbound Delivery Logs.</div>
-  <div class="toolbar">
-    <a class="btn" href="/dashboard">← Dashboard</a>
-    <a class="btn" href="/review">Review queue</a>
-    <button class="btn" id="clear-btn">Clear chat</button>
+export function chatPanelHtml(tenantShort: string): string {
+  return `
+<aside class="chat-panel" id="chat-panel">
+  <div class="chat-head">
+    <h3>${tenantShort} · Chat</h3>
+    <div class="actions">
+      <button class="btn btn-mini" id="chat-clear-btn" type="button">Clear</button>
+      <button class="btn btn-mini" id="chat-close-btn" type="button" aria-label="Close chat">✕</button>
+    </div>
   </div>
-
-  <div class="examples" id="examples">
-    <span class="example">How many pounds did we get last week?</span>
-    <span class="example">Which supplier had the biggest delivery in August?</span>
-    <span class="example">How much did we spend on food last month?</span>
+  <div class="chat-meta">Ask questions about your inbound and outbound inventory. Read-only.</div>
+  <div class="examples" id="chat-examples">
+    <span class="example">Pounds we got last week?</span>
+    <span class="example">Biggest supplier in August?</span>
+    <span class="example">How much did we spend last month?</span>
     <span class="example">What went out via Home Delivery last week?</span>
-    <span class="example">Show me the top 5 inbound items in October.</span>
   </div>
-
-  <div class="messages" id="messages"></div>
-
+  <div class="messages" id="chat-messages"></div>
   <div class="composer">
-    <textarea id="input" rows="1" placeholder="Ask about inventory…" autofocus></textarea>
-    <button class="btn primary" id="send-btn">Send</button>
+    <textarea id="chat-input" rows="1" placeholder="Ask about inventory…"></textarea>
+    <button class="btn btn-mini btn-primary" id="chat-send-btn" type="button">Send</button>
   </div>
-  <div class="hint">Enter to send · Shift+Enter for a new line. Read-only — chat can't modify the sheets.</div>
-</div>
-
-<script>
-const history = [];
-const messagesEl = document.getElementById('messages');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send-btn');
-const clearBtn = document.getElementById('clear-btn');
-
-function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-function renderMessage(role, text, opts) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + role + (opts && opts.thinking ? ' thinking' : '') + (opts && opts.error ? ' error' : '');
-  div.innerHTML = esc(text);
-  if (opts && opts.stats) {
-    const s = document.createElement('div');
-    s.className = 'stats';
-    s.textContent = opts.stats;
-    div.appendChild(s);
-  }
-  messagesEl.appendChild(div);
-  messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-  return div;
+  <div class="hint">Enter to send · Shift+Enter for a new line</div>
+</aside>`;
 }
 
-function autoGrow() {
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-}
-input.addEventListener('input', autoGrow);
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
+export const CHAT_PANEL_JS = `
+(function(){
+  var history = [];
+  var messagesEl = document.getElementById('chat-messages');
+  var input = document.getElementById('chat-input');
+  var sendBtn = document.getElementById('chat-send-btn');
+  var clearBtn = document.getElementById('chat-clear-btn');
+  var closeBtn = document.getElementById('chat-close-btn');
+  var toggleBtn = document.getElementById('chat-toggle-btn');
+  var examplesEl = document.getElementById('chat-examples');
+  if (!messagesEl || !input || !sendBtn) return;
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function setOpen(open) {
+    document.body.setAttribute('data-chat-open', open ? 'true' : 'false');
+    try { localStorage.setItem('loadslip.chat.open', open ? '1' : '0'); } catch(e){}
+    if (open) setTimeout(function(){ input.focus(); }, 50);
   }
-});
 
-document.getElementById('examples').addEventListener('click', (e) => {
-  if (e.target.classList.contains('example')) {
-    input.value = e.target.textContent;
-    autoGrow();
-    input.focus();
-  }
-});
-
-clearBtn.addEventListener('click', () => {
-  history.length = 0;
-  messagesEl.innerHTML = '';
-});
-
-async function send() {
-  const text = input.value.trim();
-  if (!text || sendBtn.disabled) return;
-  input.value = '';
-  autoGrow();
-  history.push({ role: 'user', content: text });
-  renderMessage('user', text);
-  const thinking = renderMessage('assistant', 'Thinking…', { thinking: true });
-  sendBtn.disabled = true;
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history })
-    });
-    const body = await res.json();
-    thinking.remove();
-    if (!body.ok) {
-      renderMessage('assistant', body.error || 'Something went wrong.', { error: true });
-      history.pop();
-    } else {
-      history.push({ role: 'assistant', content: body.reply });
-      const u = body.usage || {};
-      const stats = 'iterations ' + (body.iterations ?? 1) +
-        ' · input ' + (u.input_tokens ?? 0) +
-        ' · output ' + (u.output_tokens ?? 0) +
-        (u.cache_read_input_tokens ? ' · cache-hit ' + u.cache_read_input_tokens : '');
-      renderMessage('assistant', body.reply, { stats });
+  function renderMessage(role, text, opts) {
+    var div = document.createElement('div');
+    div.className = 'msg ' + role + (opts && opts.thinking ? ' thinking' : '') + (opts && opts.error ? ' error' : '');
+    div.innerHTML = esc(text);
+    if (opts && opts.stats) {
+      var s = document.createElement('div');
+      s.className = 'stats';
+      s.textContent = opts.stats;
+      div.appendChild(s);
     }
-  } catch (err) {
-    thinking.remove();
-    renderMessage('assistant', 'Network error: ' + (err.message || err), { error: true });
-    history.pop();
-  } finally {
-    sendBtn.disabled = false;
-    input.focus();
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
   }
-}
 
-sendBtn.addEventListener('click', send);
-</script>
-</body></html>`;
+  function autoGrow() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  }
+  input.addEventListener('input', autoGrow);
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  if (examplesEl) examplesEl.addEventListener('click', function(e){
+    if (e.target && e.target.classList && e.target.classList.contains('example')) {
+      input.value = e.target.textContent;
+      autoGrow();
+      input.focus();
+    }
+  });
+
+  if (clearBtn) clearBtn.addEventListener('click', function(){
+    history.length = 0;
+    messagesEl.innerHTML = '';
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', function(){ setOpen(false); });
+  if (toggleBtn) toggleBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    var open = document.body.getAttribute('data-chat-open') === 'true';
+    setOpen(!open);
+  });
+
+  async function send() {
+    var text = input.value.trim();
+    if (!text || sendBtn.disabled) return;
+    input.value = '';
+    autoGrow();
+    history.push({ role: 'user', content: text });
+    renderMessage('user', text);
+    var thinking = renderMessage('assistant', 'Thinking…', { thinking: true });
+    sendBtn.disabled = true;
+    try {
+      var res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history })
+      });
+      var body = await res.json();
+      thinking.remove();
+      if (!body.ok) {
+        renderMessage('assistant', body.error || 'Something went wrong.', { error: true });
+        history.pop();
+      } else {
+        history.push({ role: 'assistant', content: body.reply });
+        var u = body.usage || {};
+        var stats = 'iterations ' + (body.iterations || 1) +
+          ' · input ' + (u.input_tokens || 0) +
+          ' · output ' + (u.output_tokens || 0) +
+          (u.cache_read_input_tokens ? ' · cache-hit ' + u.cache_read_input_tokens : '');
+        renderMessage('assistant', body.reply, { stats: stats });
+      }
+    } catch (err) {
+      thinking.remove();
+      renderMessage('assistant', 'Network error: ' + (err.message || err), { error: true });
+      history.pop();
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+  sendBtn.addEventListener('click', send);
+
+  // Restore panel state on load.
+  try {
+    var saved = localStorage.getItem('loadslip.chat.open');
+    if (saved === '1') setOpen(true);
+  } catch(e){}
+})();
+`;
