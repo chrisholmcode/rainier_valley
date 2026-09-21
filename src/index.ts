@@ -62,6 +62,7 @@ import {
   handleGroceryRescueUploadPreviewRequest,
   handleGroceryRescueUploadCommitRequest
 } from "./grocery-rescue-upload.js";
+import { handleChatPageRequest, handleChatApiRequest } from "./chat.js";
 import { handleInboundEmailRequest } from "./email-intake.js";
 import { startEmailHeartbeat } from "./email-heartbeat.js";
 import {
@@ -2369,6 +2370,20 @@ function startHttpServer(): void {
       return;
     }
 
+    if (req.method === "GET" && path === "/chat") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      await handleChatPageRequest(res);
+      return;
+    }
+
+    if (req.method === "POST" && path === "/api/chat") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      await handleChatApiRequest(req, res);
+      return;
+    }
+
     if (req.method === "GET" && path === "/review") {
       await handleReviewListRequest(req, res);
       return;
@@ -2544,7 +2559,7 @@ function startHttpServer(): void {
   server.listen(port, () => {
     const routes: string[] = [];
     if (env.VOICE_WEBHOOK_SECRET) routes.push("/voice");
-    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review", "/donate", "/labels");
+    if (env.DASHBOARD_TOKEN || cfJwks) routes.push("/dashboard", "/review", "/chat", "/donate", "/labels");
     const authModes: string[] = [];
     if (cfJwks) authModes.push("cf-access-jwt");
     if (env.DASHBOARD_TOKEN) authModes.push("token");
