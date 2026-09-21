@@ -830,6 +830,7 @@ tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
     <div class="btn-group">${programButtons(active, token, program)}</div>
     <a class="btn btn-export" href="?view=${view}&amp;${specToQuery(spec)}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
     ${rescueExportControl(spec)}
+    <a class="btn" href="/chat">Chat →</a>
     <a class="btn" href="/coverage">Slip coverage →</a>
     <a class="btn" href="/review">Review queue →</a>
   </div>
