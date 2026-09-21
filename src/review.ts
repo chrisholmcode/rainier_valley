@@ -808,6 +808,7 @@ ${FONT_HEAD_LINKS}
   </div>
   <div class="tabs">
     <a class="btn" href="/review?tab=queue">← Back to Queue</a>
+    <a class="btn" href="/dashboard">← Dashboard</a>
     <a class="btn" href="${escapeHtml(buildLabelsLink({ date: labelDate, source: defaultSource, slipKey: slip.slipKey, slipLabel }))}" target="_blank" rel="noopener" title="Mint crate labels for this slip (date + source pre-filled)">🏷️ Labels</a>
     <button class="btn btn-primary" onclick="approveSlip()">${slip.approved ? "Re-approve" : "Approve slip"}</button>
   </div>
@@ -1354,6 +1355,7 @@ ${FONT_HEAD_LINKS}
   </div>
   <div class="tabs">
     <a class="btn" href="/review?tab=outbound">← Back to Outbound</a>
+    <a class="btn" href="/dashboard">← Dashboard</a>
     <button class="btn btn-primary" onclick="approveSlip()">${slip.approved ? "Re-approve" : "Approve slip"}</button>
   </div>
 </header>

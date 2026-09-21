@@ -367,6 +367,129 @@ function coverageCell(bucket: Bucket): string {
   return `<span class="num-out">${bucket.inboundWeighedRows}/${total}</span>`;
 }
 
+export interface InboundSlipDetail {
+  photo_url: string | null;
+  supplier: string;
+  invoice_or_order_number: string | null;
+  delivery_date: string | null;
+  is_donation: boolean;
+  line_count: number;
+  total_pounds: number;
+  unweighed_lines: number;
+  purchase_price: number;
+  min_confidence: number | null;
+}
+
+export interface OutboundSessionDetail {
+  session_key: string;
+  slack_channel: string | null;
+  slack_message_ts: string | null;
+  source: string;
+  date: string | null;
+  program_type: ProgramType | null;
+  line_count: number;
+  total_cases: number;
+  photo_url: string | null;
+  min_confidence: number | null;
+}
+
+export function collectInboundSlipDetails(
+  inboundRows: DeliverySheetRow[],
+  from: string,
+  to: string
+): InboundSlipDetail[] {
+  const byKey = new Map<string, InboundSlipDetail>();
+  for (const r of inboundRows) {
+    const d = r.delivery_date;
+    if (!d || d < from || d > to) continue;
+    if (isFee(r.is_fee)) continue;
+    if (isEmptySkeletonRow(r)) continue;
+    // Group by photo_url when present, else by supplier+invoice — that's the
+    // best fallback for email-intake / grocery-rescue rows that don't have a
+    // Slack photo.
+    const key = (r.photo_url && r.photo_url.trim())
+      || `${r.supplier ?? ""}::${r.invoice_or_order_number ?? ""}::${d}`;
+    let d0 = byKey.get(key);
+    if (!d0) {
+      d0 = {
+        photo_url: r.photo_url && r.photo_url.trim() ? r.photo_url : null,
+        supplier: r.supplier ?? "",
+        invoice_or_order_number: r.invoice_or_order_number ?? null,
+        delivery_date: d,
+        is_donation: isDonationRow(r),
+        line_count: 0,
+        total_pounds: 0,
+        unweighed_lines: 0,
+        purchase_price: 0,
+        min_confidence: null
+      };
+      byKey.set(key, d0);
+    }
+    d0.line_count += 1;
+    const lbs = inboundPoundsFor(r);
+    if (lbs != null) d0.total_pounds += lbs;
+    else d0.unweighed_lines += 1;
+    if (!d0.is_donation) {
+      const lt = toNumber(r.line_total);
+      if (lt > 0) d0.purchase_price += lt;
+    }
+    const c = r.confidence ? parseFloat(r.confidence) : NaN;
+    if (Number.isFinite(c) && (d0.min_confidence === null || c < d0.min_confidence)) {
+      d0.min_confidence = c;
+    }
+  }
+  return Array.from(byKey.values()).sort((a, b) => {
+    const ad = a.delivery_date ?? "";
+    const bd = b.delivery_date ?? "";
+    if (ad !== bd) return bd.localeCompare(ad);
+    return a.supplier.localeCompare(b.supplier);
+  });
+}
+
+export function collectOutboundSessionDetails(
+  outboundRows: EodSheetRow[],
+  from: string,
+  to: string
+): OutboundSessionDetail[] {
+  const byKey = new Map<string, OutboundSessionDetail>();
+  for (const r of outboundRows) {
+    const d = r.date;
+    if (!d || d < from || d > to) continue;
+    const key = (r.slack_channel && r.slack_message_ts)
+      ? `${r.slack_channel}:${r.slack_message_ts}`
+      : `manual::${r.recorded_at || r.rowIndex}`;
+    let s = byKey.get(key);
+    if (!s) {
+      s = {
+        session_key: key,
+        slack_channel: r.slack_channel,
+        slack_message_ts: r.slack_message_ts,
+        source: r.source ?? "unknown",
+        date: d,
+        program_type: r.program_type ?? null,
+        line_count: 0,
+        total_cases: 0,
+        photo_url: r.photo_url && r.photo_url.trim() ? r.photo_url : null,
+        min_confidence: null
+      };
+      byKey.set(key, s);
+    }
+    s.line_count += 1;
+    s.total_cases += toNumber(r.quantity);
+    if (!s.photo_url && r.photo_url && r.photo_url.trim()) s.photo_url = r.photo_url;
+    const c = r.confidence ? parseFloat(r.confidence) : NaN;
+    if (Number.isFinite(c) && (s.min_confidence === null || c < s.min_confidence)) {
+      s.min_confidence = c;
+    }
+  }
+  return Array.from(byKey.values()).sort((a, b) => {
+    const ad = a.date ?? "";
+    const bd = b.date ?? "";
+    if (ad !== bd) return bd.localeCompare(ad);
+    return a.source.localeCompare(b.source);
+  });
+}
+
 export type Range = "1w" | "4w";
 
 // A dashboard window is one of: a recent rolling range (last 7d / 28d), a
@@ -574,19 +697,27 @@ function programSuffix(program: ProgramType | null): string {
   return program ? `&amp;program=${program}` : "";
 }
 
-function viewButtons(active: ViewOption, _token: string, program: ProgramType | null): string {
+// Token-mode auth (local dev) requires ?token= on every request. In CF Access
+// prod the token param is "" so this is a no-op.
+function tokenSuffix(token: string): string {
+  return token ? `&amp;token=${encodeURIComponent(token)}` : "";
+}
+
+function viewButtons(active: ViewOption, token: string, program: ProgramType | null): string {
   const progParam = programSuffix(program);
   const specParam = specToQuery(active.spec);
+  const tokParam = tokenSuffix(token);
   const dailyCls = active.view === "daily" ? "btn active" : "btn";
   const weeklyCls = active.view === "weekly" ? "btn active" : "btn";
   return `
-    <a class="${dailyCls}" href="?view=daily&amp;${specParam}${progParam}">Daily</a>
-    <a class="${weeklyCls}" href="?view=weekly&amp;${specParam}${progParam}">Weekly</a>
+    <a class="${dailyCls}" href="?view=daily&amp;${specParam}${progParam}${tokParam}">Daily</a>
+    <a class="${weeklyCls}" href="?view=weekly&amp;${specParam}${progParam}${tokParam}">Weekly</a>
   `;
 }
 
-function programButtons(active: ViewOption, _token: string, activeProgram: ProgramType | null): string {
+function programButtons(active: ViewOption, token: string, activeProgram: ProgramType | null): string {
   const specParam = specToQuery(active.spec);
+  const tokParam = tokenSuffix(token);
   const opts: Array<{ label: string; value: ProgramType | null }> = [
     { label: "All", value: null },
     { label: "Home Delivery", value: "home_delivery" },
@@ -598,7 +729,7 @@ function programButtons(active: ViewOption, _token: string, activeProgram: Progr
       const isActive = (o.value ?? null) === (activeProgram ?? null);
       const cls = isActive ? "btn active" : "btn";
       const progParam = o.value ? `&amp;program=${o.value}` : "";
-      return `<a class="${cls}" href="?view=${active.view}&amp;${specParam}${progParam}">${o.label}</a>`;
+      return `<a class="${cls}" href="?view=${active.view}&amp;${specParam}${progParam}${tokParam}">${o.label}</a>`;
     })
     .join("");
 }
@@ -606,8 +737,9 @@ function programButtons(active: ViewOption, _token: string, activeProgram: Progr
 // Period picker consolidates the old "1w / 4w" range buttons with a month
 // dropdown so users can pull up historical months without needing a separate
 // control. Emits URLs via specToQuery so back/forward + bookmarks work.
-function periodPicker(active: ViewOption, program: ProgramType | null): string {
+function periodPicker(active: ViewOption, program: ProgramType | null, token: string): string {
   const progParam = programSuffix(program);
+  const tokParam = tokenSuffix(token);
   const months = rescueMonthOptions();
   const spec = active.spec;
 
@@ -650,8 +782,9 @@ function periodPicker(active: ViewOption, program: ProgramType | null): string {
   var apply = document.getElementById('period-apply');
   var view = ${JSON.stringify(active.view)};
   var progParam = ${JSON.stringify(progParam.replace(/&amp;/g, "&"))};
+  var tokParam = ${JSON.stringify(tokParam.replace(/&amp;/g, "&"))};
   function jumpTo(query) {
-    var url = '?view=' + view + '&' + query + progParam;
+    var url = '?view=' + view + '&' + query + progParam + tokParam;
     window.location.href = url;
   }
   sel.addEventListener('change', function(){
@@ -700,9 +833,9 @@ function rescueMonthOptions(): Array<{ value: string; label: string; from: strin
 // Rescue-export button — inherits the dashboard's currently-selected Period
 // so users don't have to pick the month twice. The href regenerates on every
 // render via specWindow.
-function rescueExportControl(spec: WindowSpec): string {
+function rescueExportControl(spec: WindowSpec, token: string): string {
   const win = specWindow(spec);
-  return `<a class="btn btn-export" href="/export/grocery-rescue?from=${escapeHtml(win.from)}&amp;to=${escapeHtml(win.to)}" download>↓ Grocery rescue slips (Food Lifeline)</a>`;
+  return `<a class="btn btn-export" href="/export/grocery-rescue?from=${escapeHtml(win.from)}&amp;to=${escapeHtml(win.to)}${tokenSuffix(token)}" download>↓ Grocery rescue slips (Food Lifeline)</a>`;
 }
 
 export function buildDashboardHtml(params: {
@@ -726,32 +859,41 @@ export function buildDashboardHtml(params: {
     hour12: true
   });
 
+  // Every metric cell carries the direction + date range that drives the
+  // side-panel drilldown. Row-level direction is fixed by the row's meaning.
+  function td(b: Bucket, dir: "inbound" | "outbound", inner: string, klass = "num"): string {
+    return `<td class="${klass} bucket-cell" data-direction="${dir}" data-from="${b.startDate}" data-to="${b.endDate}">${inner}</td>`;
+  }
+
   const colHeaderFn = view === "daily" ? dailyColHeader : weeklyColHeader;
   const headerCells = buckets.map((b) => `<th>${colHeaderFn(b)}</th>`).join("");
-  const inboundPoundsRow = buckets.map((b) => `<td class="num">${metricCell(b.inboundPounds, "in")}</td>`).join("");
-  const poundsPurchasedRow = buckets.map((b) => `<td class="num">${metricCell(b.poundsPurchased, "in")}</td>`).join("");
-  const poundsDonatedRow = buckets.map((b) => `<td class="num">${metricCell(b.poundsDonated, "in")}</td>`).join("");
-  const purchasePriceRow = buckets.map((b) => `<td class="num">${moneyCell(b.purchasePrice)}</td>`).join("");
-  const outboundCasesRow = buckets.map((b) => `<td class="num">${metricCell(b.outboundCases, "out")}</td>`).join("");
+  const inboundPoundsRow = buckets.map((b) => td(b, "inbound", metricCell(b.inboundPounds, "in"))).join("");
+  const poundsPurchasedRow = buckets.map((b) => td(b, "inbound", metricCell(b.poundsPurchased, "in"))).join("");
+  const poundsDonatedRow = buckets.map((b) => td(b, "inbound", metricCell(b.poundsDonated, "in"))).join("");
+  const purchasePriceRow = buckets.map((b) => td(b, "inbound", moneyCell(b.purchasePrice))).join("");
+  const outboundCasesRow = buckets.map((b) => td(b, "outbound", metricCell(b.outboundCases, "out"))).join("");
   const programRows = program
     ? ""
     : PROGRAM_ORDER
         .filter((p) => buckets.some((b) => b.outboundByProgram[p] > 0))
         .map((p) => {
-          const cells = buckets.map((b) => `<td class="num">${metricCell(b.outboundByProgram[p], "out")}</td>`).join("");
+          const cells = buckets.map((b) => td(b, "outbound", metricCell(b.outboundByProgram[p], "out"))).join("");
           return `      <tr><th class="sub">↳ ${escapeHtml(PROGRAM_LABEL[p])}</th>${cells}</tr>`;
         })
         .join("\n");
-  const coverageRow = buckets.map((b) => `<td class="num">${coverageCell(b)}</td>`).join("");
-  const vendorsRow = buckets.map((b) => `<td>${vendorsCell(b.vendors)}</td>`).join("");
-  const topInRow = buckets.map((b) => `<td>${itemsCell(b.topInbound)}</td>`).join("");
-  const topOutRow = buckets.map((b) => `<td>${itemsCell(b.topOutbound)}</td>`).join("");
-  const invoicesRow = buckets.map((b) => `<td class="num">${b.invoiceCount || `<span class="muted">0</span>`}</td>`).join("");
-  const sessionsRow = buckets.map((b) => `<td class="num">${b.sessionCount || `<span class="muted">0</span>`}</td>`).join("");
+  const coverageRow = buckets.map((b) => td(b, "inbound", coverageCell(b))).join("");
+  const vendorsRow = buckets.map((b) => td(b, "inbound", vendorsCell(b.vendors), "")).join("");
+  const topInRow = buckets.map((b) => td(b, "inbound", itemsCell(b.topInbound), "")).join("");
+  const topOutRow = buckets.map((b) => td(b, "outbound", itemsCell(b.topOutbound), "")).join("");
+  const invoicesRow = buckets.map((b) => td(b, "inbound", b.invoiceCount ? String(b.invoiceCount) : `<span class="muted">0</span>`)).join("");
+  const sessionsRow = buckets.map((b) => td(b, "outbound", b.sessionCount ? String(b.sessionCount) : `<span class="muted">0</span>`)).join("");
 
   const chartLabels = JSON.stringify(buckets.map((b) => chartLabel(b, view)));
   const inboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.inboundPounds * 10) / 10));
   const outboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.outboundCases * 10) / 10));
+  const bucketMeta = JSON.stringify(buckets.map((b) => ({ from: b.startDate, to: b.endDate })));
+  const programParamJs = JSON.stringify(program ?? "");
+  const tokenParamJs = JSON.stringify(token ?? "");
 
   const totalInboundPounds = buckets.reduce((s, b) => s + b.inboundPounds, 0);
   const totalPoundsPurchased = buckets.reduce((s, b) => s + b.poundsPurchased, 0);
@@ -815,6 +957,73 @@ thead th:first-child { text-align: left; }
 .period-custom[hidden] { display: none; }
 .period-dash { color: var(--muted); font-size: 12px; }
 tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
+.bucket-cell { cursor: pointer; transition: background 0.1s; }
+.bucket-cell:hover { background: var(--hover, #f4f6fa); }
+.chart-wrap canvas { cursor: pointer; }
+
+/* Bucket detail slide-in panel */
+.bucket-panel {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(480px, 92vw);
+  background: var(--card, #fff);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(10, 37, 64, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.22s ease-out;
+  display: flex; flex-direction: column;
+  z-index: 1000;
+}
+.bucket-panel.open { transform: translateX(0); }
+.bucket-panel-backdrop {
+  position: fixed; inset: 0; background: rgba(10, 37, 64, 0.16);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  z-index: 999;
+}
+.bucket-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+.bucket-panel-header {
+  padding: 18px 20px 14px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.bucket-panel-header h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.bucket-panel-header .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.bucket-panel-close {
+  background: none; border: 0; font-size: 22px; line-height: 1;
+  color: var(--muted); cursor: pointer; padding: 0 4px;
+}
+.bucket-panel-close:hover { color: var(--ink); }
+.bucket-panel-body { flex: 1; overflow-y: auto; padding: 12px 20px 20px; }
+.bucket-panel-empty { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+.bucket-panel-loading { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+.bucket-item {
+  display: flex; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.bucket-item:last-child { border-bottom: 0; }
+.bucket-item-thumb {
+  width: 56px; height: 56px; flex-shrink: 0;
+  border-radius: 6px; overflow: hidden;
+  background: #f4f6fa; border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 10px; text-align: center;
+}
+.bucket-item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bucket-item-body { flex: 1; min-width: 0; }
+.bucket-item-title {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.bucket-item-title a { color: var(--ink); text-decoration: none; }
+.bucket-item-title a:hover { text-decoration: underline; }
+.bucket-item-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.bucket-item-meta .sep { padding: 0 6px; opacity: 0.5; }
+.bucket-item-tags { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.bucket-tag {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 6px; border-radius: 4px;
+  background: #eef2f7; color: var(--ink-2, #425466);
+}
+.bucket-tag.donation { background: #e7f6ee; color: #067647; }
+.bucket-tag.warn { background: #fdf1e2; color: #b45309; }
 ${CHAT_PANEL_CSS}
 </style>
 </head>
@@ -830,13 +1039,13 @@ ${CHAT_PANEL_CSS}
   </div>
   <div class="toolbar">
     <div class="btn-group">${viewButtons(active, token, program)}</div>
-    ${periodPicker(active, program)}
+    ${periodPicker(active, program, token)}
     <div class="btn-group">${programButtons(active, token, program)}</div>
-    <a class="btn btn-export" href="?view=${view}&amp;${specToQuery(spec)}&amp;format=csv${programSuffix(program)}" download>↓ Export CSV</a>
-    ${rescueExportControl(spec)}
+    <a class="btn btn-export" href="?view=${view}&amp;${specToQuery(spec)}&amp;format=csv${programSuffix(program)}${tokenSuffix(token)}" download>↓ Export CSV</a>
+    ${rescueExportControl(spec, token)}
     <button class="btn" id="chat-toggle-btn" type="button">Chat</button>
-    <a class="btn" href="/coverage">Slip coverage →</a>
-    <a class="btn" href="/review">Review queue →</a>
+    <a class="btn" href="/coverage${token ? `?token=${encodeURIComponent(token)}` : ""}">Slip coverage →</a>
+    <a class="btn" href="/review${token ? `?token=${encodeURIComponent(token)}` : ""}">Review queue →</a>
   </div>
 </header>
 
@@ -922,6 +1131,20 @@ ${programRows}
 <footer>${env.TENANT_SHORT} Inventory · Inbound + Outbound Delivery Logs · Auto-aggregated from Google Sheets</footer>
 
 </main>
+
+<div class="bucket-panel-backdrop" id="bucket-panel-backdrop"></div>
+<aside class="bucket-panel" id="bucket-panel" aria-hidden="true">
+  <div class="bucket-panel-header">
+    <div>
+      <h3 id="bucket-panel-title">—</h3>
+      <div class="sub" id="bucket-panel-sub"></div>
+    </div>
+    <button class="bucket-panel-close" id="bucket-panel-close" type="button" aria-label="Close">×</button>
+  </div>
+  <div class="bucket-panel-body" id="bucket-panel-body">
+    <div class="bucket-panel-empty">Click a value in the table or chart to see the slips behind it.</div>
+  </div>
+</aside>
 ${chatPanelHtml(env.TENANT_SHORT)}
 </div>
 </div>
@@ -931,6 +1154,183 @@ ${chatPanelHtml(env.TENANT_SHORT)}
   const chartLabels = ${chartLabels};
   const inboundSeries = ${inboundSeries};
   const outboundSeries = ${outboundSeries};
+  const bucketMeta = ${bucketMeta};
+  const programParam = ${programParamJs};
+  const tokenParam = ${tokenParamJs};
+  const dashboardView = ${JSON.stringify(view)};
+
+  const panel = document.getElementById('bucket-panel');
+  const backdrop = document.getElementById('bucket-panel-backdrop');
+  const panelTitle = document.getElementById('bucket-panel-title');
+  const panelSub = document.getElementById('bucket-panel-sub');
+  const panelBody = document.getElementById('bucket-panel-body');
+  let panelReqId = 0;
+
+  function closePanel() {
+    panel.classList.remove('open');
+    backdrop.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+
+  function openPanelShell(direction, from, to) {
+    const label = formatRange(from, to);
+    panelTitle.textContent = (direction === 'inbound' ? 'Inbound slips' : 'Outbound sessions') + ' — ' + label;
+    panelSub.textContent = 'Loading…';
+    panelBody.innerHTML = '<div class="bucket-panel-loading">Loading…</div>';
+    panel.classList.add('open');
+    backdrop.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+  }
+
+  function formatRange(from, to) {
+    if (from === to) {
+      const d = new Date(from + 'T00:00:00Z');
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    }
+    const a = new Date(from + 'T00:00:00Z');
+    const b = new Date(to + 'T00:00:00Z');
+    const am = a.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+    const bm = b.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+    const ad = a.getUTCDate(), bd = b.getUTCDate();
+    return am === bm ? (am + ' ' + ad + '–' + bd) : (am + ' ' + ad + ' – ' + bm + ' ' + bd);
+  }
+
+  function fmtNum(n) {
+    if (!n) return '0';
+    if (Number.isInteger(n)) return String(n);
+    return n.toFixed(1);
+  }
+  function fmtMoney(n) {
+    if (!n || n <= 0) return '';
+    return '$' + Math.round(n).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function b64urlEncode(s) {
+    const b64 = btoa(unescape(encodeURIComponent(s)));
+    return b64.replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+  }
+
+  const authQs = tokenParam ? '&token=' + encodeURIComponent(tokenParam) : '';
+
+  function renderInbound(slips) {
+    if (!slips.length) return '<div class="bucket-panel-empty">No inbound slips in this window.</div>';
+    return slips.map(s => {
+      const enc = s.photo_url ? b64urlEncode(s.photo_url) : null;
+      const slipHref = enc ? ('/review/slip?slip=' + enc + authQs) : null;
+      const photoHref = enc ? ('/review/photo?slip=' + enc + authQs) : null;
+      const thumb = slipHref
+        ? '<a class="bucket-item-thumb" href="' + slipHref + '" target="_blank" rel="noopener"><img loading="lazy" src="' + photoHref + '" alt=""></a>'
+        : '<div class="bucket-item-thumb">no<br>photo</div>';
+      const openLink = slipHref
+        ? '<a href="' + slipHref + '" target="_blank" rel="noopener">Open in Review ›</a>'
+        : '<span class="muted">' + esc(s.invoice_or_order_number || '(no reference)') + '</span>';
+      const supplier = esc(s.supplier || 'unknown');
+      const invoice = s.invoice_or_order_number ? ('#' + esc(s.invoice_or_order_number)) : '';
+      const date = esc(s.delivery_date || '');
+      const parts = [];
+      if (s.total_pounds > 0) parts.push(fmtNum(s.total_pounds) + ' lbs');
+      parts.push(s.line_count + ' line' + (s.line_count === 1 ? '' : 's'));
+      if (s.unweighed_lines > 0) parts.push(s.unweighed_lines + ' unweighed');
+      if (s.purchase_price > 0) parts.push(fmtMoney(s.purchase_price));
+      const tags = [];
+      if (s.is_donation) tags.push('<span class="bucket-tag donation">Donation</span>');
+      if (s.unweighed_lines > 0) tags.push('<span class="bucket-tag warn">Missing weight</span>');
+      return '<div class="bucket-item">'
+        + thumb
+        + '<div class="bucket-item-body">'
+        +   '<div class="bucket-item-title">' + supplier + (invoice ? ' <span class="muted">' + invoice + '</span>' : '') + '</div>'
+        +   '<div class="bucket-item-meta">' + date + '<span class="sep">·</span>' + parts.join(' <span class="sep">·</span> ') + '</div>'
+        +   (tags.length ? '<div class="bucket-item-tags">' + tags.join('') + '</div>' : '')
+        +   '<div class="bucket-item-meta">' + openLink + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function renderOutbound(sessions) {
+    if (!sessions.length) return '<div class="bucket-panel-empty">No outbound sessions in this window.</div>';
+    return sessions.map(s => {
+      const sessEnc = s.session_key ? b64urlEncode(s.session_key) : null;
+      const photoEnc = s.photo_url ? b64urlEncode(s.photo_url) : null;
+      const sessHref = sessEnc ? ('/review/outbound/slip?slip=' + sessEnc + authQs) : null;
+      const photoHref = photoEnc ? ('/review/photo?slip=' + photoEnc + authQs) : null;
+      const link = sessHref
+        ? '<a href="' + sessHref + '" target="_blank" rel="noopener">Open in Review ›</a>'
+        : '';
+      const thumb = photoHref && sessHref
+        ? '<a class="bucket-item-thumb" href="' + sessHref + '" target="_blank" rel="noopener"><img loading="lazy" src="' + photoHref + '" alt=""></a>'
+        : '<div class="bucket-item-thumb">' + esc(s.source) + '</div>';
+      const program = s.program_type ? esc(s.program_type).replace(/_/g, ' ') : '—';
+      const parts = [];
+      if (s.total_cases > 0) parts.push(fmtNum(s.total_cases) + ' cases');
+      parts.push(s.line_count + ' line' + (s.line_count === 1 ? '' : 's'));
+      return '<div class="bucket-item">'
+        + thumb
+        + '<div class="bucket-item-body">'
+        +   '<div class="bucket-item-title">' + esc(s.source) + ' <span class="muted">' + program + '</span></div>'
+        +   '<div class="bucket-item-meta">' + esc(s.date || '') + '<span class="sep">·</span>' + parts.join(' <span class="sep">·</span> ') + '</div>'
+        +   (link ? '<div class="bucket-item-meta">' + link + '</div>' : '')
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  async function loadBucket(direction, from, to) {
+    const myReq = ++panelReqId;
+    openPanelShell(direction, from, to);
+    const params = new URLSearchParams({ direction, from, to });
+    if (programParam) params.set('program', programParam);
+    if (tokenParam) params.set('token', tokenParam);
+    try {
+      const resp = await fetch('/dashboard/bucket?' + params.toString(), { credentials: 'same-origin' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      if (myReq !== panelReqId) return;
+      if (direction === 'inbound') {
+        panelSub.textContent = data.slips.length + ' slip' + (data.slips.length === 1 ? '' : 's');
+        panelBody.innerHTML = renderInbound(data.slips);
+      } else {
+        panelSub.textContent = data.sessions.length + ' session' + (data.sessions.length === 1 ? '' : 's');
+        panelBody.innerHTML = renderOutbound(data.sessions);
+      }
+    } catch (err) {
+      if (myReq !== panelReqId) return;
+      panelSub.textContent = 'Error';
+      panelBody.innerHTML = '<div class="bucket-panel-empty">Failed to load: ' + esc(err.message || err) + '</div>';
+    }
+  }
+
+  // Table cell clicks
+  document.addEventListener('click', function(e) {
+    const cell = e.target.closest ? e.target.closest('.bucket-cell') : null;
+    if (!cell) return;
+    const dir = cell.getAttribute('data-direction');
+    const from = cell.getAttribute('data-from');
+    const to = cell.getAttribute('data-to');
+    if (!dir || !from || !to) return;
+    loadBucket(dir, from, to);
+  });
+
+  document.getElementById('bucket-panel-close').addEventListener('click', closePanel);
+  backdrop.addEventListener('click', closePanel);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && panel.classList.contains('open')) closePanel();
+  });
+
+  function chartClick(direction) {
+    return function(evt, elements, chart) {
+      const els = elements && elements.length ? elements : (chart.getElementsAtEventForMode ? chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, false) : []);
+      if (!els || !els.length) return;
+      const idx = els[0].index;
+      const meta = bucketMeta[idx];
+      if (!meta) return;
+      loadBucket(direction, meta.from, meta.to);
+    };
+  }
 
   new Chart(document.getElementById('inboundChart').getContext('2d'), {
     type: 'line',
@@ -951,6 +1351,7 @@ ${chatPanelHtml(env.TENANT_SHORT)}
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      onClick: chartClick('inbound'),
       plugins: {
         legend: { position: 'top', labels: { boxWidth: 12, font: { size: 13 } } },
         tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + ' lbs' } }
@@ -981,6 +1382,7 @@ ${chatPanelHtml(env.TENANT_SHORT)}
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      onClick: chartClick('outbound'),
       plugins: {
         legend: { position: 'top', labels: { boxWidth: 12, font: { size: 13 } } },
         tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.parsed.y + ' cases' } }
