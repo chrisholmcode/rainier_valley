@@ -29,6 +29,21 @@ Track `weighed_rows` vs `unweighed_rows` per supplier group so the summary can f
 
 **Filter:** `delivery_date == <target_date>`. Do NOT filter by `created_at` — invoices are sometimes logged days after the actual delivery, and `delivery_date` is the authoritative ship/invoice date.
 
+**Purchased vs donated split.** For every non-fee row derive `is_donated`:
+
+```
+if is_donation column parses as boolean:  is_donated = that value
+elif supplier in DONATION_SUPPLIERS:      is_donated = true
+else:                                     is_donated = false
+```
+
+`DONATION_SUPPLIERS = { nw_harvest, food_lifeline, grocery_rescue, hayton_farms, grand_central }` (kept in sync with `src/sheets.ts` and `src/dashboard.ts`).
+
+Then split the headline pounds into two totals:
+- `pounds_purchased = sum(row_pounds where !is_donated)`
+- `pounds_donated   = sum(row_pounds where is_donated)`
+- `purchase_price   = sum(line_total where !is_donated && line_total != null)` — dollars spent, excluding donations and fees.
+
 **Group by:** `(supplier, invoice_or_order_number)`. If `invoice_or_order_number` is empty, treat each supplier's empty-invoice rows as one group and label the section `"<Supplier> Produce — Invoice (no number captured)"`.
 
 **Within each group:**
@@ -54,17 +69,21 @@ Track `weighed_rows` vs `unweighed_rows` per supplier group so the summary can f
 
 (Don't dump the raw warning strings — they're often verbose and per-row.)
 
-## Outbound Delivery Log (15 columns)
+## Outbound Delivery Log
 
-```
-recorded_at, date, item_name_raw, item_name_normalized, quantity, quantity_raw,
-unit, category, notes, confidence, source, slack_channel, slack_message_ts,
-recorded_by, warnings_json
-```
+Columns include: `recorded_at, date, item_name_raw, item_name_normalized, quantity, quantity_raw, unit, category, notes, confidence, source, slack_channel, slack_message_ts, recorded_by, warnings_json, program_type, approved_at, approved_by, photo_url`.
 
 **Filter:** `date == <target_date>`.
 
 **Sort:** by `quantity` desc.
+
+**Program breakdown.** Every outbound row has a `program_type` column: `home_delivery`, `in_person_shopping`, `pre_made_bags`, or `unknown` (or blank → treat as `unknown`). For the outbound card compute:
+
+```
+cases_by_program[p] = sum(quantity where program_type == p)
+```
+
+Render each program with cases > 0 as its own line under an "Inventory by program" stat, ordered by cases desc, using the labels: `Home Delivery`, `In Person Shopping`, `Pre Made Bags`, `Unknown`.
 
 **Tally detail string:** prefer `quantity_raw` (e.g. `"12cs + 3 loose strokes → written total = 20cs"`). Fall back to `notes` if `quantity_raw` is empty. If both are empty, use `—`.
 

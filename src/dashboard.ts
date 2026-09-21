@@ -9,6 +9,19 @@ const PROGRAM_LABEL: Record<ProgramType, string> = {
   unknown: "Unknown"
 };
 
+const PROGRAM_ORDER: ProgramType[] = ["home_delivery", "in_person_shopping", "pre_made_bags", "unknown"];
+
+// Suppliers whose inbound is always treated as donated even when the row-level
+// is_donation column is blank. Mirrors DONATION_SUPPLIERS in src/sheets.ts —
+// keep in sync.
+const DONATION_SUPPLIERS = new Set<string>([
+  "nw_harvest",
+  "food_lifeline",
+  "grocery_rescue",
+  "hayton_farms",
+  "grand_central"
+]);
+
 export type View = "daily" | "weekly";
 
 export interface Bucket {
@@ -16,7 +29,11 @@ export interface Bucket {
   startDate: string;
   endDate: string;
   inboundPounds: number;
+  poundsPurchased: number;
+  poundsDonated: number;
+  purchasePrice: number;
   outboundCases: number;
+  outboundByProgram: Record<ProgramType, number>;
   inboundWeighedRows: number;
   inboundUnweighedRows: number;
   vendors: string[];
@@ -24,6 +41,25 @@ export interface Bucket {
   topOutbound: Array<{ name: string; qty: number }>;
   invoiceCount: number;
   sessionCount: number;
+}
+
+function parseBoolCell(v: string | null | undefined): boolean | null {
+  if (v == null || v === "") return null;
+  const s = String(v).trim().toLowerCase();
+  if (s === "true" || s === "1" || s === "yes") return true;
+  if (s === "false" || s === "0" || s === "no") return false;
+  return null;
+}
+
+function isDonationRow(r: DeliverySheetRow): boolean {
+  const explicit = parseBoolCell(r.is_donation);
+  if (explicit != null) return explicit;
+  const supplier = (r.supplier ?? "").trim().toLowerCase();
+  return DONATION_SUPPLIERS.has(supplier);
+}
+
+function emptyProgramMap(): Record<ProgramType, number> {
+  return { home_delivery: 0, in_person_shopping: 0, pre_made_bags: 0, unknown: 0 };
 }
 
 const TZ = "America/Los_Angeles";
@@ -153,7 +189,11 @@ export function aggregate(
       startDate: r.startDate,
       endDate: r.endDate,
       inboundPounds: 0,
+      poundsPurchased: 0,
+      poundsDonated: 0,
+      purchasePrice: 0,
       outboundCases: 0,
+      outboundByProgram: emptyProgramMap(),
       inboundWeighedRows: 0,
       inboundUnweighedRows: 0,
       vendors: [],
@@ -178,11 +218,18 @@ export function aggregate(
     const bucket = buckets.get(key)!;
 
     const lbs = inboundPoundsFor(r);
+    const donated = isDonationRow(r);
     if (lbs != null) {
       bucket.inboundPounds += lbs;
       bucket.inboundWeighedRows += 1;
+      if (donated) bucket.poundsDonated += lbs;
+      else bucket.poundsPurchased += lbs;
     } else {
       bucket.inboundUnweighedRows += 1;
+    }
+    if (!donated) {
+      const lt = toNumber(r.line_total);
+      if (lt > 0) bucket.purchasePrice += lt;
     }
 
     if (r.supplier && r.supplier.trim()) {
@@ -211,6 +258,9 @@ export function aggregate(
     const qty = toNumber(r.quantity);
     const bucket = buckets.get(key)!;
     bucket.outboundCases += qty;
+    const pt = (r.program_type || "unknown") as ProgramType;
+    const programKey: ProgramType = pt in bucket.outboundByProgram ? pt : "unknown";
+    bucket.outboundByProgram[programKey] += qty;
 
     const sessionKey = r.slack_message_ts || `manual::${r.recorded_at || r.rowIndex}`;
     let ss = sessionSets.get(key);
@@ -297,6 +347,16 @@ function formatNum(n: number): string {
 function metricCell(n: number, kind: "in" | "out"): string {
   if (n === 0) return `<span class="muted">0</span>`;
   return `<span class="num-${kind}">${formatNum(n)}</span>`;
+}
+
+function formatMoney(n: number): string {
+  const rounded = Math.round(n);
+  return "$" + rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function moneyCell(n: number): string {
+  if (n <= 0) return `<span class="muted">$0</span>`;
+  return `<span class="num-in">${formatMoney(n)}</span>`;
 }
 
 function coverageCell(bucket: Bucket): string {
@@ -429,6 +489,8 @@ export function buildCsvExport(params: {
     quantity: number;
     unit: string;
     pounds: number | null;
+    line_total: number | null;
+    is_donation: string;
     supplier: string;
     reference: string;
     category: string;
@@ -439,6 +501,7 @@ export function buildCsvExport(params: {
     const d = r.delivery_date;
     if (!d || !dateSet.has(d)) continue;
     if (isFee(r.is_fee)) continue;
+    const lt = toNumber(r.line_total);
     rows.push({
       date: d,
       direction: "inbound",
@@ -446,6 +509,8 @@ export function buildCsvExport(params: {
       quantity: toNumber(r.quantity),
       unit: (r.unit ?? "").trim(),
       pounds: inboundPoundsFor(r),
+      line_total: lt > 0 || r.line_total ? lt : null,
+      is_donation: isDonationRow(r) ? "TRUE" : "FALSE",
       supplier: (r.supplier ?? "").trim(),
       reference: (r.invoice_or_order_number ?? "").trim(),
       category: (r.category ?? "").trim(),
@@ -463,6 +528,8 @@ export function buildCsvExport(params: {
       quantity: toNumber(r.quantity),
       unit: (r.unit ?? "").trim(),
       pounds: null,
+      line_total: null,
+      is_donation: "",
       supplier: "",
       reference: r.slack_message_ts ?? "",
       category: (r.category ?? "").trim(),
@@ -476,7 +543,7 @@ export function buildCsvExport(params: {
     return a.item.localeCompare(b.item);
   });
 
-  const header = ["date", "direction", "item", "quantity", "unit", "pounds", "supplier", "reference", "category", "program_type"];
+  const header = ["date", "direction", "item", "quantity", "unit", "pounds", "line_total", "is_donation", "supplier", "reference", "category", "program_type"];
   const lines = [header.join(",")];
   for (const r of rows) {
     lines.push([
@@ -486,6 +553,8 @@ export function buildCsvExport(params: {
       csvField(formatNum(r.quantity)),
       csvField(r.unit),
       csvField(r.pounds == null ? "" : formatNum(r.pounds)),
+      csvField(r.line_total == null ? "" : r.line_total.toFixed(2)),
+      csvField(r.is_donation),
       csvField(r.supplier),
       csvField(r.reference),
       csvField(r.category),
@@ -659,7 +728,19 @@ export function buildDashboardHtml(params: {
   const colHeaderFn = view === "daily" ? dailyColHeader : weeklyColHeader;
   const headerCells = buckets.map((b) => `<th>${colHeaderFn(b)}</th>`).join("");
   const inboundPoundsRow = buckets.map((b) => `<td class="num">${metricCell(b.inboundPounds, "in")}</td>`).join("");
+  const poundsPurchasedRow = buckets.map((b) => `<td class="num">${metricCell(b.poundsPurchased, "in")}</td>`).join("");
+  const poundsDonatedRow = buckets.map((b) => `<td class="num">${metricCell(b.poundsDonated, "in")}</td>`).join("");
+  const purchasePriceRow = buckets.map((b) => `<td class="num">${moneyCell(b.purchasePrice)}</td>`).join("");
   const outboundCasesRow = buckets.map((b) => `<td class="num">${metricCell(b.outboundCases, "out")}</td>`).join("");
+  const programRows = program
+    ? ""
+    : PROGRAM_ORDER
+        .filter((p) => buckets.some((b) => b.outboundByProgram[p] > 0))
+        .map((p) => {
+          const cells = buckets.map((b) => `<td class="num">${metricCell(b.outboundByProgram[p], "out")}</td>`).join("");
+          return `      <tr><th class="sub">↳ ${escapeHtml(PROGRAM_LABEL[p])}</th>${cells}</tr>`;
+        })
+        .join("\n");
   const coverageRow = buckets.map((b) => `<td class="num">${coverageCell(b)}</td>`).join("");
   const vendorsRow = buckets.map((b) => `<td>${vendorsCell(b.vendors)}</td>`).join("");
   const topInRow = buckets.map((b) => `<td>${itemsCell(b.topInbound)}</td>`).join("");
@@ -672,7 +753,14 @@ export function buildDashboardHtml(params: {
   const outboundSeries = JSON.stringify(buckets.map((b) => Math.round(b.outboundCases * 10) / 10));
 
   const totalInboundPounds = buckets.reduce((s, b) => s + b.inboundPounds, 0);
+  const totalPoundsPurchased = buckets.reduce((s, b) => s + b.poundsPurchased, 0);
+  const totalPoundsDonated = buckets.reduce((s, b) => s + b.poundsDonated, 0);
+  const totalPurchasePrice = buckets.reduce((s, b) => s + b.purchasePrice, 0);
   const totalOutbound = buckets.reduce((s, b) => s + b.outboundCases, 0);
+  const totalByProgram: Record<ProgramType, number> = emptyProgramMap();
+  for (const b of buckets) {
+    for (const p of PROGRAM_ORDER) totalByProgram[p] += b.outboundByProgram[p];
+  }
 
   const bucketKeys = new Set(buckets.map((b) => b.key));
   const programBreakdown = new Map<ProgramType, number>();
@@ -725,6 +813,7 @@ thead th:first-child { text-align: left; }
 .period-custom { display: inline-flex; gap: 6px; align-items: center; }
 .period-custom[hidden] { display: none; }
 .period-dash { color: var(--muted); font-size: 12px; }
+tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
 </style>
 </head>
 <body>
@@ -755,6 +844,20 @@ thead th:first-child { text-align: left; }
       : totalInboundRows > 0
         ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">from ${totalInboundRows} rows</div>`
         : ""}
+  </div>
+  <div class="summary-pill in">
+    <div class="label">Pounds purchased</div>
+    <div class="value">${formatNum(totalPoundsPurchased)}</div>
+    ${totalPurchasePrice > 0
+      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">${formatMoney(totalPurchasePrice)} spent</div>`
+      : ""}
+  </div>
+  <div class="summary-pill in">
+    <div class="label">Pounds donated</div>
+    <div class="value">${formatNum(totalPoundsDonated)}</div>
+    ${totalInboundPounds > 0
+      ? `<div class="muted" style="font-size: 11px; margin-top: 4px;">${Math.round((totalPoundsDonated / totalInboundPounds) * 100)}% of inbound</div>`
+      : ""}
   </div>
   <div class="summary-pill out">
     <div class="label">${program ? `Outbound · ${escapeHtml(PROGRAM_LABEL[program])} cases` : "Outbound · total cases"}</div>
@@ -789,7 +892,11 @@ thead th:first-child { text-align: left; }
     </thead>
     <tbody>
       <tr><th>${inboundPoundsLabel}</th>${inboundPoundsRow}</tr>
+      <tr><th class="sub">↳ Pounds purchased</th>${poundsPurchasedRow}</tr>
+      <tr><th class="sub">↳ Pounds donated</th>${poundsDonatedRow}</tr>
+      <tr><th>Purchase price</th>${purchasePriceRow}</tr>
       <tr><th>${outboundCasesLabel}</th>${outboundCasesRow}</tr>
+${programRows}
       <tr><th>Weight coverage</th>${coverageRow}</tr>
       <tr><th>Vendors</th>${vendorsRow}</tr>
       <tr><th>Top inbound items (lbs)</th>${topInRow}</tr>
