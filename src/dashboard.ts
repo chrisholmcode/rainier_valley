@@ -2,6 +2,7 @@ import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
 import { SHARED_CSS, FONT_HEAD_LINKS } from "./ui-styles.js";
 import { env } from "./config.js";
 import { CHAT_PANEL_CSS, CHAT_PANEL_JS, chatPanelHtml } from "./chat.js";
+import { computePriceChanges, type PriceChangeItem } from "./price-changes.js";
 
 const PROGRAM_LABEL: Record<ProgramType, string> = {
   home_delivery: "Home Delivery",
@@ -358,6 +359,36 @@ function formatMoney(n: number): string {
 function moneyCell(n: number): string {
   if (n <= 0) return `<span class="muted">$0</span>`;
   return `<span class="num-in">${formatMoney(n)}</span>`;
+}
+
+function fmtCost(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return "$" + n.toFixed(2);
+}
+
+function fmtPct(n: number): string {
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+  return sign + Math.abs(Math.round(n * 1000) / 10).toFixed(1) + "%";
+}
+
+function renderPriceChangeRows(items: PriceChangeItem[]): string {
+  if (items.length === 0) return "";
+  return items
+    .map((it) => {
+      const arrow = it.direction === "up" ? "▲" : "▼";
+      const cls = it.direction === "up" ? "pc-up" : "pc-down";
+      const unitLabel = it.unit ? ` <span class="muted">/ ${escapeHtml(it.unit)}</span>` : "";
+      return `<tr>
+        <td>${escapeHtml(it.item)}</td>
+        <td>${escapeHtml(it.supplier)}</td>
+        <td class="num">${fmtCost(it.prior_avg_cost)}${unitLabel}</td>
+        <td class="num">${fmtCost(it.recent_avg_cost)}${unitLabel}</td>
+        <td class="num ${cls}">${arrow} ${fmtPct(it.pct_change)}</td>
+        <td class="num">${it.prior_order_count} → ${it.recent_order_count}</td>
+        <td class="num">${formatMoney(it.recent_spend)}</td>
+      </tr>`;
+    })
+    .join("");
 }
 
 function coverageCell(bucket: Bucket): string {
@@ -921,6 +952,10 @@ export function buildDashboardHtml(params: {
   const totalUnweighed = buckets.reduce((s, b) => s + b.inboundUnweighedRows, 0);
   const totalInboundRows = totalWeighed + totalUnweighed;
 
+  const priceChanges = computePriceChanges(inboundRows, {});
+  const priceChangeRowsHtml = renderPriceChangeRows(priceChanges.items.slice(0, 15));
+  const priceChangeSubtitle = `${priceChanges.recentWindow.start} → ${priceChanges.recentWindow.end} vs ${priceChanges.priorWindow.start} → ${priceChanges.priorWindow.end} · ±${Math.round(priceChanges.thresholdPct * 100)}% threshold · min ${priceChanges.minObservationsPerWindow} orders/window`;
+
   const active: ViewOption = { view, spec };
   const windowLbl = windowLabel(spec);
   const bucketWord = view === "daily" ? "day" : "week";
@@ -957,6 +992,10 @@ thead th:first-child { text-align: left; }
 .period-custom[hidden] { display: none; }
 .period-dash { color: var(--muted); font-size: 12px; }
 tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
+.pc-up { color: #b91c1c; font-weight: 600; }
+.pc-down { color: #047857; font-weight: 600; }
+.section-sub { color: var(--muted); font-size: 12px; margin: -4px 0 12px; }
+.empty-note { color: var(--muted); font-size: 13px; font-style: italic; padding: 12px 4px; }
 .bucket-cell { cursor: pointer; transition: background 0.1s; }
 .bucket-cell:hover { background: var(--hover, #f4f6fa); }
 .chart-wrap canvas { cursor: pointer; }
@@ -1126,6 +1165,30 @@ ${programRows}
       <tr><th>Outbound sessions</th>${sessionsRow}</tr>
     </tbody>
   </table>
+</div>
+
+<h2>Recent price changes</h2>
+<div class="section-sub">${escapeHtml(priceChangeSubtitle)}</div>
+<div class="card">
+  ${priceChanges.items.length === 0
+    ? `<div class="empty-note">No items with a ${Math.round(priceChanges.thresholdPct * 100)}%+ price move in the last ${priceChanges.windowDays * 2} days. (Requires ≥${priceChanges.minObservationsPerWindow} orders in each window and ≥$${priceChanges.minRecentSpend} recent spend.)</div>`
+    : `<table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Supplier</th>
+        <th class="num">Prior avg</th>
+        <th class="num">Recent avg</th>
+        <th class="num">Δ %</th>
+        <th class="num">Orders (prior → recent)</th>
+        <th class="num">Recent spend</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${priceChangeRowsHtml}
+    </tbody>
+  </table>${priceChanges.items.length > 15 ? `<div class="section-sub" style="margin-top: 8px;">Showing top 15 of ${priceChanges.items.length} — ask the chat for the full list or a CSV.</div>` : ""}`
+  }
 </div>
 
 <footer>${env.TENANT_SHORT} Inventory · Inbound + Outbound Delivery Logs · Auto-aggregated from Google Sheets</footer>
