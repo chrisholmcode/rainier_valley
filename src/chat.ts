@@ -12,6 +12,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./config.js";
 import { readDeliveryRows, readEodRows } from "./sheets.js";
 import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
+import { computePriceChanges } from "./price-changes.js";
 import {
   aggregate as aggregateDashboard,
   resolveBuckets,
@@ -163,7 +164,7 @@ function buildSystemPrompt(): Array<Anthropic.TextBlockParam> {
 
 ## Behavior rules
 1. Always call a tool before quoting a number. Never make up totals.
-2. Prefer get_dashboard_metrics for range aggregates (pounds/cases/purchase price by day or week). Fall back to query_inbound / query_outbound when you need row-level detail (e.g. "list Caruso's items last Thursday").
+2. Prefer get_dashboard_metrics for range aggregates (pounds/cases/purchase price by day or week). Use analyze_price_changes for anything about price fluctuations, spikes, drops, or "what got more expensive". Fall back to query_inbound / query_outbound when you need row-level detail (e.g. "list Caruso's items last Thursday").
 3. Dates are always America/Los_Angeles YYYY-MM-DD. Convert relative phrases ("last week", "yesterday", "August") before calling tools. Weeks are Sunday–Saturday.
 4. Cap query_inbound / query_outbound results at 100 rows. If a query would return more, narrow the date range or add filters and note the truncation in your answer.
 5. When the user asks for a CSV, export, spreadsheet, or download — even implicitly ("send me the numbers", "give me a file") — use create_download. It writes ALL matching rows to a server-side CSV; the user gets a download button automatically. Pick a descriptive filename (supplier + month, direction + range, etc.). After calling it, describe what's in the file: row count, date range, any filters applied. Do NOT paste the download_id into your reply.
@@ -354,6 +355,25 @@ const CHAT_TOOLS: Anthropic.Tool[] = [
     }
   },
   {
+    name: "analyze_price_changes",
+    description: "Compare each priced (supplier, item, unit) group's recent-window average unit_cost against the prior window of the same length. Flags items whose price moved by >= threshold_pct. Use this whenever the user asks about price changes, fluctuations, spikes, drops, or 'what got more expensive'. Defaults match the dashboard's Recent price changes card: 14-day windows, 20% threshold, ≥2 orders per window, ≥$50 recent spend.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        window_days: { type: "number", description: "Length of each window in days. Default 14 (2 weeks recent vs 2 weeks prior)." },
+        threshold_pct: { type: "number", description: "Minimum absolute % move to flag, as a decimal (0.20 = 20%). Default 0.20." },
+        min_observations_per_window: { type: "number", description: "Require at least this many orders in EACH window. Default 2." },
+        min_recent_spend: { type: "number", description: "Suppress items with recent-window spend below this dollar amount. Default 50." },
+        supplier: { type: "string", description: "Optional supplier slug to filter to." },
+        item_contains: { type: "string", description: "Optional case-insensitive substring match on item name." },
+        top_n: { type: "number", description: "Return only the top N by absolute % change. Default 25." },
+        as_csv: { type: "boolean", description: "If true, also generate a downloadable CSV of the flagged items. Default false." },
+        filename: { type: "string", description: "Filename for the CSV when as_csv=true. Must end .csv." }
+      },
+      required: []
+    }
+  },
+  {
     name: "get_dashboard_metrics",
     description: "Return the same aggregated metrics the /dashboard page shows: per-bucket inbound pounds (total / purchased / donated), purchase price, outbound cases (total + per-program), top items, invoice count. This is the fastest way to answer range questions. Prefer this over query_* when the question is about totals or trends.",
     input_schema: {
@@ -448,6 +468,46 @@ function dispatchTool(name: string, input: Record<string, unknown>, ctx: ToolCon
       returned: Math.min(filtered.length, limit),
       truncated,
       rows: filtered.slice(0, limit).map(slimOutbound)
+    };
+  }
+
+  if (name === "analyze_price_changes") {
+    const report = computePriceChanges(ctx.inbound, {
+      windowDays: typeof input.window_days === "number" ? input.window_days : undefined,
+      thresholdPct: typeof input.threshold_pct === "number" ? input.threshold_pct : undefined,
+      minObservationsPerWindow: typeof input.min_observations_per_window === "number" ? input.min_observations_per_window : undefined,
+      minRecentSpend: typeof input.min_recent_spend === "number" ? input.min_recent_spend : undefined,
+      supplier: input.supplier ? String(input.supplier) : undefined,
+      itemContains: input.item_contains ? String(input.item_contains) : undefined
+    });
+    const topN = Math.max(1, Math.min(200, Number(input.top_n ?? 25)));
+    const items = report.items.slice(0, topN);
+    const asCsv = input.as_csv === true;
+
+    let downloadInfo: CreatedDownload | null = null;
+    if (asCsv && items.length > 0) {
+      const rawFilename = input.filename ? String(input.filename).trim() : "price-changes.csv";
+      const filename = rawFilename.toLowerCase().endsWith(".csv") ? rawFilename : rawFilename + ".csv";
+      const columns = ["item", "supplier", "unit", "prior_avg_cost", "recent_avg_cost", "pct_change", "prior_order_count", "recent_order_count", "prior_spend", "recent_spend", "direction"];
+      const csv = buildCsv(items as unknown as Array<Record<string, unknown>>, columns);
+      const id = randomBytes(12).toString("hex");
+      pruneDownloads();
+      downloadStore.set(id, { filename, csv, rowCount: items.length, createdAt: Date.now() });
+      downloadInfo = { id, filename, row_count: items.length };
+      ctx.createdDownloads.push(downloadInfo);
+    }
+
+    return {
+      recent_window: report.recentWindow,
+      prior_window: report.priorWindow,
+      threshold_pct: report.thresholdPct,
+      total_flagged: report.items.length,
+      returned: items.length,
+      items,
+      download: downloadInfo,
+      note: items.length === 0
+        ? `No items met the ±${Math.round(report.thresholdPct * 100)}% threshold with ≥${report.minObservationsPerWindow} orders per window and ≥$${report.minRecentSpend} recent spend. Loosening any of those (window_days, threshold_pct, min_observations_per_window, min_recent_spend) may surface more.`
+        : "Flagged items sorted by absolute pct_change descending. Direction 'up' = cost rose, 'down' = fell."
     };
   }
 
@@ -797,7 +857,7 @@ export function chatPanelHtml(tenantShort: string): string {
   <div class="examples" id="chat-examples">
     <span class="example">Pounds we got last week?</span>
     <span class="example">Biggest supplier in August?</span>
-    <span class="example">How much did we spend last month?</span>
+    <span class="example">Any big price changes this week?</span>
     <span class="example">CSV of Caruso invoices in August</span>
     <span class="example">Export outbound rows for last week</span>
   </div>
