@@ -954,7 +954,7 @@ export function buildDashboardHtml(params: {
 
   const priceChanges = computePriceChanges(inboundRows, {});
   const priceChangeRowsHtml = renderPriceChangeRows(priceChanges.items.slice(0, 15));
-  const priceChangeSubtitle = `${priceChanges.recentWindow.start} → ${priceChanges.recentWindow.end} vs ${priceChanges.priorWindow.start} → ${priceChanges.priorWindow.end} · ±${Math.round(priceChanges.thresholdPct * 100)}% threshold · min ${priceChanges.minObservationsPerWindow} orders/window`;
+  const priceChangeSubtitle = `Recent ${priceChanges.recentWindow.start} → ${priceChanges.recentWindow.end} (${priceChanges.recentWindowDays}d) vs prior ${priceChanges.priorWindow.start} → ${priceChanges.priorWindow.end} (${priceChanges.priorWindowDays}d) · ±${Math.round(priceChanges.thresholdPct * 100)}% threshold · ≥${priceChanges.minObservationsPerWindow} order${priceChanges.minObservationsPerWindow === 1 ? "" : "s"} per window`;
 
   const active: ViewOption = { view, spec };
   const windowLbl = windowLabel(spec);
@@ -1171,7 +1171,7 @@ ${programRows}
 <div class="section-sub">${escapeHtml(priceChangeSubtitle)}</div>
 <div class="card">
   ${priceChanges.items.length === 0
-    ? `<div class="empty-note">No items with a ${Math.round(priceChanges.thresholdPct * 100)}%+ price move in the last ${priceChanges.windowDays * 2} days. (Requires ≥${priceChanges.minObservationsPerWindow} orders in each window and ≥$${priceChanges.minRecentSpend} recent spend.)</div>`
+    ? `<div class="empty-note">No items with a ${Math.round(priceChanges.thresholdPct * 100)}%+ price move between the two windows. (Requires ≥${priceChanges.minObservationsPerWindow} order${priceChanges.minObservationsPerWindow === 1 ? "" : "s"} in each window and ≥$${priceChanges.minRecentSpend} recent spend.)</div>`
     : `<table>
     <thead>
       <tr>
