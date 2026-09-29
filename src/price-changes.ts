@@ -78,9 +78,10 @@ export interface PriceChangeItem {
 
 export interface PriceChangeParams {
   asOf?: string;                    // YYYY-MM-DD PT, default = today PT
-  windowDays?: number;              // recent window length in days (equal prior window follows), default 14
+  recentWindowDays?: number;        // recent window length in days, default 14 (last 2 weeks)
+  priorWindowDays?: number;         // prior window length in days, default 42 (weeks 2-8 back)
   thresholdPct?: number;            // 0.20 = ±20%, default 0.20
-  minObservationsPerWindow?: number; // default 2
+  minObservationsPerWindow?: number; // default 1
   minRecentSpend?: number;          // default $50 to suppress noise on tiny buys
   supplier?: string;                // optional supplier slug filter
   itemContains?: string;            // optional case-insensitive item substring filter
@@ -88,7 +89,8 @@ export interface PriceChangeParams {
 
 export interface PriceChangeReport {
   asOf: string;
-  windowDays: number;
+  recentWindowDays: number;
+  priorWindowDays: number;
   thresholdPct: number;
   minObservationsPerWindow: number;
   minRecentSpend: number;
@@ -102,17 +104,18 @@ export function computePriceChanges(
   params: PriceChangeParams = {}
 ): PriceChangeReport {
   const asOf = params.asOf ?? todayPtIso();
-  const windowDays = params.windowDays ?? 14;
+  const recentWindowDays = params.recentWindowDays ?? 14;
+  const priorWindowDays = params.priorWindowDays ?? 42;
   const thresholdPct = params.thresholdPct ?? 0.20;
-  const minObs = params.minObservationsPerWindow ?? 2;
+  const minObs = params.minObservationsPerWindow ?? 1;
   const minRecentSpend = params.minRecentSpend ?? 50;
   const supplierFilter = params.supplier ? params.supplier.toLowerCase() : null;
   const itemContains = params.itemContains ? params.itemContains.toLowerCase() : null;
 
   const recentEnd = asOf;
-  const recentStart = addDays(asOf, -(windowDays - 1));
+  const recentStart = addDays(asOf, -(recentWindowDays - 1));
   const priorEnd = addDays(recentStart, -1);
-  const priorStart = addDays(priorEnd, -(windowDays - 1));
+  const priorStart = addDays(priorEnd, -(priorWindowDays - 1));
 
   interface Group {
     supplier: string;
@@ -179,7 +182,8 @@ export function computePriceChanges(
 
   return {
     asOf,
-    windowDays,
+    recentWindowDays,
+    priorWindowDays,
     thresholdPct,
     minObservationsPerWindow: minObs,
     minRecentSpend,

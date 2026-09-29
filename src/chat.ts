@@ -356,13 +356,14 @@ const CHAT_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "analyze_price_changes",
-    description: "Compare each priced (supplier, item, unit) group's recent-window average unit_cost against the prior window of the same length. Flags items whose price moved by >= threshold_pct. Use this whenever the user asks about price changes, fluctuations, spikes, drops, or 'what got more expensive'. Defaults match the dashboard's Recent price changes card: 14-day windows, 20% threshold, ≥2 orders per window, ≥$50 recent spend.",
+    description: "Compare each priced (supplier, item, unit) group's recent-window average unit_cost against the prior window's average. Flags items whose price moved by >= threshold_pct. Use this whenever the user asks about price changes, fluctuations, spikes, drops, or 'what got more expensive'. Defaults match the dashboard's Recent price changes card: recent 14 days vs prior 42 days (weeks 2-8), 20% threshold, ≥1 order per window, ≥$50 recent spend.",
     input_schema: {
       type: "object" as const,
       properties: {
-        window_days: { type: "number", description: "Length of each window in days. Default 14 (2 weeks recent vs 2 weeks prior)." },
+        recent_window_days: { type: "number", description: "Recent window length in days. Default 14 (last 2 weeks)." },
+        prior_window_days: { type: "number", description: "Prior window length in days, ending right before the recent window starts. Default 42 (weeks 2-8 back)." },
         threshold_pct: { type: "number", description: "Minimum absolute % move to flag, as a decimal (0.20 = 20%). Default 0.20." },
-        min_observations_per_window: { type: "number", description: "Require at least this many orders in EACH window. Default 2." },
+        min_observations_per_window: { type: "number", description: "Require at least this many orders in EACH window. Default 1." },
         min_recent_spend: { type: "number", description: "Suppress items with recent-window spend below this dollar amount. Default 50." },
         supplier: { type: "string", description: "Optional supplier slug to filter to." },
         item_contains: { type: "string", description: "Optional case-insensitive substring match on item name." },
@@ -473,7 +474,8 @@ function dispatchTool(name: string, input: Record<string, unknown>, ctx: ToolCon
 
   if (name === "analyze_price_changes") {
     const report = computePriceChanges(ctx.inbound, {
-      windowDays: typeof input.window_days === "number" ? input.window_days : undefined,
+      recentWindowDays: typeof input.recent_window_days === "number" ? input.recent_window_days : undefined,
+      priorWindowDays: typeof input.prior_window_days === "number" ? input.prior_window_days : undefined,
       thresholdPct: typeof input.threshold_pct === "number" ? input.threshold_pct : undefined,
       minObservationsPerWindow: typeof input.min_observations_per_window === "number" ? input.min_observations_per_window : undefined,
       minRecentSpend: typeof input.min_recent_spend === "number" ? input.min_recent_spend : undefined,
