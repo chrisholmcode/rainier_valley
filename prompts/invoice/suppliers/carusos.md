@@ -9,6 +9,7 @@ Document format: Printed invoice with columns ORDERED | SHIPPED | ITEM CODE | DE
   - Worked example: 10 cases of `BROCCOLI CROWN 20#` → approx_weight = 10 × 20 = 200.
   - Worked example: 20 cases of `BERRIES RASPBERRY PACKER 12/6 OZ` → approx_weight = 20 × 12 × 6 / 16 = 90.
 - ITEM CODE => item_code_raw
+- **invoice_or_order_number:** Caruso's prints the invoice/order number with an internal hyphen grouping the leading prefix from the sequence number (e.g., `006-19274`). The hyphen is a visual separator, not part of the identifier. Strip it and any other internal separators, keeping the digits concatenated and preserving leading zeros. Example: `006-19274` => `00619274`.
 - DESCRIPTION => item_name_raw (keep exact, e.g., "BEAN GREEN 28#")
 - Normalize: "BEAN GREEN 28#" => "Green Beans", "BROCCOLI CROWN 20#" => "Broccoli Crowns"
 - delivery_date and invoice_date: Caruso's invoices carry a single date, labeled **SHIP DATE** in the upper-right header block. Populate BOTH `delivery_date` and `invoice_date` with that date (converted to YYYY-MM-DD).
