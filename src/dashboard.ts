@@ -1194,6 +1194,9 @@ ${programRows}
 <footer>${env.TENANT_SHORT} Inventory · Inbound + Outbound Delivery Logs · Auto-aggregated from Google Sheets</footer>
 
 </main>
+${chatPanelHtml(env.TENANT_SHORT)}
+</div>
+</div>
 
 <div class="bucket-panel-backdrop" id="bucket-panel-backdrop"></div>
 <aside class="bucket-panel" id="bucket-panel" aria-hidden="true">
@@ -1208,9 +1211,6 @@ ${programRows}
     <div class="bucket-panel-empty">Click a value in the table or chart to see the slips behind it.</div>
   </div>
 </aside>
-${chatPanelHtml(env.TENANT_SHORT)}
-</div>
-</div>
 
 <script>${CHAT_PANEL_JS}</script>
 <script>
