@@ -10,7 +10,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "./config.js";
-import { readDeliveryRows, readEodRows } from "./sheets.js";
+import {
+  readDeliveryRows,
+  readEodRows,
+  appendChatMessages,
+  readChatMessagesForSession,
+  listRecentChatSessions,
+  type ChatMessageRow
+} from "./sheets.js";
 import type { DeliverySheetRow, EodSheetRow, ProgramType } from "./types.js";
 import { computePriceChanges } from "./price-changes.js";
 import {
@@ -646,6 +653,7 @@ export interface ChatMessage {
 
 interface ChatRequestBody {
   messages: ChatMessage[];
+  session_id?: string;
 }
 
 interface ChatResponseBody {
@@ -659,6 +667,7 @@ interface ChatResponseBody {
     cache_read_input_tokens: number;
   };
   downloads?: CreatedDownload[];
+  session_id?: string;
   error?: string;
 }
 
@@ -775,7 +784,11 @@ export function handleChatDownloadRequest(req: IncomingMessage, res: ServerRespo
   res.end(entry.csv);
 }
 
-export async function handleChatApiRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+function newSessionId(): string {
+  return "cs_" + randomBytes(10).toString("hex");
+}
+
+export async function handleChatApiRequest(req: IncomingMessage, res: ServerResponse, userEmail: string): Promise<void> {
   let body: ChatRequestBody;
   try {
     body = await readJsonBody<ChatRequestBody>(req);
@@ -796,12 +809,63 @@ export async function handleChatApiRequest(req: IncomingMessage, res: ServerResp
     return;
   }
 
+  const sessionId = (typeof body.session_id === "string" && /^cs_[a-f0-9]{20}$/.test(body.session_id))
+    ? body.session_id
+    : newSessionId();
+
   try {
     const result = await runChatLoop(body.messages);
+    result.session_id = sessionId;
+
+    if (result.ok && result.reply) {
+      // Persist the new user message + assistant reply. We trust the client to
+      // send the full history each turn, so only the LAST user message is new
+      // relative to the stored session. Message indices continue from whatever
+      // is already on disk for this session.
+      try {
+        const existing = await readChatMessagesForSession(sessionId);
+        const nextIndex = existing.length;
+        const now = new Date().toISOString();
+        const rows: ChatMessageRow[] = [
+          { session_id: sessionId, message_index: nextIndex, created_at: now, user_email: userEmail, role: "user", content: lastUser.content },
+          { session_id: sessionId, message_index: nextIndex + 1, created_at: now, user_email: userEmail, role: "assistant", content: result.reply }
+        ];
+        await appendChatMessages(rows);
+      } catch (persistErr) {
+        // Persistence failure shouldn't block the reply — log and move on.
+        console.error("[chat] failed to persist messages:", persistErr);
+      }
+    }
+
     res.writeHead(result.ok ? 200 : 500, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     res.end(JSON.stringify(result));
   } catch (err) {
     console.error("[chat] loop failed:", err);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: false, error: (err as Error).message ?? "internal error", session_id: sessionId }));
+  }
+}
+
+export async function handleChatSessionsListRequest(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+  try {
+    const sessions = await listRecentChatSessions(50);
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+    res.end(JSON.stringify({ ok: true, sessions }));
+  } catch (err) {
+    console.error("[chat] list sessions failed:", err);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: false, error: (err as Error).message ?? "internal error" }));
+  }
+}
+
+export async function handleChatSessionReadRequest(_req: IncomingMessage, res: ServerResponse, sessionId: string): Promise<void> {
+  try {
+    const rows = await readChatMessagesForSession(sessionId);
+    const messages = rows.map((r) => ({ role: r.role, content: r.content }));
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+    res.end(JSON.stringify({ ok: true, session_id: sessionId, messages }));
+  } catch (err) {
+    console.error("[chat] read session failed:", err);
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: false, error: (err as Error).message ?? "internal error" }));
   }
@@ -834,6 +898,14 @@ body[data-chat-open="true"] .chat-panel { display: flex; }
 .chat-panel .msg .downloads a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: white; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--ink); text-decoration: none; font-weight: 500; }
 .chat-panel .msg .downloads a:hover { background: #fafbfc; border-color: var(--ink, #0a2540); }
 .chat-panel .msg .downloads .rows { color: var(--muted); font-weight: 400; }
+.chat-panel .history-view { flex: 1; min-height: 0; overflow-y: auto; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.chat-panel .history-view .empty { padding: 20px; color: var(--muted); font-size: 12px; text-align: center; }
+.chat-panel .history-item { padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.chat-panel .history-item:last-child { border-bottom: none; }
+.chat-panel .history-item:hover { background: #fafbfc; }
+.chat-panel .history-item .preview { font-size: 13px; color: var(--ink); line-height: 1.4; margin-bottom: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.chat-panel .history-item .meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.chat-panel .history-item .meta .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
 .chat-panel .composer { display: flex; gap: 6px; align-items: flex-end; background: white; border: 1px solid var(--line); border-radius: 10px; padding: 6px; }
 .chat-panel textarea { flex: 1; border: none; outline: none; font-family: inherit; font-size: 13px; resize: none; min-height: 20px; max-height: 120px; padding: 4px; color: var(--ink); background: transparent; }
 .chat-panel .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
@@ -851,7 +923,8 @@ export function chatPanelHtml(tenantShort: string): string {
   <div class="chat-head">
     <h3>${tenantShort} · Chat</h3>
     <div class="actions">
-      <button class="btn btn-mini" id="chat-clear-btn" type="button">Clear</button>
+      <button class="btn btn-mini" id="chat-history-btn" type="button">History</button>
+      <button class="btn btn-mini" id="chat-clear-btn" type="button">New</button>
       <button class="btn btn-mini" id="chat-close-btn" type="button" aria-label="Close chat">✕</button>
     </div>
   </div>
@@ -863,6 +936,7 @@ export function chatPanelHtml(tenantShort: string): string {
     <span class="example">CSV of Caruso invoices in August</span>
     <span class="example">Export outbound rows for last week</span>
   </div>
+  <div class="history-view" id="chat-history-view" hidden></div>
   <div class="messages" id="chat-messages"></div>
   <div class="composer">
     <textarea id="chat-input" rows="1" placeholder="Ask about inventory…"></textarea>
@@ -875,12 +949,15 @@ export function chatPanelHtml(tenantShort: string): string {
 export const CHAT_PANEL_JS = `
 (function(){
   var history = [];
+  var sessionId = null;
   var messagesEl = document.getElementById('chat-messages');
   var input = document.getElementById('chat-input');
   var sendBtn = document.getElementById('chat-send-btn');
   var clearBtn = document.getElementById('chat-clear-btn');
   var closeBtn = document.getElementById('chat-close-btn');
   var toggleBtn = document.getElementById('chat-toggle-btn');
+  var historyBtn = document.getElementById('chat-history-btn');
+  var historyView = document.getElementById('chat-history-view');
   var examplesEl = document.getElementById('chat-examples');
   if (!messagesEl || !input || !sendBtn) return;
 
@@ -939,7 +1016,76 @@ export const CHAT_PANEL_JS = `
 
   if (clearBtn) clearBtn.addEventListener('click', function(){
     history.length = 0;
+    sessionId = null;
     messagesEl.innerHTML = '';
+    hideHistory();
+  });
+
+  function hideHistory() {
+    if (historyView) historyView.hidden = true;
+    if (messagesEl) messagesEl.hidden = false;
+  }
+  function showHistory() {
+    if (historyView) historyView.hidden = false;
+    if (messagesEl) messagesEl.hidden = true;
+  }
+  function fmtTime(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      var now = new Date();
+      var sameDay = d.toDateString() === now.toDateString();
+      var opts = sameDay ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+      return d.toLocaleString(undefined, opts);
+    } catch(e){ return iso; }
+  }
+  async function loadHistoryList() {
+    showHistory();
+    historyView.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      var res = await fetch('/api/chat/sessions');
+      var body = await res.json();
+      if (!body.ok || !body.sessions || body.sessions.length === 0) {
+        historyView.innerHTML = '<div class="empty">No past chats yet.</div>';
+        return;
+      }
+      historyView.innerHTML = '';
+      body.sessions.forEach(function(s){
+        var item = document.createElement('div');
+        item.className = 'history-item';
+        item.setAttribute('data-session-id', s.session_id);
+        var preview = s.first_user_message || '(no messages)';
+        item.innerHTML =
+          '<div class="preview">' + esc(preview) + '</div>' +
+          '<div class="meta"><span class="email">' + esc(s.user_email || 'unknown') + '</span>' +
+          '<span>' + esc(fmtTime(s.last_active_at)) + ' · ' + s.message_count + ' msgs</span></div>';
+        item.addEventListener('click', function(){ resumeSession(s.session_id); });
+        historyView.appendChild(item);
+      });
+    } catch(err) {
+      historyView.innerHTML = '<div class="empty">Failed to load history: ' + esc(err.message || err) + '</div>';
+    }
+  }
+  async function resumeSession(id) {
+    try {
+      var res = await fetch('/api/chat/sessions/' + encodeURIComponent(id));
+      var body = await res.json();
+      if (!body.ok) throw new Error(body.error || 'resume failed');
+      sessionId = id;
+      history = body.messages.map(function(m){ return { role: m.role, content: m.content }; });
+      messagesEl.innerHTML = '';
+      history.forEach(function(m){
+        renderMessage(m.role, m.content);
+      });
+      hideHistory();
+      input.focus();
+    } catch(err) {
+      alert('Resume failed: ' + (err.message || err));
+    }
+  }
+  if (historyBtn) historyBtn.addEventListener('click', function(){
+    if (historyView && !historyView.hidden) { hideHistory(); return; }
+    loadHistoryList();
   });
 
   if (closeBtn) closeBtn.addEventListener('click', function(){ setOpen(false); });
@@ -962,10 +1108,11 @@ export const CHAT_PANEL_JS = `
       var res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({ messages: history, session_id: sessionId })
       });
       var body = await res.json();
       thinking.remove();
+      if (body.session_id) sessionId = body.session_id;
       if (!body.ok) {
         renderMessage('assistant', body.error || 'Something went wrong.', { error: true });
         history.pop();
