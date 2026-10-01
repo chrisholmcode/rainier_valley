@@ -69,7 +69,12 @@ import {
   handleGroceryRescueUploadPreviewRequest,
   handleGroceryRescueUploadCommitRequest
 } from "./grocery-rescue-upload.js";
-import { handleChatApiRequest, handleChatDownloadRequest } from "./chat.js";
+import {
+  handleChatApiRequest,
+  handleChatDownloadRequest,
+  handleChatSessionsListRequest,
+  handleChatSessionReadRequest
+} from "./chat.js";
 import { handleInboundEmailRequest } from "./email-intake.js";
 import { startEmailHeartbeat } from "./email-heartbeat.js";
 import {
@@ -2451,7 +2456,28 @@ function startHttpServer(): void {
     if (req.method === "POST" && path === "/api/chat") {
       const authed = await authRequest(req, res);
       if (!authed) return;
-      await handleChatApiRequest(req, res);
+      const userEmail = (await requestUserEmail(req)) ?? "unknown";
+      await handleChatApiRequest(req, res, userEmail);
+      return;
+    }
+
+    if (req.method === "GET" && path === "/api/chat/sessions") {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      await handleChatSessionsListRequest(req, res);
+      return;
+    }
+
+    if (req.method === "GET" && path.startsWith("/api/chat/sessions/")) {
+      const authed = await authRequest(req, res);
+      if (!authed) return;
+      const id = path.slice("/api/chat/sessions/".length);
+      if (!/^cs_[a-f0-9]{20}$/.test(id)) {
+        res.writeHead(400, { "Content-Type": "text/plain" });
+        res.end("Invalid session id.");
+        return;
+      }
+      await handleChatSessionReadRequest(req, res, id);
       return;
     }
 

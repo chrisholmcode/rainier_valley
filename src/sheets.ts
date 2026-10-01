@@ -2011,3 +2011,122 @@ export async function markCrateConsumed(params: {
     }
   });
 }
+
+// ── Chat persistence ──────────────────────────────────────────────────────
+//
+// One row per chat message in the Chats tab. Chats are shared across all
+// authenticated users at the tenant — anyone can read anyone's chat history
+// and resume a prior conversation. Session id is a client-generated opaque
+// token; messages for a session share it. Reconstruct ordering by
+// message_index within a session.
+
+export const CHATS_SHEET_HEADERS = [
+  "session_id",
+  "message_index",
+  "created_at",
+  "user_email",
+  "role",
+  "content"
+];
+
+export interface ChatMessageRow {
+  session_id: string;
+  message_index: number;
+  created_at: string;
+  user_email: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatSessionSummary {
+  session_id: string;
+  started_at: string;
+  last_active_at: string;
+  user_email: string;
+  first_user_message: string;
+  message_count: number;
+}
+
+export async function ensureChatsSheetHeader(): Promise<void> {
+  await ensureHeader(env.CHATS_WORKSHEET_NAME, CHATS_SHEET_HEADERS);
+}
+
+export async function appendChatMessages(messages: ChatMessageRow[]): Promise<void> {
+  if (messages.length === 0) return;
+  await ensureChatsSheetHeader();
+  const values = messages.map((m) => [
+    m.session_id,
+    m.message_index,
+    m.created_at,
+    m.user_email,
+    m.role,
+    m.content
+  ]);
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.CHATS_WORKSHEET_NAME}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values }
+  });
+}
+
+async function readAllChatRows(): Promise<ChatMessageRow[]> {
+  await ensureChatsSheetHeader();
+  const sheets = google.sheets({ version: "v4", auth });
+  const resp = await sheets.spreadsheets.values.get({
+    spreadsheetId: env.GOOGLE_SPREADSHEET_ID,
+    range: `${env.CHATS_WORKSHEET_NAME}!A:F`
+  });
+  const rows = resp.data.values ?? [];
+  const out: ChatMessageRow[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || !r[0]) continue;
+    const role = String(r[4] ?? "user");
+    out.push({
+      session_id: String(r[0]),
+      message_index: Number(r[1] ?? 0),
+      created_at: String(r[2] ?? ""),
+      user_email: String(r[3] ?? ""),
+      role: role === "assistant" ? "assistant" : "user",
+      content: String(r[5] ?? "")
+    });
+  }
+  return out;
+}
+
+export async function readChatMessagesForSession(sessionId: string): Promise<ChatMessageRow[]> {
+  if (!sessionId) return [];
+  const all = await readAllChatRows();
+  return all
+    .filter((r) => r.session_id === sessionId)
+    .sort((a, b) => a.message_index - b.message_index);
+}
+
+export async function listRecentChatSessions(limit = 50): Promise<ChatSessionSummary[]> {
+  const all = await readAllChatRows();
+  const bySession = new Map<string, ChatMessageRow[]>();
+  for (const r of all) {
+    let bucket = bySession.get(r.session_id);
+    if (!bucket) bySession.set(r.session_id, (bucket = []));
+    bucket.push(r);
+  }
+  const summaries: ChatSessionSummary[] = [];
+  for (const [sessionId, msgs] of bySession.entries()) {
+    msgs.sort((a, b) => a.message_index - b.message_index);
+    const first = msgs[0];
+    const last = msgs[msgs.length - 1];
+    const firstUser = msgs.find((m) => m.role === "user");
+    summaries.push({
+      session_id: sessionId,
+      started_at: first.created_at,
+      last_active_at: last.created_at,
+      user_email: first.user_email,
+      first_user_message: (firstUser?.content ?? "").slice(0, 160),
+      message_count: msgs.length
+    });
+  }
+  summaries.sort((a, b) => b.last_active_at.localeCompare(a.last_active_at));
+  return summaries.slice(0, limit);
+}
