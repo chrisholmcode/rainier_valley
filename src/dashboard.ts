@@ -1002,17 +1002,17 @@ tbody th.sub { font-weight: 500; color: var(--muted); padding-left: 20px; }
 
 /* Bucket detail slide-in panel */
 .bucket-panel {
-  position: fixed; top: 0; right: 0; bottom: 0;
+  position: fixed; top: 0; bottom: 0;
+  right: calc(-1 * min(480px, 92vw) - 20px);
   width: min(480px, 92vw);
   background: var(--card, #fff);
   border-left: 1px solid var(--line);
   box-shadow: -8px 0 24px rgba(10, 37, 64, 0.08);
-  transform: translateX(100%);
-  transition: transform 0.22s ease-out;
+  transition: right 0.22s ease-out;
   display: flex; flex-direction: column;
   z-index: 1000;
 }
-.bucket-panel.open { transform: translateX(0); }
+.bucket-panel.open { right: 0; }
 .bucket-panel-backdrop {
   position: fixed; inset: 0; background: rgba(10, 37, 64, 0.16);
   opacity: 0; pointer-events: none; transition: opacity 0.2s;
