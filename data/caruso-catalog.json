@@ -1,17 +1,17 @@
 {
-  "scrapedAt": "2026-08-14T17:34:12.654Z",
-  "enrichedAt": "2026-08-14T17:34:24.986Z",
-  "totalItems": 2548,
-  "derivableWeights": 1567,
-  "needsDetailPage": 593,
+  "scrapedAt": "2026-10-06T23:23:00.749Z",
+  "enrichedAt": "2026-10-06T23:23:17.041Z",
+  "totalItems": 2511,
+  "derivableWeights": 1595,
+  "needsDetailPage": 589,
   "kindStats": {
-    "lb_direct": 682,
-    "ct_only": 619,
-    "multi_lb": 273,
-    "other": 228,
+    "lb_direct": 712,
+    "ct_only": 617,
+    "multi_lb": 268,
+    "other": 158,
     "multi_oz": 523,
-    "volume": 134,
-    "single_oz": 89
+    "volume": 141,
+    "single_oz": 92
   },
   "items": [
     {
@@ -55,6 +55,14 @@
       "kind": "multi_lb"
     },
     {
+      "sku": "00102",
+      "name": "APPLE FUJI FANCY",
+      "packSize": "163 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "00110",
       "name": "APPLE FUJI WAXF PREMIUM",
       "packSize": "64 CT",
@@ -79,9 +87,9 @@
       "kind": "ct_only"
     },
     {
-      "sku": "00116",
+      "sku": "00118",
       "name": "APPLE FUJI US#1",
-      "packSize": "56 CT",
+      "packSize": "72 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -90,14 +98,6 @@
       "sku": "00143",
       "name": "APPLE FUJI",
       "packSize": "125 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00150",
-      "name": "APPLE GALA WAXF PREMIUM",
-      "packSize": "72 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -135,25 +135,17 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "00192",
-      "name": "APPLE GINGER GOLD USXF",
-      "packSize": "80 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00206",
-      "name": "APPLE GOLDEN DEL USXF",
-      "packSize": "80 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00235",
-      "name": "APPLE GRANNY SMITH USXF",
+      "sku": "00190",
+      "name": "APPLE GALA WAXF",
       "packSize": "64 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "00205",
+      "name": "APPLE GOLDEN DEL USXF",
+      "packSize": "72 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -191,6 +183,46 @@
       "kind": "ct_only"
     },
     {
+      "sku": "00259",
+      "name": "APPLE HONEYCRISP US#1",
+      "packSize": "125 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "00260",
+      "name": "APPLE HONEYCRISP US#1",
+      "packSize": "48 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "00261",
+      "name": "APPLE HONEYCRISP US#1",
+      "packSize": "72 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "00271",
+      "name": "APPLE HONEYCRISP WAXF",
+      "packSize": "64 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "00277",
+      "name": "APPLE HONEYCRISP BAG",
+      "packSize": "12/3#",
+      "weightLb": 36,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
       "sku": "00281",
       "name": "APPLE HONEYCRISP US#1",
       "packSize": "56 CT",
@@ -199,36 +231,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "00282",
-      "name": "APPLE HONEYCRISP US#1",
-      "packSize": "64 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00284",
-      "name": "APPLE HONEYCRISP USXF",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00349",
-      "name": "APPLE PINK LADY WAXF PREMIUM",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00358",
-      "name": "APPLE PINK LADY USXF",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
+      "sku": "00326",
+      "name": "APPLE OPAL EURO 50",
+      "packSize": "27#",
+      "weightLb": 27,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "00371",
@@ -269,6 +277,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "00451",
+      "name": "ASPARAGUS SMALL",
+      "packSize": "11#",
+      "weightLb": 11,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "00453",
@@ -415,18 +431,18 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "00510",
-      "name": "BANANA THAI",
-      "packSize": "40#",
-      "weightLb": 40,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "00511",
       "name": "BEAN BLACK",
       "packSize": "50#",
       "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "00514",
+      "name": "BEAN FAVA",
+      "packSize": "25#",
+      "weightLb": 25,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -437,6 +453,22 @@
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
+    },
+    {
+      "sku": "00517",
+      "name": "BEAN GARBANZO FRESH",
+      "packSize": "13-15#",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "00519",
+      "name": "BEAN GREEN",
+      "packSize": "15#",
+      "weightLb": 15,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "00523",
@@ -481,7 +513,7 @@
     {
       "sku": "00537",
       "name": "BEEF RIBEYE BNLSS CHOICE",
-      "packSize": "90#AVE",
+      "packSize": "40#AVG",
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
@@ -511,6 +543,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "00548",
+      "name": "BERRIES BLACK",
+      "packSize": "12/6 OZ",
+      "weightLb": 4.5,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
       "sku": "00550",
       "name": "BERRIES BLUE",
       "packSize": "8/18 OZ",
@@ -527,12 +567,12 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "00552",
+      "sku": "00553",
       "name": "BERRIES BLUE",
-      "packSize": "12/1 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "12/9.6 OZ",
+      "weightLb": 7.2,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "00556",
@@ -559,6 +599,14 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "00561",
+      "name": "BERRIES STRAW CLAMSHELL",
+      "packSize": "4/2#",
+      "weightLb": 8,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
       "sku": "00564",
       "name": "BERRIES STRAW DRISCOLL",
       "packSize": "8/1#",
@@ -567,36 +615,12 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "00574",
-      "name": "BEET CHIOGGA",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "00577",
       "name": "BERRIES STRAW EA",
       "packSize": "1#",
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "00578",
-      "name": "POTATO RED 'B'",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "00580",
-      "name": "FRZN CORN DOGS HONEY",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "00588",
@@ -655,10 +679,10 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "00643",
-      "name": "CABBAGE GREEN MED LOCAL",
-      "packSize": "50#",
-      "weightLb": 50,
+      "sku": "00646",
+      "name": "CABBAGE KRAUT BIN",
+      "packSize": "650#",
+      "weightLb": 650,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -667,14 +691,6 @@
       "name": "CABBAGE NAPA",
       "packSize": "30#",
       "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "00649",
-      "name": "CABBAGE NAPA",
-      "packSize": "50#",
-      "weightLb": 50,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -807,14 +823,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "00679",
-      "name": "CARROT CELLO",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "00682",
       "name": "CARROT DICED 1/4",
       "packSize": "5#",
@@ -943,6 +951,14 @@
       "kind": "multi_lb"
     },
     {
+      "sku": "00712",
+      "name": "CAULIFLOWER ORANGE",
+      "packSize": "12 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "00713",
       "name": "CAULIFLOWER PURPLE",
       "packSize": "12 CT",
@@ -972,14 +988,6 @@
       "packSize": "24 CT",
       "weightLb": 50,
       "weightSource": "scraped_detail",
-      "kind": "ct_only"
-    },
-    {
-      "sku": "00718",
-      "name": "CELERY NAKED",
-      "packSize": "30 CT",
-      "weightLb": null,
-      "weightSource": null,
       "kind": "ct_only"
     },
     {
@@ -1039,14 +1047,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "00770",
-      "name": "CHERRY RED 10.5 ROW CANADA",
-      "packSize": "18#",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "00801",
       "name": "CHOY YU SUM",
       "packSize": "25-30#",
@@ -1095,6 +1095,14 @@
       "kind": "ct_only"
     },
     {
+      "sku": "00811",
+      "name": "COCONUT GREEN BRAZIL",
+      "packSize": "10 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "00818",
       "name": "CANNED PEPPER JALAPENO SLC NAC",
       "packSize": "6/#10",
@@ -1117,6 +1125,14 @@
       "weightLb": 24,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
+    },
+    {
+      "sku": "00836",
+      "name": "CORN STALK BUNDLES",
+      "packSize": "6 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "00844",
@@ -1271,6 +1287,14 @@
       "kind": "ct_only"
     },
     {
+      "sku": "00879",
+      "name": "CUCUMBER ENGLISH BUSHEL",
+      "packSize": "45 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "00882",
       "name": "CUCUMBER PERSIAN",
       "packSize": "18#",
@@ -1280,7 +1304,7 @@
     },
     {
       "sku": "00886",
-      "name": "CUCUMBER PICKLES",
+      "name": "CUCUMBER PICKLES LARGE",
       "packSize": "40#",
       "weightLb": 40,
       "weightSource": "derived_from_pack",
@@ -1585,10 +1609,10 @@
     {
       "sku": "00973",
       "name": "EGGPLANT CHINESE",
-      "packSize": "30#",
-      "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
+      "packSize": "25-30#",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
     },
     {
       "sku": "00976",
@@ -1601,22 +1625,6 @@
     {
       "sku": "00981",
       "name": "FIG BLACK MISSION",
-      "packSize": "12/1 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "00983",
-      "name": "FIG BROWN TURKEY",
-      "packSize": "12/1 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "00984",
-      "name": "FIG GREEN SIERRA",
       "packSize": "12/1 PT",
       "weightLb": null,
       "weightSource": null,
@@ -1640,7 +1648,7 @@
     },
     {
       "sku": "00991",
-      "name": "FLOWER HIBISCUS",
+      "name": "FLOWER HIBISCUS/JAMAICA",
       "packSize": "25#",
       "weightLb": 25,
       "weightSource": "derived_from_pack",
@@ -1751,33 +1759,9 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "01140",
-      "name": "GRAPE IVORY (GREEN)",
-      "packSize": "19#",
-      "weightLb": 19,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "01184",
-      "name": "GRAPEFRUIT BAG",
-      "packSize": "8/5#",
-      "weightLb": 40,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "01195",
-      "name": "GRAPEFRUIT STAR RUBY",
-      "packSize": "27 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01197",
-      "name": "GRAPEFRUIT STAR RUBY",
-      "packSize": "48 CT",
+      "sku": "01230",
+      "name": "GRAPEFRUIT PUMMELO CALIF",
+      "packSize": "10 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -1827,6 +1811,22 @@
       "name": "GUAVA",
       "packSize": "13#",
       "weightLb": 13,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "01263",
+      "name": "GUAVA",
+      "packSize": "16/1#",
+      "weightLb": 16,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "01264",
+      "name": "GUAVA SERRATO GUAYABA",
+      "packSize": "20#",
+      "weightLb": 20,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -1925,14 +1925,6 @@
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "01298",
-      "name": "HERB DILLWEED BUNDLE",
-      "packSize": "6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "01301",
@@ -2087,6 +2079,14 @@
       "kind": "volume"
     },
     {
+      "sku": "01322",
+      "name": "HERB LIVING BASIL",
+      "packSize": "12 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "01324",
       "name": "HERB MARJORAM",
       "packSize": "1#",
@@ -2151,14 +2151,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "01350",
-      "name": "HERB OPAL BASIL",
-      "packSize": "1#",
-      "weightLb": 1,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "01353",
       "name": "HERB OREGANO",
       "packSize": "1#",
@@ -2197,14 +2189,6 @@
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "01372",
-      "name": "HERB VERDALAGA",
-      "packSize": "24CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "01375",
@@ -2261,14 +2245,6 @@
       "weightLb": 25,
       "weightSource": "scraped_detail",
       "kind": "ct_only"
-    },
-    {
-      "sku": "01406",
-      "name": "KEY LIME BAG",
-      "packSize": "17/2#",
-      "weightLb": 34,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "01409",
@@ -2343,14 +2319,6 @@
       "kind": "other"
     },
     {
-      "sku": "01438",
-      "name": "LEMON CHOICE",
-      "packSize": "165",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "01443",
       "name": "LEMON",
       "packSize": "5#",
@@ -2375,12 +2343,12 @@
       "kind": "other"
     },
     {
-      "sku": "01452",
-      "name": "LEMON FANCY",
-      "packSize": "165",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "sku": "01462",
+      "name": "LEMON YUZU",
+      "packSize": "10#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "01463",
@@ -2487,14 +2455,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "01499",
-      "name": "LETTUCE ROMAINE CROWN",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "01500",
       "name": "LETTUCE ROMAINE HEART",
       "packSize": "48 CT",
@@ -2543,14 +2503,6 @@
       "kind": "other"
     },
     {
-      "sku": "01508",
-      "name": "LIME",
-      "packSize": "230",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "01509",
       "name": "LIME",
       "packSize": "250",
@@ -2591,44 +2543,28 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "01545",
-      "name": "MANDARIN DAISY AUSSIE",
-      "packSize": "70 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01597",
-      "name": "MANGO KEITT",
-      "packSize": "4 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01599",
-      "name": "MANGO KENT",
-      "packSize": "6 CT",
-      "weightLb": 8,
-      "weightSource": "scraped_detail",
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01601",
-      "name": "MANGO KEITT",
-      "packSize": "8/9 CT",
-      "weightLb": 8,
-      "weightSource": "scraped_detail",
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01613",
-      "name": "MANGO TREE RIPENED HADEN",
-      "packSize": "20#",
-      "weightLb": 20,
+      "sku": "01532",
+      "name": "MANDARIN",
+      "packSize": "10/3#",
+      "weightLb": 30,
       "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "01603",
+      "name": "MANGO TOMMY BRAZIL",
+      "packSize": "12 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "01605",
+      "name": "MANGO TOMMY BRAZIL",
+      "packSize": "7 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "01624",
@@ -2637,14 +2573,6 @@
       "weightLb": 15,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "01683",
-      "name": "MELON CANARY",
-      "packSize": "5 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "01688",
@@ -2674,30 +2602,6 @@
       "sku": "01700",
       "name": "AVOCADO HASS PREMIUM",
       "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01701",
-      "name": "MELON CASABA",
-      "packSize": "5 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01706",
-      "name": "MELON GALIA",
-      "packSize": "5 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01710",
-      "name": "MELON GOLDEN DEW",
-      "packSize": "6 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -2743,52 +2647,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "01760",
-      "name": "MELON WATER BIN SDLS 36'S",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "01761",
-      "name": "MELON WATER BIN SDLS 45 HERM",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "01762",
-      "name": "MELON WATER BIN SDLS 45'S",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "01765",
-      "name": "MELON WATER BIN SDLS 65 HERM",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "01766",
-      "name": "MELON WATER BIN SDLS 70 HERM",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "01772",
-      "name": "MELON WATER BIN YELLOW SDLS",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "sku": "01784",
+      "name": "MUSHROOM CHANTERELLE",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "01788",
@@ -2809,8 +2673,8 @@
     {
       "sku": "01796",
       "name": "MUSHROOM GOURMET MIX",
-      "packSize": "5#",
-      "weightLb": 5,
+      "packSize": "6#",
+      "weightLb": 6,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -2866,8 +2730,8 @@
       "sku": "01808",
       "name": "AVOCADO HASS PREMIUM",
       "packSize": "70 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 25,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -2935,20 +2799,12 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "01843",
-      "name": "NECTARINE  VF",
-      "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "01854",
-      "name": "NECTARINE WHITE  2 LYR",
-      "packSize": "42 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
+      "sku": "01869",
+      "name": "NIRA GREEN (GARLIC CHIVE)",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "01909",
@@ -3103,6 +2959,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "01964",
+      "name": "ONION SWEET MAYAN JUMBO",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "01967",
       "name": "ONION SWEET NORTHWEST",
       "packSize": "40#",
@@ -3191,28 +3055,20 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "02004",
+      "name": "ORANGE AUSSIE  FCY DRACULA",
+      "packSize": "56 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "02074",
       "name": "KUMQUAT",
       "packSize": "10#",
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "02118",
-      "name": "ORANGE VALENCIA BAG",
-      "packSize": "8/5#",
-      "weightLb": 40,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "02121",
-      "name": "ORANGE VALENCIA CH",
-      "packSize": "56 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "02122",
@@ -3247,9 +3103,25 @@
       "kind": "ct_only"
     },
     {
+      "sku": "02132",
+      "name": "ORANGE VALENCIA FCY",
+      "packSize": "56 CT",
+      "weightLb": 38,
+      "weightSource": "scraped_detail",
+      "kind": "ct_only"
+    },
+    {
       "sku": "02134",
       "name": "ORG ANISE NW",
       "packSize": "12 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "02173",
+      "name": "ORG APPLE FUJI US#1",
+      "packSize": "72 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -3263,12 +3135,28 @@
       "kind": "ct_only"
     },
     {
+      "sku": "02220",
+      "name": "ORG APPLE GRANNY SMITH WXF",
+      "packSize": "80 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "02228",
       "name": "ORG APPLE HONEYCRISP US#1",
       "packSize": "64 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "02251",
+      "name": "ORG APPLE OPAL EURO XF",
+      "packSize": "27#",
+      "weightLb": 27,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "02271",
@@ -3343,24 +3231,8 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "02285",
-      "name": "ORG BERRIES BLUE",
-      "packSize": "12/6 OZ",
-      "weightLb": 4.5,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "02287",
-      "name": "ORG BERRIES BLUE",
-      "packSize": "12/1 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "02289",
-      "name": "ORG BERRIES RASP DRISCOLL",
+      "sku": "02283",
+      "name": "ORG BERRIES BLACK",
       "packSize": "12/6 OZ",
       "weightLb": 4.5,
       "weightSource": "derived_from_pack",
@@ -3442,14 +3314,6 @@
       "sku": "02314",
       "name": "ORG CAULIFLOWER",
       "packSize": "12 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "02318",
-      "name": "ORG CELERY NAKED NW",
-      "packSize": "30 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -3623,20 +3487,20 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "02372",
-      "name": "ORG EGGPLANT",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "02389",
       "name": "ORG GRAPE RED SDLS",
       "packSize": "19#",
       "weightLb": 19,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "02395",
+      "name": "ORG GREENS COLLARD",
+      "packSize": "24 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "02466",
@@ -3671,14 +3535,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "02476",
-      "name": "ORG LEEK",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "02479",
       "name": "ORG LETTUCE GREEN LEAF",
       "packSize": "24 CT",
@@ -3711,33 +3567,9 @@
       "kind": "ct_only"
     },
     {
-      "sku": "02499",
-      "name": "ORG MELON CANTALOUPE",
-      "packSize": "9 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "02503",
-      "name": "ORG MELON WATER BIN SEEDED",
-      "packSize": "650#",
-      "weightLb": 650,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "02504",
-      "name": "ORG MELON WATER BIN SDLS",
-      "packSize": "650#",
-      "weightLb": 650,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "02505",
-      "name": "ORG MELON WATER MINI",
-      "packSize": "6 CT",
+      "sku": "02492",
+      "name": "ORG MANGO KEITT",
+      "packSize": "12 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -3757,14 +3589,6 @@
       "weightLb": 4.5,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "02518",
-      "name": "ORG NECTARINE",
-      "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "02522",
@@ -3807,8 +3631,16 @@
       "kind": "ct_only"
     },
     {
-      "sku": "02549",
+      "sku": "02548",
       "name": "ORG PEAR BARTLETT FCY",
+      "packSize": "90 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "02557",
+      "name": "ORG PEAR D'ANJOU",
       "packSize": "80 CT",
       "weightLb": null,
       "weightSource": null,
@@ -3845,6 +3677,14 @@
       "weightLb": 11,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "02584",
+      "name": "ORG POMEGRANATE",
+      "packSize": "30 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "02593",
@@ -3903,6 +3743,22 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "02602",
+      "name": "ORG RADISH",
+      "packSize": "24 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "02611",
+      "name": "ORG SQUASH DELICATA",
+      "packSize": "35#",
+      "weightLb": 35,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "02614",
       "name": "ORG SQUASH ZUCCHINI",
       "packSize": "24#",
@@ -3935,22 +3791,6 @@
       "kind": "other"
     },
     {
-      "sku": "02640",
-      "name": "ORG TOMATO OTV",
-      "packSize": "11#",
-      "weightLb": 11,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "02645",
-      "name": "ORG TOMATO SUNGOLD",
-      "packSize": "12/1 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "02646",
       "name": "ORG TOMATO SWEET 100'S",
       "packSize": "12/1 PT",
@@ -3963,6 +3803,14 @@
       "name": "ORG YAM GARNETT #1",
       "packSize": "40#",
       "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "02654",
+      "name": "PAPAYA CARIBBEAN RED",
+      "packSize": "32#",
+      "weightLb": 32,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -4047,22 +3895,6 @@
       "kind": "other"
     },
     {
-      "sku": "02681",
-      "name": "PEA TIP/DAU MIU",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "02683",
-      "name": "PEA ENGLISH (CHICHARO)",
-      "packSize": "25-30#",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "02684",
       "name": "PEA SNAP",
       "packSize": "10#",
@@ -4079,14 +3911,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "02704",
-      "name": "PEACH DONUT",
-      "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "02736",
       "name": "PEAR ASIAN PREMIUM WRAPPED",
       "packSize": "8 CT",
@@ -4097,6 +3921,14 @@
     {
       "sku": "02771",
       "name": "PEAR BARTLETT FCY",
+      "packSize": "70/80 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "02788",
+      "name": "PEAR BOSC FCY",
       "packSize": "70/80 CT",
       "weightLb": null,
       "weightSource": null,
@@ -4117,6 +3949,38 @@
       "weightLb": 35,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "02805",
+      "name": "PEAR CACTUS YELLOW",
+      "packSize": "35#",
+      "weightLb": 35,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "02809",
+      "name": "PEAR COMICE  FCY",
+      "packSize": "70 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "02824",
+      "name": "PEAR D'ANJOU  FCY",
+      "packSize": "70/80 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "02847",
+      "name": "PEAR STARK CRIMSON HLF",
+      "packSize": "35 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "02851",
@@ -4151,14 +4015,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "02887",
-      "name": "PEPPER GREEN BELL JBO",
-      "packSize": "BUSHEL",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "02888",
       "name": "PEPPER GREEN BELL",
       "packSize": "5#",
@@ -4171,22 +4027,6 @@
       "name": "PEPPER GREEN",
       "packSize": "1#",
       "weightLb": 1,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "02894",
-      "name": "PEPPER GYPSY",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "02895",
-      "name": "PEPPER GYPSY",
-      "packSize": "25#",
-      "weightLb": 25,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -4231,11 +4071,19 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "02919",
-      "name": "PEPPER JALAPENO XL PREMIUM",
+      "sku": "02917",
+      "name": "PEPPER JALAPENO RED",
       "packSize": "BUSHEL",
       "weightLb": null,
       "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "02919",
+      "name": "PEPPER JALAPENO XL PREMIUM",
+      "packSize": "BUSHEL",
+      "weightLb": 35,
+      "weightSource": "scraped_detail",
       "kind": "other"
     },
     {
@@ -4253,14 +4101,6 @@
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "02926",
-      "name": "PEPPER MINI SWEET",
-      "packSize": "9/2#",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "02929",
@@ -4297,6 +4137,14 @@
     {
       "sku": "02942",
       "name": "PEPPER RED BELL",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "02949",
+      "name": "PEPPER RED DICED 3/8",
       "packSize": "5#",
       "weightLb": 5,
       "weightSource": "derived_from_pack",
@@ -4415,6 +4263,30 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "02994",
+      "name": "PERSIMMON FUYU",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "02996",
+      "name": "PERSIMMON HACHIYA 1-LYR",
+      "packSize": "20 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03000",
+      "name": "PERSIMMON FUYU MED/LRG",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "03004",
       "name": "PICKLE 1/8 S.C  CHIPS BUCKET",
       "packSize": "5 GAL",
@@ -4424,24 +4296,16 @@
     },
     {
       "sku": "03006",
-      "name": "PINEAPPLE",
+      "name": "PINEAPPLE DOLE COLADA",
       "packSize": "6 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
     },
     {
-      "sku": "03008",
-      "name": "PINEAPPLE  PINK",
-      "packSize": "6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "03012",
-      "name": "PINEAPPLE",
-      "packSize": "7 CT",
+      "sku": "03010",
+      "name": "PINEAPPLE DOLE COLADA",
+      "packSize": "8 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -4455,14 +4319,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "03015",
-      "name": "PINEAPPLE DELMONTE GOLD",
-      "packSize": "6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "03041",
       "name": "PLUM BLACK  VF",
       "packSize": "35 CT",
@@ -4471,25 +4327,17 @@
       "kind": "ct_only"
     },
     {
-      "sku": "03101",
+      "sku": "03105",
       "name": "PLUM RED VF",
-      "packSize": "35 CT",
+      "packSize": "40 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
     },
     {
-      "sku": "03102",
-      "name": "PLUM RED VF",
-      "packSize": "45 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "03140",
-      "name": "PLUOT RED RASP  2 LYR",
-      "packSize": "56 CT",
+      "sku": "03146",
+      "name": "POMEGRANATE 2 LAYER ULTIMATE",
+      "packSize": "22 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -4498,6 +4346,30 @@
       "sku": "03150",
       "name": "POMEGRANATE 2 LAYER",
       "packSize": "30 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03152",
+      "name": "POMEGRANATE 2 LAYER",
+      "packSize": "34 CT",
+      "weightLb": 20,
+      "weightSource": "scraped_detail",
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03158",
+      "name": "POM ULTIMATE STACKER 22 SIZE",
+      "packSize": "154 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03161",
+      "name": "POM ULTIMATE STACKER 30 SIZE",
+      "packSize": "210 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -4545,6 +4417,14 @@
     {
       "sku": "03179",
       "name": "POTATO RED  #2",
+      "packSize": "50#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "03180",
+      "name": "POTATO RED 'A'",
       "packSize": "50#",
       "weightLb": 50,
       "weightSource": "derived_from_pack",
@@ -4623,14 +4503,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "03192",
-      "name": "POTATO RUSSET",
-      "packSize": "100 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "03193",
       "name": "POTATO RUSSET",
       "packSize": "50 CT",
@@ -4655,24 +4527,16 @@
       "kind": "multi_lb"
     },
     {
+      "sku": "03198",
+      "name": "POTATO RUSSET BIN",
+      "packSize": "400/5#",
+      "weightLb": 2000,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
       "sku": "03204",
       "name": "POTATO TS GOLD FINGERLING",
-      "packSize": "12/24 OZ",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "03206",
-      "name": "POTATO TS HONEY GOLD",
-      "packSize": "12/24 OZ",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "03207",
-      "name": "POTATO TS PURPLE PASSION",
       "packSize": "12/24 OZ",
       "weightLb": 18,
       "weightSource": "derived_from_pack",
@@ -4719,14 +4583,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03214",
-      "name": "POTATO WHITE 'B'",
-      "packSize": "50#",
-      "weightLb": 50,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "03215",
       "name": "POTATO YUKON",
       "packSize": "10/5#",
@@ -4745,14 +4601,6 @@
     {
       "sku": "03218",
       "name": "POTATO YUKON  #2",
-      "packSize": "50#",
-      "weightLb": 50,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03219",
-      "name": "POTATO YUKON 'A'",
       "packSize": "50#",
       "weightLb": 50,
       "weightSource": "derived_from_pack",
@@ -4781,6 +4629,62 @@
       "weightLb": 50,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "03233",
+      "name": "PUMPKIN CARVER BIN",
+      "packSize": "30-35 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "03235",
+      "name": "PUMPKIN BIN CINDERELLA",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "03238",
+      "name": "PUMPKIN BIN WHITE",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "03240",
+      "name": "PUMPKIN JACK BE LITTLE",
+      "packSize": "30 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03241",
+      "name": "PUMPKIN JACK BE LITTLE",
+      "packSize": "40 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03247",
+      "name": "PUMPKIN SUGAR PIE BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "03249",
+      "name": "PUMPKIN WEE BE LITTLE",
+      "packSize": "40 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "03256",
@@ -4831,6 +4735,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "03266",
+      "name": "RAPINI",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "03268",
       "name": "RICE HOMAI CALROSE",
       "packSize": "50#",
@@ -4839,24 +4751,8 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03271",
-      "name": "ROOT GOLDEN GOBO/BURDOCK",
-      "packSize": "22#",
-      "weightLb": 22,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "03272",
       "name": "ROOT HORSERADISH",
-      "packSize": "1#",
-      "weightLb": 1,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03273",
-      "name": "ROOT JICAMA",
       "packSize": "1#",
       "weightLb": 1,
       "weightSource": "derived_from_pack",
@@ -4883,14 +4779,6 @@
       "name": "ROOT JICAMA",
       "packSize": "35#",
       "weightLb": 35,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03280",
-      "name": "ROOT NAGAIMO JAPANESE",
-      "packSize": "22#",
-      "weightLb": 22,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -4975,10 +4863,10 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03332",
-      "name": "SQUASH BABY YELLOW PATTY PAN",
-      "packSize": "10#",
-      "weightLb": 10,
+      "sku": "03330",
+      "name": "SQUASH ASSORT BIN STICKRD",
+      "packSize": "700#",
+      "weightLb": 700,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -5071,26 +4959,10 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03348",
-      "name": "SQUASH MEX GREY",
-      "packSize": "35#",
-      "weightLb": 35,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "03352",
       "name": "SQUASH OPO",
       "packSize": "40#",
       "weightLb": 40,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03354",
-      "name": "SQUASH PATTY PAN GREEN",
-      "packSize": "10#",
-      "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -5111,6 +4983,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "03359",
+      "name": "SQUASH SWEET MEAT BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "03364",
       "name": "SQUASH YELLOW",
       "packSize": "5#",
@@ -5123,14 +5003,6 @@
       "name": "SQUASH ZUCCHINI",
       "packSize": "5#",
       "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03371",
-      "name": "SQUASH ZUCHINNI BABY",
-      "packSize": "10#",
-      "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -5319,6 +5191,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "03432",
+      "name": "POTATO SWEET JUMBO",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "03433",
       "name": "POTATO SWEET MEDIUM",
       "packSize": "40#",
@@ -5339,6 +5219,22 @@
       "name": "TAMARINDO SWEET",
       "packSize": "16/1#",
       "weightLb": 16,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "03492",
+      "name": "TEJECOTE",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "03494",
+      "name": "TEJECOTE",
+      "packSize": "8/1#",
+      "weightLb": 8,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
     },
@@ -5383,22 +5279,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03510",
-      "name": "TOMATO 2 LYR",
-      "packSize": "3X4",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "03511",
-      "name": "TOMATO 2 LYR",
-      "packSize": "4X4",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "03512",
       "name": "TOMATO 2 LYR",
       "packSize": "4X5",
@@ -5415,9 +5295,9 @@
       "kind": "other"
     },
     {
-      "sku": "03517",
-      "name": "TOMATO LOOSE",
-      "packSize": "25# 5X5",
+      "sku": "03518",
+      "name": "TOMATO LOOSE XL",
+      "packSize": "25# 5X6",
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
@@ -5487,14 +5367,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03576",
-      "name": "TOMATO LOCAL",
-      "packSize": "22#",
-      "weightLb": 22,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "03577",
       "name": "TOMATO LOCAL",
       "packSize": "25#",
@@ -5533,6 +5405,14 @@
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
+    },
+    {
+      "sku": "03600",
+      "name": "TONG HO SMALL",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "03602",
@@ -5615,10 +5495,26 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03645",
-      "name": "CUCUMBER PICKLES LARGE",
-      "packSize": "22#",
-      "weightLb": 22,
+      "sku": "03624",
+      "name": "YAM OKINAWA SWEETS",
+      "packSize": "30#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "03626",
+      "name": "APPLE AMBROSIA WAXF",
+      "packSize": "88 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "03639",
+      "name": "BRUSSEL SPROUT BEACHSIDE",
+      "packSize": "25#",
+      "weightLb": 25,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -5759,36 +5655,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "03732",
-      "name": "ORG GRAPE FLAME SDLS",
-      "packSize": "18#",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03734",
-      "name": "ORG MELON WATER MINI",
-      "packSize": "8 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "03736",
       "name": "ORG SQUASH YELLOW",
       "packSize": "24#",
       "weightLb": 24,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "03754",
-      "name": "PEPPER JALAPENO",
-      "packSize": "4/4#",
-      "weightLb": 16,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "03765",
@@ -5807,22 +5679,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "03773",
-      "name": "LECHUGUILLA COCONUT",
-      "packSize": "24/16 OZ",
-      "weightLb": 24,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "03774",
-      "name": "LECHUGUILLA PINEAPPLE",
-      "packSize": "24/16 OZ",
-      "weightLb": 24,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "03775",
       "name": "LEMON FANCY",
       "packSize": "75",
@@ -5839,28 +5695,20 @@
       "kind": "ct_only"
     },
     {
+      "sku": "03834",
+      "name": "GRAPE SWEET SAPPHIRE (BLACK)",
+      "packSize": "19#",
+      "weightLb": 19,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "03842",
-      "name": "MANDARIN MURCOTT W",
+      "name": "MANDARIN MURCOTT HONEY 2X",
       "packSize": "22#",
       "weightLb": 22,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "03846",
-      "name": "MELON CANTALOUPE BIN HERM",
-      "packSize": "700#",
-      "weightLb": 700,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03858",
-      "name": "ORG APPLE GALA WXF",
-      "packSize": "88 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "03860",
@@ -5871,26 +5719,10 @@
       "kind": "ct_only"
     },
     {
-      "sku": "03861",
-      "name": "ORG EGGPLANT",
-      "packSize": "18 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "03862",
       "name": "ORG GARLIC JUMBO",
       "packSize": "30#",
       "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "03864",
-      "name": "ORG MELON CANTALOUPE BIN",
-      "packSize": "700#",
-      "weightLb": 700,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -6071,34 +5903,26 @@
       "kind": "ct_only"
     },
     {
-      "sku": "03951",
-      "name": "PLUOT DAPPLE VF",
-      "packSize": "45 CT",
+      "sku": "03953",
+      "name": "GRAPEFRUIT STAR RUBY",
+      "packSize": "32/36 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
     },
     {
-      "sku": "03962",
-      "name": "ORANGE NAVEL CHILEAN",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "03981",
-      "name": "ORG MELON CANTALOUPE EURO",
-      "packSize": "38#",
-      "weightLb": 38,
+      "sku": "03978",
+      "name": "PUMPKIN SUGAR PIE",
+      "packSize": "35#",
+      "weightLb": 35,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
     {
-      "sku": "03991",
-      "name": "CACAO FRUIT",
-      "packSize": "6#",
-      "weightLb": 6,
+      "sku": "03996",
+      "name": "GRAPE GREAT GREEN SDLS",
+      "packSize": "19#",
+      "weightLb": 19,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -6114,14 +5938,6 @@
       "sku": "04005",
       "name": "CABBAGE GREEN",
       "packSize": "3 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "04006",
-      "name": "ONION GREEN LOCAL",
-      "packSize": "48 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -6161,14 +5977,6 @@
     {
       "sku": "04042",
       "name": "BOK CHOY - LARGE",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "04043",
-      "name": "CABBAGE NAPA",
       "packSize": "10#",
       "weightLb": 10,
       "weightSource": "derived_from_pack",
@@ -6241,6 +6049,14 @@
     {
       "sku": "04071",
       "name": "PEAR BARTLETT",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "04072",
+      "name": "PEAR D ANJOU",
       "packSize": "5#",
       "weightLb": 5,
       "weightSource": "derived_from_pack",
@@ -6360,7 +6176,7 @@
     },
     {
       "sku": "04117",
-      "name": "FRZN APPLES SLICES",
+      "name": "FRZN APPLES GRNY SMTH SLICE",
       "packSize": "40#",
       "weightLb": 40,
       "weightSource": "derived_from_pack",
@@ -6405,6 +6221,14 @@
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "04143",
+      "name": "SAUCE BBQ SWEET BABY RAY'S",
+      "packSize": "4/1 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
     },
     {
       "sku": "04152",
@@ -6613,6 +6437,14 @@
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "04225",
+      "name": "POMEGRANATE",
+      "packSize": "3 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "04233",
@@ -6879,6 +6711,14 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "04312",
+      "name": "FRZN PRFCT PUR PEAR",
+      "packSize": "6/30 OZ",
+      "weightLb": 11.25,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
       "sku": "04313",
       "name": "FRZN PRFCT PUR POMEGRANATE",
       "packSize": "6/30 OZ",
@@ -6905,6 +6745,14 @@
     {
       "sku": "04316",
       "name": "FRZN PRFCT PUR POMEGRANATE EA",
+      "packSize": "30 OZ",
+      "weightLb": 1.875,
+      "weightSource": "derived_from_pack",
+      "kind": "single_oz"
+    },
+    {
+      "sku": "04317",
+      "name": "FRZN PRFCT PUR PEAR EACH",
       "packSize": "30 OZ",
       "weightLb": 1.875,
       "weightSource": "derived_from_pack",
@@ -7079,14 +6927,6 @@
       "kind": "other"
     },
     {
-      "sku": "04445",
-      "name": "BEEF SIRLOIN STEAK",
-      "packSize": "6/12#",
-      "weightLb": 72,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "04448",
       "name": "POTATO RED 'A' PREMIUM",
       "packSize": "50#",
@@ -7127,22 +6967,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "04470",
-      "name": "MELON WATERMELON MINI",
-      "packSize": "6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "04471",
-      "name": "MELON WATERMELON MINI",
-      "packSize": "8 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "04472",
       "name": "MELON WATERMELON MINI",
       "packSize": "9 CT",
@@ -7167,12 +6991,44 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "04477",
+      "name": "PINEAPPLE",
+      "packSize": "3 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "04487",
       "name": "JUICE ORANGE GALLON",
       "packSize": "4/1 GAL",
       "weightLb": null,
       "weightSource": null,
       "kind": "volume"
+    },
+    {
+      "sku": "04494",
+      "name": "POM WONDERFUL STACKER 22 SIZE",
+      "packSize": "154 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "04495",
+      "name": "POM WONDERFUL STACKER 30 SIZE",
+      "packSize": "210 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "04496",
+      "name": "POM WONDERFUL BIN 30 SIZE",
+      "packSize": "420 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "04505",
@@ -7218,6 +7074,22 @@
       "sku": "04529",
       "name": "PLASTIC BAG  THANK YOU",
       "packSize": "1000 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "04532",
+      "name": "POM WONDERFUL 2 LAYER",
+      "packSize": "16 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "04533",
+      "name": "POM WONDERFUL 2 LAYER",
+      "packSize": "22 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -7351,6 +7223,14 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "04599",
+      "name": "POM WONDERFUL BIN 22 SIZE",
+      "packSize": "308 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "04601",
       "name": "ONION YELLOW DICED 3/8",
       "packSize": "4/5#",
@@ -7371,6 +7251,14 @@
       "name": "MUSHROOM CRIMINI",
       "packSize": "5#",
       "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "04613",
+      "name": "LIME SWEET BULK",
+      "packSize": "40#",
+      "weightLb": 40,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -7423,22 +7311,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "04660",
-      "name": "BROCCOLI CROWN ICELESS",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "04666",
-      "name": "PEPPER GREEN DICED 3/8",
-      "packSize": "2/2.5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "04672",
       "name": "PEPPER GREEN BELL XL DISPLAY",
       "packSize": "BUSHEL",
@@ -7458,14 +7330,6 @@
       "sku": "04688",
       "name": "MELON WATER SDLS",
       "packSize": "2 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "04694",
-      "name": "ORG LETTUCE BUTTER RED",
-      "packSize": "24 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -7527,14 +7391,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "04775",
-      "name": "LEMON MEYER",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "04781",
       "name": "FRZN BERRIES MIXED",
       "packSize": "6/2.5#",
@@ -7575,14 +7431,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "04806",
-      "name": "CARROT RAINBOW",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "04815",
       "name": "ORG KALE GREEN",
       "packSize": "6 CT",
@@ -7594,14 +7442,6 @@
       "sku": "04816",
       "name": "ORG KALE LACINATO",
       "packSize": "6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "04823",
-      "name": "APPLE RED DEL USXF",
-      "packSize": "163 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -7671,14 +7511,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "04887",
-      "name": "ORG BERRIES BLUE",
-      "packSize": "8/18 OZ",
-      "weightLb": 9,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "04907",
       "name": "SPICE GARLIC GRANULATED PC5",
       "packSize": "6#",
@@ -7704,7 +7536,7 @@
     },
     {
       "sku": "04912",
-      "name": "BEEF GROUND BULK 80/20",
+      "name": "FRZN BEEF GROUND BULK 80/20",
       "packSize": "8/10#",
       "weightLb": 80,
       "weightSource": "derived_from_pack",
@@ -7847,14 +7679,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "04986",
-      "name": "DAIRY BUTTERMILK 1%",
-      "packSize": "1/2 GAL",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
-    },
-    {
       "sku": "04993",
       "name": "SPICE CUMIN WHOLE PC5",
       "packSize": "4.5#",
@@ -7871,22 +7695,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "04996",
-      "name": "PAPER LINER CHECKER 12X12",
-      "packSize": "5000 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "04999",
-      "name": "PAPER LINER CHECKER 12X12",
-      "packSize": "1000 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "05000",
       "name": "FRZN PRFCT PUR PRKLY PEAR EACH",
       "packSize": "30 OZ",
@@ -7896,8 +7704,8 @@
     },
     {
       "sku": "05007",
-      "name": "STAINLESS STEEL SCRUBBER EA",
-      "packSize": "12CT",
+      "name": "STAINLESS STEEL SCRUBBER",
+      "packSize": "6/12CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -7951,14 +7759,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "05110",
-      "name": "CABBAGE RED",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "05111",
       "name": "TOMATO CHERRY",
       "packSize": "10#",
@@ -7983,14 +7783,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "05140",
-      "name": "MANDARIN LG",
-      "packSize": "10/3#",
-      "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "05148",
       "name": "BLUE RUBBER BANDS",
       "packSize": "EACH",
@@ -8013,6 +7805,14 @@
       "weightLb": 30,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
+    },
+    {
+      "sku": "05161",
+      "name": "ONION WHITE JBO YAKIMA NATION",
+      "packSize": "50#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "05187",
@@ -8055,18 +7855,18 @@
       "kind": "other"
     },
     {
-      "sku": "05216",
-      "name": "ROOT TARO",
-      "packSize": "10#",
-      "weightLb": 10,
+      "sku": "05214",
+      "name": "PEPPER HABANERO MIX",
+      "packSize": "8#",
+      "weightLb": 8,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
     {
-      "sku": "05217",
-      "name": "ONION WHITE PREMIUM",
-      "packSize": "50#",
-      "weightLb": 50,
+      "sku": "05216",
+      "name": "ROOT TARO",
+      "packSize": "10#",
+      "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -8105,10 +7905,10 @@
     {
       "sku": "05259",
       "name": "SOAP DAWN DISH",
-      "packSize": "EACH",
+      "packSize": "1 GAL",
       "weightLb": null,
       "weightSource": null,
-      "kind": "other"
+      "kind": "volume"
     },
     {
       "sku": "05270",
@@ -8199,20 +7999,20 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "05318",
+      "name": "BEAN ROMANO",
+      "packSize": "13#",
+      "weightLb": 13,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "05323",
       "name": "FRZN COD 1.7-2.3 PIECES",
       "packSize": "10#",
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "05324",
-      "name": "LEMON",
-      "packSize": "18/2#",
-      "weightLb": 36,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "05328",
@@ -8223,10 +8023,26 @@
       "kind": "volume"
     },
     {
+      "sku": "05339",
+      "name": "CNTR BLACK REC W/LID 24OZ",
+      "packSize": "150 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "05351",
       "name": "FRZN BERRIES STRAW SLICED",
       "packSize": "30#",
       "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "05352",
+      "name": "ORANGE BLOOD",
+      "packSize": "5#",
+      "weightLb": 5,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -8295,14 +8111,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "05394",
-      "name": "LETTUCE ROMAINE LOCAL",
-      "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "05395",
       "name": "ORG LH BALSAMIC",
       "packSize": "6/11.25 OZ",
@@ -8341,54 +8149,6 @@
       "weightLb": 4.219,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "05427",
-      "name": "PEACH WHITE 2 LYR NORTHWEST",
-      "packSize": "40/42ct TP",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "05433",
-      "name": "PEACH YELLOW 2 LYR NORTHWEST",
-      "packSize": "30/32ct TP",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "05449",
-      "name": "PEACH WHITE VF NORTHWEST",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "05453",
-      "name": "PEACH YELLOW VF NORTHWEST",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "05483",
-      "name": "NECTARINE WHITE 2LYR NORTHWEST",
-      "packSize": "44ct TP",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "05490",
-      "name": "NECTARINE YELLOW 2LYR NORTHWES",
-      "packSize": "40/42ct TP",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "05509",
@@ -8431,26 +8191,10 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "05534",
-      "name": "NECTARINE WHITE VF NORTHWEST",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "05540",
       "name": "NECTARINE YELLOW VF NORTHWEST",
       "packSize": "25#",
       "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "05545",
-      "name": "ORG MELON WATER BIN SDLS 60'S",
-      "packSize": "650#",
-      "weightLb": 650,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -8487,44 +8231,12 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "05600",
-      "name": "MELON WATERMELON MINI YELLOW",
-      "packSize": "9 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "05603",
       "name": "ONION SWEET",
       "packSize": "10#",
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "05618",
-      "name": "ORG SQUASH ZUCCHINI NW",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "05619",
-      "name": "ORG SQUASH MIXED",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "05628",
-      "name": "APPLE HONEYCRISP WAXF PREM",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "05629",
@@ -8560,7 +8272,7 @@
     },
     {
       "sku": "05703",
-      "name": "FLOWER HIBISCUS",
+      "name": "FLOWER HIBISCUS/JAMAICA",
       "packSize": "5#",
       "weightLb": 5,
       "weightSource": "derived_from_pack",
@@ -8591,6 +8303,14 @@
       "kind": "ct_only"
     },
     {
+      "sku": "05759",
+      "name": "POMEGRANATE ARILS",
+      "packSize": "12/4 OZ",
+      "weightLb": 3,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
       "sku": "05768",
       "name": "PIZZA BOX BROWN 8",
       "packSize": "50 CT",
@@ -8607,17 +8327,9 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "05776",
-      "name": "ORG ORANGE VALENCIA",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "05785",
-      "name": "ONION GREEN BBQ BOSKOVICH",
-      "packSize": "24 CT",
+      "sku": "05795",
+      "name": "LEAVES MAGUEY BUNCH",
+      "packSize": "6 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -8677,6 +8389,22 @@
       "weightLb": 4.875,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "05864",
+      "name": "PUMPKIN JUMBO SMALL 90-100#",
+      "packSize": "1 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "05865",
+      "name": "PUMPKIN JUMBO LRG 215-275#",
+      "packSize": "1 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "05872",
@@ -8823,17 +8551,17 @@
       "kind": "ct_only"
     },
     {
-      "sku": "05973",
-      "name": "SOUP CUP PLSTC W/VNTD LID 8OZ",
-      "packSize": "250 CT",
+      "sku": "05962",
+      "name": "APPLE SWEETIE EURO",
+      "packSize": "50 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
     },
     {
-      "sku": "06062",
-      "name": "ANISE",
-      "packSize": "1 CT",
+      "sku": "05973",
+      "name": "SOUP CUP PLSTC W/VNTD LID 8OZ",
+      "packSize": "250 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -8871,14 +8599,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "06070",
-      "name": "BROCCOLI CROWN",
-      "packSize": "1#",
-      "weightLb": 1,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "06090",
       "name": "SOUP CUP PLSTC W/VNTD LID 24OZ",
       "packSize": "250 CT",
@@ -8887,17 +8607,9 @@
       "kind": "ct_only"
     },
     {
-      "sku": "06103",
-      "name": "TOMATO CHERRY MIXED MEDLEY",
-      "packSize": "6/1.5#",
-      "weightLb": 9,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "06123",
-      "name": "ORG APPLE GRANNY SMITH WXF",
-      "packSize": "64 CT",
+      "sku": "06105",
+      "name": "QUINCE/MEMBRILLO 2-LYR",
+      "packSize": "30/36 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -8983,28 +8695,20 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "06260",
+      "name": "GUAVA FLORIDA PINK",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "06262",
       "name": "MEXICAN CHOCOLATE",
       "packSize": "6/19 OZ",
       "weightLb": 7.125,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "06267",
-      "name": "MELON WATER BLACK",
-      "packSize": "5/6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "06268",
-      "name": "MELON WATER YELLOW",
-      "packSize": "5/6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "06284",
@@ -9029,22 +8733,6 @@
       "weightLb": 5,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "06305",
-      "name": "BEAN FAVA",
-      "packSize": "28-30#",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "06307",
-      "name": "PEPPER CHILE CHILTEPE",
-      "packSize": "12CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "06314",
@@ -9081,6 +8769,14 @@
     {
       "sku": "06335",
       "name": "PEPPER HUNGARO",
+      "packSize": "10#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "06356",
+      "name": "FRZN MINI CORN DOGS 239CT",
       "packSize": "10#",
       "weightLb": 10,
       "weightSource": "derived_from_pack",
@@ -9144,11 +8840,19 @@
     },
     {
       "sku": "06389",
-      "name": "PORTION CUP LID 1.5-2 OZ",
+      "name": "LID PORTION CUP 1.5-2 OZ",
       "packSize": "2500 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "06392",
+      "name": "FRZN CORDON BLEU BITES 1OZ",
+      "packSize": "2/5#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "06405",
@@ -9199,9 +8903,9 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "06471",
-      "name": "PEPPER TRI COLOR",
-      "packSize": "8/3 CT",
+      "sku": "06465",
+      "name": "ORG POTATO RUSSET",
+      "packSize": "70 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -9303,20 +9007,28 @@
       "kind": "ct_only"
     },
     {
-      "sku": "06578",
-      "name": "ORG CELERY",
-      "packSize": "3 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "06599",
       "name": "ONION YELLOW PRE-PACK",
       "packSize": "10/5#",
       "weightLb": 50,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
+    },
+    {
+      "sku": "06614",
+      "name": "ORG POTATO YUKON GEM",
+      "packSize": "50#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "06615",
+      "name": "ORG POTATO RED COLORADO ROSE",
+      "packSize": "50#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "06618",
@@ -9333,22 +9045,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "06631",
-      "name": "MELON TUSCAN",
-      "packSize": "9 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "06639",
-      "name": "MELON WATER USA SDLS 60'S",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "06644",
@@ -9407,6 +9103,14 @@
       "kind": "ct_only"
     },
     {
+      "sku": "06690",
+      "name": "PINEAPPLE HONEY GLOW",
+      "packSize": "7 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "06695",
       "name": "ORG EB CLASSIC CAESAR KIT",
       "packSize": "6/7.8 OZ",
@@ -9431,22 +9135,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "06727",
-      "name": "ORG POTATO RUSSET",
-      "packSize": "80 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "06730",
-      "name": "ONION SWEET WALLA WALLA JBO",
-      "packSize": "40#",
-      "weightLb": 40,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "06735",
       "name": "ORG CARROT CLIP TOP",
       "packSize": "50#",
@@ -9466,8 +9154,8 @@
       "sku": "06738",
       "name": "PEPPER GREEN BELL LG CHOICE",
       "packSize": "BUSHEL",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 25,
+      "weightSource": "scraped_detail",
       "kind": "other"
     },
     {
@@ -9477,6 +9165,14 @@
       "weightLb": 35,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "06750",
+      "name": "PLUM RED VF",
+      "packSize": "60 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "06751",
@@ -9527,12 +9223,28 @@
       "kind": "ct_only"
     },
     {
+      "sku": "06789",
+      "name": "PAPAYA MEXICAN  MEDIUM",
+      "packSize": "32#",
+      "weightLb": 32,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "06793",
       "name": "CORN BICOLOR NORTHWEST",
       "packSize": "48 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "06794",
+      "name": "ALMONDS",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "06809",
@@ -9559,14 +9271,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "06826",
-      "name": "APPLE GRAVENSTEIN",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "06830",
       "name": "TAKE OUT BOX #1 KRAFT",
       "packSize": "450 CT",
@@ -9591,28 +9295,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "06857",
-      "name": "GRAPE CHRISSY PREMIUM (RED)",
-      "packSize": "19#",
-      "weightLb": 19,
+      "sku": "06859",
+      "name": "MELON WATER BIN SDLS HERM 55CT",
+      "packSize": "650#",
+      "weightLb": 650,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "06863",
-      "name": "PEAR BARTLETT JIPPO",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "06875",
-      "name": "ORG PEACH",
-      "packSize": "44 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "06881",
@@ -9623,26 +9311,18 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "06886",
-      "name": "LH DRSNG HATCH CHILE RANCH",
-      "packSize": "6/13 OZ",
-      "weightLb": 4.875,
+      "sku": "06927",
+      "name": "APPLE GINGER GOLD (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
       "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
+      "kind": "lb_direct"
     },
     {
-      "sku": "06894",
-      "name": "PLUOT RED 2 LYR RUBY SWEET",
-      "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "06905",
-      "name": "CUCUMBER GHERKIN PICKLES",
-      "packSize": "25#",
-      "weightLb": 25,
+      "sku": "06928",
+      "name": "APPLE ZESTAR (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -9687,6 +9367,22 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "06958",
+      "name": "PEAR TOSCA ITALIAN (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "06959",
+      "name": "APPLE TSUGARU (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "06961",
       "name": "SPOON WRAPPED BLACK HEAVY DUTY",
       "packSize": "1000 CT",
@@ -9695,10 +9391,34 @@
       "kind": "ct_only"
     },
     {
-      "sku": "06972",
-      "name": "CHEESE GOAT CRUMBLED EACH",
-      "packSize": "2#",
-      "weightLb": 2,
+      "sku": "06965",
+      "name": "PEAR ASIAN HOSUI (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "06976",
+      "name": "APPLE RED RUBEN(KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "06978",
+      "name": "PEAR ASIAN 20TH CENTURY(KIYOK)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "06980",
+      "name": "PEAR SECKEL (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -9711,12 +9431,124 @@
       "kind": "ct_only"
     },
     {
+      "sku": "07001",
+      "name": "SQUASH TURBIN BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07004",
+      "name": "PUMPKIN BLUE DOLL BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07007",
+      "name": "PUMPKIN ASSORTED BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07008",
+      "name": "APPLE CRIMSON CRISP (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07018",
+      "name": "APPLE ASHMEADS KERNAL (KIYOKA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07026",
+      "name": "ORG GRAPE CONCORD",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07028",
+      "name": "APPLE NEWTON PIPPIN (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07029",
+      "name": "APPLE WINTER BANANA (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07042",
+      "name": "APPLE MOUNTAIN ROSE (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07047",
+      "name": "OIL LARD",
+      "packSize": "48#",
+      "weightLb": 48,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07058",
+      "name": "APPLE JAZZ USXF",
+      "packSize": "72/80CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "07062",
+      "name": "PEAR TAYLOR GOLD (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "07099",
       "name": "CR GARLIC GINGER STIR FRY",
       "packSize": "12/4.25 OZ",
       "weightLb": 3.188,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "07120",
+      "name": "MANDARIN CUTIE",
+      "packSize": "10/3#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "07122",
+      "name": "MANDARIN CUTIE",
+      "packSize": "15/2#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "07143",
@@ -9752,7 +9584,7 @@
     },
     {
       "sku": "07199",
-      "name": "PORTION CUP LID 3.25-4OZ",
+      "name": "LID PORTION CUP 3.25-4OZ",
       "packSize": "2500 CT",
       "weightLb": null,
       "weightSource": null,
@@ -9775,14 +9607,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "07210",
-      "name": "MUSHROOM KING OYSTER",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "07221",
       "name": "HERB THYME",
       "packSize": "1/4#",
@@ -9797,14 +9621,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "07247",
-      "name": "GARLIC PEELED - IMPORT",
-      "packSize": "4/5#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "07255",
@@ -9851,14 +9667,6 @@
       "name": "CHEESE MASCARPONE",
       "packSize": "5#",
       "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "07358",
-      "name": "GRAPE COTTON CANDY SDLS GREEN",
-      "packSize": "18#",
-      "weightLb": 18,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -9919,14 +9727,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "07423",
-      "name": "ORG MELON HONEYDEW",
-      "packSize": "5/6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "07424",
       "name": "AVOCADO HASS CONDITIONED 1LYR",
       "packSize": "30 CT",
@@ -9949,30 +9749,6 @@
       "weightLb": 11.25,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "07442",
-      "name": "PEPPER TRI COLOR",
-      "packSize": "6/6 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "07447",
-      "name": "PEPPER HABANERO CHOCOLATE",
-      "packSize": "8#",
-      "weightLb": 8,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "07454",
-      "name": "CORN YELLOW",
-      "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "07464",
@@ -9999,30 +9775,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "07513",
-      "name": "GRAPE GREEN SEEDLESS",
-      "packSize": "1#",
-      "weightLb": 1,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "07552",
-      "name": "ORG PLUM RED VF",
-      "packSize": "28#",
-      "weightLb": 28,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "07553",
-      "name": "ORG PLUM BLACK VF",
-      "packSize": "28#",
-      "weightLb": 28,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "07557",
       "name": "BERRIES BLUE EA",
       "packSize": "6 OZ",
@@ -10047,14 +9799,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "07578",
-      "name": "MELON WATERMELON MINI",
-      "packSize": "1 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "07593",
       "name": "BERRIES BLACK EA",
       "packSize": "6 OZ",
@@ -10066,8 +9810,8 @@
       "sku": "07594",
       "name": "CORN WHITE NORTHWEST",
       "packSize": "48 CT",
-      "weightLb": null,
-      "weightSource": null,
+      "weightLb": 50,
+      "weightSource": "scraped_detail",
       "kind": "ct_only"
     },
     {
@@ -10085,14 +9829,6 @@
       "weightLb": 20,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
-    },
-    {
-      "sku": "07628",
-      "name": "PEPPER SHISHITO",
-      "packSize": "28#",
-      "weightLb": 28,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "07635",
@@ -10125,6 +9861,22 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "07710",
+      "name": "APPLE DOLGO CRAB(KIYOKAWA)",
+      "packSize": "16#",
+      "weightLb": 16,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07713",
+      "name": "PEAR RED SENSATION (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "07714",
@@ -10263,12 +10015,20 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "07769",
-      "name": "KIWI GOLD",
-      "packSize": "8/1#",
-      "weightLb": 8,
+      "sku": "07767",
+      "name": "PUMPKIN BIN WARTY",
+      "packSize": "650#",
+      "weightLb": 650,
       "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "07791",
+      "name": "PEAR WARREN (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "07793",
@@ -10277,14 +10037,6 @@
       "weightLb": 35,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "07794",
-      "name": "LH DIP PUMPKIN SPICE",
-      "packSize": "12/16 OZ",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
     },
     {
       "sku": "07795",
@@ -10296,7 +10048,7 @@
     },
     {
       "sku": "07863",
-      "name": "COLD CUP LID PET SIP",
+      "name": "LID COLD CUP PET SIP",
       "packSize": "1000 CT",
       "weightLb": null,
       "weightSource": null,
@@ -10415,6 +10167,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "07910",
+      "name": "PEAR CONCORD (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "07916",
       "name": "NOODLE PAD THAI  RAMA",
       "packSize": "50/1#",
@@ -10440,7 +10200,7 @@
     },
     {
       "sku": "07923",
-      "name": "FOIL 9  LID ROUND",
+      "name": "LID FOIL 9  ROUND",
       "packSize": "500 CT",
       "weightLb": null,
       "weightSource": null,
@@ -10469,6 +10229,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "07951",
+      "name": "BH CARROT JUICE",
+      "packSize": "6/52 OZ",
+      "weightLb": 19.5,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "07992",
@@ -10509,14 +10277,6 @@
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
-    },
-    {
-      "sku": "08006",
-      "name": "PEPPER GHOST",
-      "packSize": "6#",
-      "weightLb": 6,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "08008",
@@ -10591,14 +10351,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "08088",
-      "name": "APPLE COSMIC CRISP USXF",
-      "packSize": "64 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "08104",
       "name": "HERB GARLIC CHIVE (GRN NIRA)",
       "packSize": "1#",
@@ -10615,24 +10367,8 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "08115",
-      "name": "APPLE COSMIC CRISP USXF",
-      "packSize": "56 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "08116",
       "name": "APPLE HONEYCRISP",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "08117",
-      "name": "APPLE PINK LADY",
       "packSize": "5#",
       "weightLb": 5,
       "weightSource": "derived_from_pack",
@@ -10783,14 +10519,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "08215",
-      "name": "BTF PEPPER GHOST",
-      "packSize": "8/50 G",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "08232",
       "name": "BTF PEPPER THAI CHILI",
       "packSize": "12/4 OZ",
@@ -10808,19 +10536,11 @@
     },
     {
       "sku": "08349",
-      "name": "DAIRY HEAVY WHIPPING CREAM DG",
+      "name": "DAIRY HVY WHIPPING CREAM DG UP",
       "packSize": "6-1/2 GAL",
       "weightLb": null,
       "weightSource": null,
       "kind": "volume"
-    },
-    {
-      "sku": "08351",
-      "name": "CUCUMBER PREMIUM",
-      "packSize": "36 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "08353",
@@ -10859,6 +10579,14 @@
       "name": "ORG PEPPER GREEN BELL NW",
       "packSize": "25#",
       "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "08393",
+      "name": "ORG SQUASH BUTTERNUT NW",
+      "packSize": "35#",
+      "weightLb": 35,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -10911,30 +10639,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "08418",
-      "name": "ORG LETTUCE GREEN LEAF LOCAL",
-      "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "08419",
-      "name": "ORG LETTUCE RED LEAF LOCAL",
-      "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "08420",
-      "name": "ORG LETTUCE ROMAINE LOCAL",
-      "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "08425",
       "name": "ORG KALE GREEN BUNCH LOCAL",
       "packSize": "24 CT",
@@ -10965,6 +10669,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "08444",
+      "name": "PEPPER CHILI MORITA DRIED",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "08455",
@@ -11055,28 +10767,20 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "08485",
-      "name": "GRAPE CANDY SNAP (RED)",
-      "packSize": "19#",
-      "weightLb": 19,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "08487",
-      "name": "SAUCE TARTER",
-      "packSize": "4/1 GAL",
+      "sku": "08510",
+      "name": "PINEAPPLE HONEY GLOW",
+      "packSize": "8 CT",
       "weightLb": null,
       "weightSource": null,
-      "kind": "volume"
+      "kind": "ct_only"
     },
     {
-      "sku": "08509",
-      "name": "TOMATO GREEN",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
+      "sku": "08520",
+      "name": "PINEAPPLE HONEY GLOW",
+      "packSize": "6 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "08524",
@@ -11085,14 +10789,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "08550",
-      "name": "SAUCE MOLE EACH",
-      "packSize": "8.25 OZ",
-      "weightLb": 0.516,
-      "weightSource": "derived_from_pack",
-      "kind": "single_oz"
     },
     {
       "sku": "08553",
@@ -11391,20 +11087,68 @@
       "kind": "other"
     },
     {
-      "sku": "08662",
-      "name": "PRUNE ITALIAN",
-      "packSize": "30#",
-      "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "08671",
       "name": "HERB MICRO CILANTRO",
       "packSize": "4 OZ",
       "weightLb": 0.25,
       "weightSource": "derived_from_pack",
       "kind": "single_oz"
+    },
+    {
+      "sku": "08692",
+      "name": "RESERS COLESLAW",
+      "packSize": "2/7# CASE",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "08696",
+      "name": "POM WONDERFUL STACKER 16 SIZE",
+      "packSize": "112 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "08697",
+      "name": "POM WONDERFUL STACKER 36 SIZE",
+      "packSize": "252 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "08699",
+      "name": "POM WONDERFUL BIN 16 SIZE",
+      "packSize": "224 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "08700",
+      "name": "POM WONDERFUL BIN 36 SIZE",
+      "packSize": "504 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "08701",
+      "name": "POMEGRANATE 2 LAYER ULTIMATE",
+      "packSize": "30 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "08703",
+      "name": "POM ULTIMATE STACKER 16 SIZE",
+      "packSize": "112 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "08709",
@@ -11471,6 +11215,38 @@
       "kind": "other"
     },
     {
+      "sku": "08745",
+      "name": "PEAR BARTLETT (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "08746",
+      "name": "PEAR STARKCRIMSON (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "08747",
+      "name": "APPLE GALA (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "08754",
+      "name": "PUMPKIN GIANT 150-179#",
+      "packSize": "1 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "08767",
       "name": "GLOVE NITRILE LARGE",
       "packSize": "1000 CT",
@@ -11495,12 +11271,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "08771",
-      "name": "GRAPE SAPHIRE MIGHTY MONSTER",
-      "packSize": "19#",
-      "weightLb": 19,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
+      "sku": "08788",
+      "name": "PERSIMMON FUYU 1-LYR",
+      "packSize": "20/22CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "08789",
@@ -11583,18 +11359,18 @@
       "kind": "ct_only"
     },
     {
-      "sku": "08836",
-      "name": "MANDARIN",
-      "packSize": "15/2#",
-      "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
+      "sku": "08812",
+      "name": "TERIYAKI SAUCE GINGER GARLIC",
+      "packSize": "4/1 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
     },
     {
-      "sku": "08845",
-      "name": "SQUASH ZUCCHINI PREMIUM",
-      "packSize": "24#",
-      "weightLb": 24,
+      "sku": "08830",
+      "name": "GRAPE ENVY XL (GREEN)",
+      "packSize": "19#",
+      "weightLb": 19,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -11605,6 +11381,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "08854",
+      "name": "GRAPE ENVY PREMIUM (GREEN)",
+      "packSize": "19#",
+      "weightLb": 19,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "08861",
@@ -11621,6 +11405,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "volume"
+    },
+    {
+      "sku": "08886",
+      "name": "CANNED PICKLED BEETS",
+      "packSize": "6/#10",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
     },
     {
       "sku": "08898",
@@ -11661,14 +11453,6 @@
       "weightLb": 30,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
-    },
-    {
-      "sku": "08927",
-      "name": "SOY SAUCE GLUTEN FREE",
-      "packSize": "5 GAL",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
     },
     {
       "sku": "08931",
@@ -11717,6 +11501,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "09028",
+      "name": "DAIRY COTTAGE CHEESE",
+      "packSize": "4/5#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "09033",
@@ -11799,6 +11591,22 @@
       "kind": "ct_only"
     },
     {
+      "sku": "09049",
+      "name": "ORANGE CARA CARA",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09053",
+      "name": "EGGPLANT THAI",
+      "packSize": "30#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "09063",
       "name": "CHEESE AMERICAN SLICED 185CT",
       "packSize": "4/5#",
@@ -11831,12 +11639,28 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "09089",
+      "name": "ORG AVOCADO HASS CONDITIONED",
+      "packSize": "48 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "09097",
       "name": "CILANTRO BOSKOVICH",
       "packSize": "60 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "09108",
+      "name": "ORG BERRIES STRAW CLAMSHELL",
+      "packSize": "8/1#",
+      "weightLb": 8,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "09113",
@@ -11853,6 +11677,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "09115",
+      "name": "NATALIES MARGARITA MIX",
+      "packSize": "6/32 OZ",
+      "weightLb": 12,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "09132",
@@ -12031,6 +11863,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "09408",
+      "name": "AVOCADO BAG",
+      "packSize": "14/6ct",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "09410",
       "name": "OIL CORN",
       "packSize": "35#",
@@ -12045,14 +11885,6 @@
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "09422",
-      "name": "BOK CHOY",
-      "packSize": "8 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "09436",
@@ -12077,14 +11909,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "09456",
-      "name": "CHEESE STRING",
-      "packSize": "4/24/1oz",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "09457",
@@ -12125,14 +11949,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
-    },
-    {
-      "sku": "09490",
-      "name": "PEANUT BUTTER CREAMY",
-      "packSize": "35#",
-      "weightLb": 35,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "09494",
@@ -12184,7 +12000,7 @@
     },
     {
       "sku": "09508",
-      "name": "PORTION CUP LID 0.75-1 OZ",
+      "name": "LID PORTION CUP 0.75-1 OZ",
       "packSize": "2500 CT",
       "weightLb": null,
       "weightSource": null,
@@ -12312,7 +12128,7 @@
     },
     {
       "sku": "09556",
-      "name": "COLD CUP LID PET W/ STRAW SLT",
+      "name": "LID COLD CUP PET W/ STRAW SLT",
       "packSize": "1000 CT",
       "weightLb": null,
       "weightSource": null,
@@ -12320,7 +12136,7 @@
     },
     {
       "sku": "09557",
-      "name": "HOT CUP LID SIP 10-24OZ",
+      "name": "LID SIP HOT CUP 10-24OZ",
       "packSize": "1000 CT",
       "weightLb": null,
       "weightSource": null,
@@ -12357,6 +12173,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "09585",
+      "name": "WONTON WRAPPER THICK",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "09587",
@@ -12415,26 +12239,10 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "09666",
-      "name": "GRAPE SUMMER DIAMOND (GREEN)",
-      "packSize": "19#",
-      "weightLb": 19,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "09671",
       "name": "TORTILLA YELLOW PRE-CUT (4)",
       "packSize": "30#",
       "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "09674",
-      "name": "BOK CHOY SHANGHAI",
-      "packSize": "1#",
-      "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -12445,6 +12253,14 @@
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "09680",
+      "name": "RANCH",
+      "packSize": "4/1 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
     },
     {
       "sku": "09688",
@@ -12487,22 +12303,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "09731",
-      "name": "PEACH YELLOW 2 LYR MARYHILL",
-      "packSize": "40/44ct TP",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "09732",
-      "name": "PEACH YELLOW 2 LYR MARYHILL",
-      "packSize": "32/36ct TP",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "09737",
       "name": "BERRIES RASPBERRY EA",
       "packSize": "6 OZ",
@@ -12525,6 +12325,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "volume"
+    },
+    {
+      "sku": "09762",
+      "name": "RICE WHITE PAR BOILED",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "09771",
@@ -12575,20 +12383,20 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "09808",
-      "name": "PEACH",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "09809",
       "name": "PLUM BLACK",
       "packSize": "5#",
       "weightLb": 5,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
+    },
+    {
+      "sku": "09810",
+      "name": "ORG APPLE JONAGOLD WXF",
+      "packSize": "72CT/LG",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
     },
     {
       "sku": "09815",
@@ -12599,12 +12407,76 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "09823",
+      "name": "APPLE HONEYCRISP (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09824",
+      "name": "APPLE FUJI (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09825",
+      "name": "PEAR RED ANJOU (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09826",
+      "name": "PEAR COMICE (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09827",
+      "name": "APPLE MUTSU (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09828",
+      "name": "APPLE JONAGOLD (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "09832",
       "name": "APPLE GOLDEN DEL PREMIUM WAXF",
-      "packSize": "72 CT",
+      "packSize": "72/80CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "09837",
+      "name": "APPLE AMBROSIA (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "09838",
+      "name": "APPLE GRANNY SMITH (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "09841",
@@ -12613,6 +12485,14 @@
       "weightLb": 11.25,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "09849",
+      "name": "PEAR BOSC (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "09855",
@@ -12629,6 +12509,14 @@
       "weightLb": 11.25,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "09869",
+      "name": "PEAR D'ANJOU (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "09883",
@@ -12679,36 +12567,12 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "09965",
-      "name": "SPICE CINNAMON STICK BAG",
-      "packSize": "2#",
-      "weightLb": 2,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "09973",
       "name": "FRZN POBLANO STUFD W/CHESE 6OZ",
       "packSize": "30 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "09974",
-      "name": "APPLE COSMIC CRISP WAXF PREM",
-      "packSize": "56 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "09980",
-      "name": "CANNED BEAN PINTO BEANS EA",
-      "packSize": "108 OZ",
-      "weightLb": 6.75,
-      "weightSource": "derived_from_pack",
-      "kind": "single_oz"
     },
     {
       "sku": "09983",
@@ -12741,14 +12605,6 @@
       "weightLb": 5.625,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "09995",
-      "name": "LIME FINGER  CAVIAR   EACH",
-      "packSize": "8 OZ",
-      "weightLb": 0.5,
-      "weightSource": "derived_from_pack",
-      "kind": "single_oz"
     },
     {
       "sku": "09996",
@@ -12943,22 +12799,6 @@
       "kind": "other"
     },
     {
-      "sku": "10080",
-      "name": "ARTICHOKE BABY",
-      "packSize": "18#",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "10081",
-      "name": "DAIRY SOUR CREAM",
-      "packSize": "4/5#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "10113",
       "name": "VA VEGGIE MIX",
       "packSize": "64/2 OZ",
@@ -12999,14 +12839,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10138",
-      "name": "NECTARINE",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "10145",
       "name": "AVOCADO HASS FOOD SERVICE RIPE",
       "packSize": "60 CT",
@@ -13024,7 +12856,7 @@
     },
     {
       "sku": "10156",
-      "name": "FRIES DBL R SHOESTRING 1/4",
+      "name": "FF DBL R SHOESTRING 1/4",
       "packSize": "6/4.5#",
       "weightLb": 27,
       "weightSource": "derived_from_pack",
@@ -13032,7 +12864,15 @@
     },
     {
       "sku": "10158",
-      "name": "FRIES STEAK CUT 1/2",
+      "name": "FF STEAK CUT 1/2",
+      "packSize": "6/5#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "10159",
+      "name": "FRIES STRAIGHT CUT 3/8",
       "packSize": "6/5#",
       "weightLb": 30,
       "weightSource": "derived_from_pack",
@@ -13040,7 +12880,7 @@
     },
     {
       "sku": "10160",
-      "name": "FRIES COLOSSAL CRISP 3/8  LW",
+      "name": "FF COLOSSAL CRISP 3/8  LW",
       "packSize": "6/5#",
       "weightLb": 30,
       "weightSource": "derived_from_pack",
@@ -13053,14 +12893,6 @@
       "weightLb": 45,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "10220",
-      "name": "TORTILLA SPINACH WRAP 12",
-      "packSize": "6/10 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "10223",
@@ -13103,14 +12935,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10251",
-      "name": "CARROT 2  CHUNK UNPEELED",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "10259",
       "name": "GROCERY FORTUNE COOKIE",
       "packSize": "350 CT",
@@ -13136,7 +12960,7 @@
     },
     {
       "sku": "10280",
-      "name": "FRIES CRISPY ON DLVRY 5/16  LW",
+      "name": "FF CRISPY ON DLVRY 5/16  LW",
       "packSize": "6/5#",
       "weightLb": 30,
       "weightSource": "derived_from_pack",
@@ -13231,6 +13055,14 @@
       "kind": "volume"
     },
     {
+      "sku": "10351",
+      "name": "VINEGAR BALSAMIC",
+      "packSize": "1 LITER",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
       "sku": "10352",
       "name": "VINEGAR RED WINE",
       "packSize": "1 GAL",
@@ -13312,7 +13144,7 @@
     },
     {
       "sku": "10372",
-      "name": "HOT FOOD CUP LID CLR 8OZ",
+      "name": "LID HOT FOOD CUP CLR 8OZ",
       "packSize": "50/20 CT",
       "weightLb": null,
       "weightSource": null,
@@ -13327,16 +13159,8 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10379",
-      "name": "PEPPERS CHERRY MILD 128 OZ",
-      "packSize": "1 GAL",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
-    },
-    {
       "sku": "10382",
-      "name": "FRIES CAVENDISH FINE COAT 3/8",
+      "name": "FF CAVENDISH FINE COAT 3/8",
       "packSize": "6/5#",
       "weightLb": 30,
       "weightSource": "derived_from_pack",
@@ -13439,14 +13263,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "10431",
-      "name": "ORG ONION SPRING",
-      "packSize": "12 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "10433",
       "name": "ORG GREENS DANDELION RED  NW",
       "packSize": "12 CT",
@@ -13503,6 +13319,14 @@
       "kind": "multi_lb"
     },
     {
+      "sku": "10483",
+      "name": "VINEGAR BALSAMIC",
+      "packSize": "4/1 LITER",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
       "sku": "10485",
       "name": "LEAVES TARO",
       "packSize": "10#",
@@ -13535,14 +13359,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10511",
-      "name": "CHEESE BLEU CHEESE CRUMBLES",
-      "packSize": "4/5#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "10512",
       "name": "HOT CUP SLEEVE BROWN 8 OZ",
       "packSize": "1000 CT",
@@ -13567,8 +13383,24 @@
       "kind": "multi_lb"
     },
     {
+      "sku": "10516",
+      "name": "MELON WATERMELON MINI BLACK",
+      "packSize": "8 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "10524",
+      "name": "SPICE HOT MUSTARD PWDR",
+      "packSize": "10/5#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
       "sku": "10530",
-      "name": "FRIES SWEET POTATO PUFF LW",
+      "name": "FF SWEET POTATO PUFF LW",
       "packSize": "6/2.5#",
       "weightLb": 15,
       "weightSource": "derived_from_pack",
@@ -13589,14 +13421,6 @@
       "weightLb": 12,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
-    },
-    {
-      "sku": "10543",
-      "name": "PEAR BOSC IMPORT",
-      "packSize": "70/80CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "10551",
@@ -13623,14 +13447,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "10566",
-      "name": "ORG CACTUS",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "10568",
       "name": "HERB MICRO RADISH PURPLE",
       "packSize": "4 OZ",
@@ -13648,7 +13464,7 @@
     },
     {
       "sku": "10570",
-      "name": "HOT CUP LID SIP 8OZ",
+      "name": "LID SIP HOT CUP 8OZ",
       "packSize": "1000 CT",
       "weightLb": null,
       "weightSource": null,
@@ -13687,20 +13503,12 @@
       "kind": "volume"
     },
     {
-      "sku": "10605",
-      "name": "CHERRY RED",
-      "packSize": "2#",
-      "weightLb": 2,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "10616",
-      "name": "NATALIES GUAVA LEMONADE",
-      "packSize": "6/56 OZ",
-      "weightLb": 21,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
+      "sku": "10603",
+      "name": "AGAVE SYRUP",
+      "packSize": "4/1 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
     },
     {
       "sku": "10623",
@@ -13735,14 +13543,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10637",
-      "name": "POTATO TS AMERICAN BLEND",
-      "packSize": "10/3#",
-      "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "10638",
       "name": "POTATO TS SUNBURST BLEND",
       "packSize": "10/3#",
@@ -13767,14 +13567,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "10644",
-      "name": "ORG PARSLEY ITALIAN LOCAL",
-      "packSize": "30 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "10645",
       "name": "CANNED TOMATO PUREE",
       "packSize": "#10",
@@ -13789,14 +13581,6 @@
       "weightLb": 24,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "10671",
-      "name": "ORG GRAPE CHAMPAGNE",
-      "packSize": "16/1#",
-      "weightLb": 16,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "10672",
@@ -13855,30 +13639,6 @@
       "kind": "single_oz"
     },
     {
-      "sku": "10802",
-      "name": "ORG PEPPER JIMMY NARDELLO",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "10804",
-      "name": "GRAPE SUMMER BLISS (RED)",
-      "packSize": "19#",
-      "weightLb": 19,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "10811",
-      "name": "ORANGE CARA CARA CHILEAN",
-      "packSize": "72 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "10816",
       "name": "FLOWER SNAPDRAGONS ASSORTED",
       "packSize": "5/20 CT",
@@ -13927,12 +13687,20 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "10861",
-      "name": "PEPPER PASILLA",
-      "packSize": "4/2#",
-      "weightLb": 8,
+      "sku": "10864",
+      "name": "GRAPEFRUIT SOUTH AFRICAN",
+      "packSize": "32 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "10866",
+      "name": "ORANGE BLOOD DRACULA",
+      "packSize": "20#",
+      "weightLb": 20,
       "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
+      "kind": "lb_direct"
     },
     {
       "sku": "10867",
@@ -13949,6 +13717,30 @@
       "weightLb": 3,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "10878",
+      "name": "PUMPKIN WE BE LITTLE MIX",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "10879",
+      "name": "PUMPKIN GOURD MIX",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "10881",
+      "name": "PUMPKIN PINK DOLL BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "10888",
@@ -14039,14 +13831,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "10900",
-      "name": "VA SQUASH BUTTERNUT 1  CUBES",
-      "packSize": "4/3#",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "10901",
       "name": "VA APPLE GREEN WEDGES",
       "packSize": "4/5#",
@@ -14095,14 +13879,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10912",
-      "name": "BEEF TRIPE FRESH",
-      "packSize": "22#",
-      "weightLb": 22,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "10930",
       "name": "CILANTRO",
       "packSize": "5/6 CT",
@@ -14111,12 +13887,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "10933",
-      "name": "CHEESE BURRATA BALLS",
-      "packSize": "6/8 OZ",
-      "weightLb": 3,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
+      "sku": "10932",
+      "name": "PEAR GEM EURO",
+      "packSize": "42CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
     },
     {
       "sku": "10937",
@@ -14143,20 +13919,20 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "10944",
+      "name": "APPLE CRIMSON GOLD (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "10954",
       "name": "AG SPRING ROLL SHELLS",
       "packSize": "40/11 OZ",
       "weightLb": 27.5,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "10956",
-      "name": "ORG TOMATO CHERRY MIXED MEDLEY",
-      "packSize": "12/1 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "10964",
@@ -14807,14 +14583,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "11142",
-      "name": "ORG POTATO RUSSET",
-      "packSize": "12/3#",
-      "weightLb": 36,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "11145",
       "name": "OIL GRAPESEED",
       "packSize": "6/2 L",
@@ -15015,14 +14783,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "11187",
-      "name": "PASTE AJI PANCA",
-      "packSize": "6.6#",
-      "weightLb": 6.6,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "11188",
       "name": "SPICE ACHIOTE PASTE 1 EACH",
       "packSize": "14 OZ",
@@ -15119,26 +14879,10 @@
       "kind": "single_oz"
     },
     {
-      "sku": "11209",
-      "name": "SPICE CORIANDER GROUND PC5",
-      "packSize": "3.75#",
-      "weightLb": 3.75,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "11213",
       "name": "SPICE PEPPER BLACK WHOLE PC5",
       "packSize": "5.25#",
       "weightLb": 5.25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "11216",
-      "name": "SQUASH DELICATA",
-      "packSize": "20#",
-      "weightLb": 20,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -15176,7 +14920,7 @@
     },
     {
       "sku": "11231",
-      "name": "COLD CUP LID DOME PET 12-24OZ",
+      "name": "LID COLD CUP DOME PET 12-24OZ",
       "packSize": "1000 CT",
       "weightLb": null,
       "weightSource": null,
@@ -15263,14 +15007,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "11244",
-      "name": "PJ LEMONADE ELDERBERRY",
-      "packSize": "6/15.2 OZ",
-      "weightLb": 5.7,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "11245",
       "name": "PJ LEMONADE BLACKBERRY",
       "packSize": "6/15.2 OZ",
@@ -15329,7 +15065,7 @@
     {
       "sku": "11254",
       "name": "CHEESE QUESO FRESCO",
-      "packSize": "10#AVG",
+      "packSize": "8#AVG",
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
@@ -15479,22 +15215,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "11305",
-      "name": "BLACK 8  CONTAINER ANCHOR 36OZ",
-      "packSize": "300 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "11306",
-      "name": "BLACK 8  LID CLR ANCHOR 36OZ",
-      "packSize": "300 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "11307",
       "name": "BLK CNTNR ANCHOR 2 CMPT BASE",
       "packSize": "252 CT",
@@ -15520,7 +15240,7 @@
     },
     {
       "sku": "11311",
-      "name": "FRIES SHOESTRING CONQUEST 1/4",
+      "name": "FF SHOESTRING CONQUEST 1/4",
       "packSize": "6/4.5#",
       "weightLb": 27,
       "weightSource": "derived_from_pack",
@@ -15559,14 +15279,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "11324",
-      "name": "FRZN PORK NECK BONES",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "11326",
       "name": "DAIRY YAMI PEACH YOGURT",
       "packSize": "12/6 OZ",
@@ -15600,7 +15312,7 @@
     },
     {
       "sku": "11332",
-      "name": "DAIRY MILK 2% REDUCED FAT EACH",
+      "name": "DAIRY MILK 2%",
       "packSize": "1/2 GAL",
       "weightLb": null,
       "weightSource": null,
@@ -15791,14 +15503,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "11381",
-      "name": "DAIRY COTTAGE CHEESE",
-      "packSize": "12/1#",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "11382",
       "name": "FRZN CARIBBEAN BLEND",
       "packSize": "6/4#",
@@ -15903,14 +15607,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "11402",
-      "name": "BOX CAKE 9X9X4",
-      "packSize": "200 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "11406",
       "name": "SILAGY HATCH CHILI",
       "packSize": "6/0.5 GAL",
@@ -15984,7 +15680,7 @@
     },
     {
       "sku": "11418",
-      "name": "FIBER BB LID 24-32OZ",
+      "name": "LID FIBER BURRITO BOWL 24-32OZ",
       "packSize": "500 CT",
       "weightLb": null,
       "weightSource": null,
@@ -16007,9 +15703,9 @@
       "kind": "volume"
     },
     {
-      "sku": "11424",
-      "name": "APPLE FUJI US#1",
-      "packSize": "64 CT",
+      "sku": "11423",
+      "name": "RADISH FRENCH BREAKFAST",
+      "packSize": "24 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -16133,14 +15829,6 @@
       "weightLb": 1.875,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "11450",
-      "name": "CHOCOLATE DARK PB CUP",
-      "packSize": "6-12/1.4OZ",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "11453",
@@ -16280,19 +15968,11 @@
     },
     {
       "sku": "11472",
-      "name": "FRIES STEALTH SKIN-ON 3/8  LW",
+      "name": "FF STEALTH SKIN-ON 3/8  LW",
       "packSize": "6/5#",
       "weightLb": 30,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
-    },
-    {
-      "sku": "11473",
-      "name": "NETTLE STINGING",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "11474",
@@ -16456,7 +16136,7 @@
     },
     {
       "sku": "11500",
-      "name": "FRIES STEALTH CRINKLE 5/16  LW",
+      "name": "FF STEALTH CRINKLE 5/16  LW",
       "packSize": "6/5#",
       "weightLb": 30,
       "weightSource": "derived_from_pack",
@@ -16472,7 +16152,7 @@
     },
     {
       "sku": "11502",
-      "name": "HOT FOOD CUP LID CLR 16OZ",
+      "name": "LID HOT FOOD CUP CLR 16OZ",
       "packSize": "50/20 CT",
       "weightLb": null,
       "weightSource": null,
@@ -16600,7 +16280,7 @@
     },
     {
       "sku": "11543",
-      "name": "HOT FOOD CUP LID CLR 24-32OZ",
+      "name": "LID HOT FOOD CUP CLR 24-32OZ",
       "packSize": "50/12 CT",
       "weightLb": null,
       "weightSource": null,
@@ -16847,14 +16527,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "11620",
-      "name": "ORG BERRIES RASP LOCAL",
-      "packSize": "12/0.5 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "11623",
       "name": "PEPPER HABANERO GREEN",
       "packSize": "8-10#",
@@ -16885,22 +16557,6 @@
       "weightLb": 3,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "11631",
-      "name": "ORG BERRIES BLACK LOCAL",
-      "packSize": "12/0.5 PT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "11636",
-      "name": "CORN BABY FRESH",
-      "packSize": "100 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "11640",
@@ -17023,14 +16679,6 @@
       "kind": "single_oz"
     },
     {
-      "sku": "11672",
-      "name": "POTATO RED COOKED DICE A 1/2",
-      "packSize": "3/10#",
-      "weightLb": 30,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
       "sku": "11674",
       "name": "SPICE SAGE RUBBED PC1",
       "packSize": "6 OZ",
@@ -17143,14 +16791,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "11699",
-      "name": "VINEGAR APPLE CIDER",
-      "packSize": "6/1 GAL",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
-    },
-    {
       "sku": "11702",
       "name": "SPICE ONION MINCED PC1",
       "packSize": "1#",
@@ -17224,7 +16864,7 @@
     },
     {
       "sku": "11713",
-      "name": "SPICE SESAME SEED PC1",
+      "name": "SPICE SESAME SEED WHITE PC1",
       "packSize": "1.25#",
       "weightLb": 1.25,
       "weightSource": "derived_from_pack",
@@ -17367,14 +17007,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "11737",
-      "name": "PEACH DONUT NORTHWEST VF",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "11738",
       "name": "FRIES TRI-CUT 1/2  LW",
       "packSize": "6/5#",
@@ -17393,14 +17025,6 @@
     {
       "sku": "11747",
       "name": "ORG PEPPER PADRON",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "11748",
-      "name": "ORG PEPPER JALAPENO",
       "packSize": "10#",
       "weightLb": 10,
       "weightSource": "derived_from_pack",
@@ -17463,6 +17087,14 @@
       "kind": "multi_oz"
     },
     {
+      "sku": "11769",
+      "name": "ORG COMMONPLACE WILD ARUGULA",
+      "packSize": "3#",
+      "weightLb": 3,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "11777",
       "name": "CNTR MFPP 8X8  3CPT",
       "packSize": "120 CT",
@@ -17477,14 +17109,6 @@
       "weightLb": 4,
       "weightSource": "derived_from_pack",
       "kind": "multi_lb"
-    },
-    {
-      "sku": "11787",
-      "name": "MELON TROPICAL SUNSET",
-      "packSize": "650",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "11796",
@@ -17549,14 +17173,6 @@
       "weightLb": 5.625,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "11811",
-      "name": "APPLE GINGER GOLD USXF",
-      "packSize": "125 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "11813",
@@ -17639,20 +17255,28 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "11843",
-      "name": "LETTUCE BABY ICEBERG ARTISAN",
-      "packSize": "12/2 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "11844",
       "name": "DELI SADDLE PACK BAG 10X8",
       "packSize": "1000 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "11850",
+      "name": "DAIRY BUTTERMILK 1.5%",
+      "packSize": "1/2 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "11851",
+      "name": "SQUASH CARNIVAL BIN",
+      "packSize": "700#",
+      "weightLb": 700,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "11853",
@@ -17711,6 +17335,22 @@
       "kind": "ct_only"
     },
     {
+      "sku": "11863",
+      "name": "NATALIES PINEAPPLE JUICE",
+      "packSize": "6/32 OZ",
+      "weightLb": 12,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "11867",
+      "name": "HAY BALES",
+      "packSize": "BALE",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
       "sku": "11869",
       "name": "PAPER BAG PINT",
       "packSize": "500CT",
@@ -17735,10 +17375,10 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "11884",
-      "name": "MUSHROOM LOBSTER",
-      "packSize": "5#",
-      "weightLb": 5,
+      "sku": "11878",
+      "name": "APPLE MCINTOSH (KIYOKAWA)",
+      "packSize": "34#",
+      "weightLb": 34,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -17749,6 +17389,14 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "11889",
+      "name": "RYAN'S FRESH APPLE CIDER",
+      "packSize": "4/1 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
     },
     {
       "sku": "11891",
@@ -17895,14 +17543,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "11926",
-      "name": "FRZN PUREE TART CHERRY",
-      "packSize": "42#",
-      "weightLb": 42,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "11927",
       "name": "SOY SAUCE KIKKOMAN",
       "packSize": "5 GAL",
@@ -17917,6 +17557,14 @@
       "weightLb": 4.5,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "11929",
+      "name": "LEMON BUDDHA'S HAND",
+      "packSize": "14#",
+      "weightLb": 14,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "11931",
@@ -17989,14 +17637,6 @@
       "weightLb": 0.25,
       "weightSource": "derived_from_pack",
       "kind": "single_oz"
-    },
-    {
-      "sku": "11944",
-      "name": "DAIRY OAT MILK MINOR FIGURES",
-      "packSize": "6/32 OZ",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
     },
     {
       "sku": "11946",
@@ -18207,10 +17847,10 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "12036",
-      "name": "HERB BETEL LEAF",
-      "packSize": "1#",
-      "weightLb": 1,
+      "sku": "12035",
+      "name": "LIME MAKRUT",
+      "packSize": "10#",
+      "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
     },
@@ -18229,30 +17869,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "12040",
-      "name": "FROZEN BEEF CHUCKROLL",
-      "packSize": "60#",
-      "weightLb": 60,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "12045",
-      "name": "PAPER DELI PICK-UP 10X10",
-      "packSize": "6000 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12048",
-      "name": "CANNED CREAM OF MUSHROOM SOUP",
-      "packSize": "12/50 OZ",
-      "weightLb": 37.5,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
     },
     {
       "sku": "12049",
@@ -18297,10 +17913,10 @@
     {
       "sku": "12067",
       "name": "FRZN COD FILLET SKNLS BNLS",
-      "packSize": "16/32 OZ",
-      "weightLb": 32,
+      "packSize": "30#",
+      "weightLb": 30,
       "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
+      "kind": "lb_direct"
     },
     {
       "sku": "12068",
@@ -18471,14 +18087,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "12131",
-      "name": "ORG TF CHIMICHURRI CHOP KIT",
-      "packSize": "6/10.75 OZ",
-      "weightLb": 4.031,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "12132",
       "name": "ORG TF HONEY CITRUS CHOP KIT",
       "packSize": "6/9.25 OZ",
@@ -18535,14 +18143,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12148",
-      "name": "PAPER BAG QUART",
-      "packSize": "500 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "12149",
       "name": "LETTUCE BIBB GRN LIV (DEGOEDE)",
       "packSize": "12 CT",
@@ -18575,22 +18175,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12161",
-      "name": "SAUCE WORCESTERSHIRE",
-      "packSize": "4/1 GAL",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
-    },
-    {
-      "sku": "12162",
-      "name": "SQUASH BABY TRI MIX",
-      "packSize": "10#",
-      "weightLb": 10,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "12163",
       "name": "SPICE CUMIN SEED GROUND PC5",
       "packSize": "4.75#",
@@ -18616,11 +18200,19 @@
     },
     {
       "sku": "12175",
-      "name": "SOUP CUP PLASTIC W/LID 8OZ",
+      "name": "SOUP CUP PLSTC W/LID 8OZ",
       "packSize": "240 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
+    },
+    {
+      "sku": "12176",
+      "name": "APPLE SLICED RED",
+      "packSize": "4/3#",
+      "weightLb": 12,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "12178",
@@ -18687,14 +18279,6 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "12197",
-      "name": "PEA ENGLISH",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "12208",
       "name": "SPICE CILANTRO C&S PC5",
       "packSize": "14 OZ",
@@ -18713,7 +18297,7 @@
     {
       "sku": "12213",
       "name": "BEEF STRIPLOIN BNLSS CHOICE",
-      "packSize": "90#AVE",
+      "packSize": "60#AVG",
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
@@ -18725,14 +18309,6 @@
       "weightLb": 7.3,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "12216",
-      "name": "PUREE TART CHERRY ASEPTIC",
-      "packSize": "11#",
-      "weightLb": 11,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "12217",
@@ -18765,6 +18341,22 @@
       "weightLb": 3,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
+    },
+    {
+      "sku": "12227",
+      "name": "ORG TATSOI",
+      "packSize": "4#",
+      "weightLb": 4,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12229",
+      "name": "ORG MIZUNA",
+      "packSize": "4#",
+      "weightLb": 4,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "12231",
@@ -18831,14 +18423,6 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "12245",
-      "name": "OF REFRESHER PINEAPPLE LIMEADE",
-      "packSize": "6/32 OZ",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "12248",
       "name": "SUPPLY REGISTER RIBBON RED/BLK",
       "packSize": "12CT",
@@ -18877,14 +18461,6 @@
       "weightLb": 7.5,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "12254",
-      "name": "ORG BEET RED NW",
-      "packSize": "25#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "12257",
@@ -18973,14 +18549,6 @@
       "weightLb": 1,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "12288",
-      "name": "DAVINCI NATURAL AGAVE",
-      "packSize": "4/750 ML",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
     },
     {
       "sku": "12289",
@@ -19087,6 +18655,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "12315",
+      "name": "KIMCHI VEGAN ORIG SEOUL EACH",
+      "packSize": "28 OZ",
+      "weightLb": 1.75,
+      "weightSource": "derived_from_pack",
+      "kind": "single_oz"
+    },
+    {
       "sku": "12319",
       "name": "CANNED TOMATILLO WHOLE",
       "packSize": "#10",
@@ -19119,14 +18695,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12327",
-      "name": "EGG DUCK",
-      "packSize": "324 x 60",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "12329",
       "name": "FRZN CHICKEN TNDRS BRD HMSTYL",
       "packSize": "10#",
@@ -19141,14 +18709,6 @@
       "weightLb": 10,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "12331",
-      "name": "BEEF FLAT IRON",
-      "packSize": "40#AVG",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "12332",
@@ -19183,20 +18743,12 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "12341",
-      "name": "ORG POTATO TS HONEYGOLD NIBBLE",
-      "packSize": "12/16 OZ",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12342",
-      "name": "LID DOME CLEAR 7",
-      "packSize": "250 x 2500",
+      "sku": "12340",
+      "name": "APPLE AMBROSIA WAXF",
+      "packSize": "125 CT",
       "weightLb": null,
       "weightSource": null,
-      "kind": "other"
+      "kind": "ct_only"
     },
     {
       "sku": "12343",
@@ -19221,22 +18773,6 @@
       "weightLb": 42,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "12348",
-      "name": "FRZN OF BLUEBERRY SMOOTH",
-      "packSize": "6/32 OZ",
-      "weightLb": 12,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12351",
-      "name": "FF POT LATTICE CHIP SKIN-ON LW",
-      "packSize": "5/5#",
-      "weightLb": 25,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
     },
     {
       "sku": "12353",
@@ -19328,7 +18864,7 @@
     },
     {
       "sku": "12364",
-      "name": "FRIES SHOESTRING CONQUEST+ 1/4",
+      "name": "FF SHOESTRING CONQUEST+ 1/4",
       "packSize": "6/4.5#",
       "weightLb": 27,
       "weightSource": "derived_from_pack",
@@ -19439,46 +18975,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "12384",
-      "name": "CHEESE CHEDDAR SMOKED",
-      "packSize": "36 x 20",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12385",
-      "name": "SALSA TRADITIONAL MILD",
-      "packSize": "12/15 OZ",
-      "weightLb": 11.25,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12386",
-      "name": "BEEF BARBACOA COOKED",
-      "packSize": "5/15 OZ",
-      "weightLb": 4.688,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12387",
-      "name": "CRACKER PIMENTO CHEESE GF",
-      "packSize": "12/5 OZ",
-      "weightLb": 3.75,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12388",
-      "name": "CHEESE CURDS MARKET HERB",
-      "packSize": "8/5 OZ",
-      "weightLb": 2.5,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "12389",
       "name": "GUACAMOLE MILD",
       "packSize": "8/15 OZ",
@@ -19487,100 +18983,12 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "12390",
-      "name": "SALAMI ITALIAN SLICED",
-      "packSize": "12/2.5 OZ",
-      "weightLb": 1.875,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12391",
-      "name": "BEV SPARKLING WHITE BURT NA",
-      "packSize": "6/750 ML",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
-    },
-    {
-      "sku": "12392",
-      "name": "BEV SPARKLING ROSE BURT NA",
-      "packSize": "6/750 ML",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "volume"
-    },
-    {
-      "sku": "12393",
-      "name": "PORK CARNITAS COOKED",
-      "packSize": "5/15 OZ",
-      "weightLb": 4.688,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12394",
-      "name": "CHICKEN SHREDDED COOKED",
-      "packSize": "5/15 OZ",
-      "weightLb": 4.688,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12395",
-      "name": "CHEESE BEECHER'S SMKD FLAGSHIP",
-      "packSize": "24/6.6 OZ",
-      "weightLb": 9.9,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
       "sku": "12396",
       "name": "PEPPER RED DICED 1/4",
-      "packSize": "2/5#",
-      "weightLb": 10,
+      "packSize": "5#",
+      "weightLb": 5,
       "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "12397",
-      "name": "SALAMI GENOA SLICED",
-      "packSize": "12/2.5 OZ",
-      "weightLb": 1.875,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_oz"
-    },
-    {
-      "sku": "12398",
-      "name": "CRACKER SEA SALT GF",
-      "packSize": "144 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12399",
-      "name": "CRACKER ORIGINAL CORN",
-      "packSize": "144 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12400",
-      "name": "PUREE TART CHERRY",
-      "packSize": "42 x 420",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12401",
-      "name": "FF SEASONED BB 1/2 X1/4  45R",
-      "packSize": "36 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "kind": "lb_direct"
     },
     {
       "sku": "12402",
@@ -19599,22 +19007,6 @@
       "kind": "lb_direct"
     },
     {
-      "sku": "12404",
-      "name": "MUSHROOM PORCINI",
-      "packSize": "5#",
-      "weightLb": 5,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "12409",
-      "name": "EGG LG BR PASTURE RAISED LOOSE",
-      "packSize": "15 DOZ",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "12411",
       "name": "LH BLUE CHEESE CUPS",
       "packSize": "48/1.5 OZ",
@@ -19625,10 +19017,10 @@
     {
       "sku": "12412",
       "name": "PEPPER RED DICED 1/4",
-      "packSize": "16 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "4/5#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "12416",
@@ -19655,52 +19047,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12421",
-      "name": "PAN ALUMINUM FULL DEEP",
-      "packSize": "50 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12422",
-      "name": "PAN ALUMINUM FULL DEEP LID",
-      "packSize": "50 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12423",
-      "name": "PAN ALUMINUM HALF DEEP",
-      "packSize": "100 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12424",
-      "name": "PAN ALUMINUM HALF DEEP LID",
-      "packSize": "100 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
       "sku": "12425",
       "name": "PEPPER RED DICED 1/4",
-      "packSize": "4 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12426",
-      "name": "CHEESE AMERICAN SLICED",
-      "packSize": "256 x 150",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "2/5#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "12430",
@@ -19709,14 +19061,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "12432",
-      "name": "MANDARIN IMPORT BULK",
-      "packSize": "33#",
-      "weightLb": 33,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
     },
     {
       "sku": "12433",
@@ -19759,6 +19103,14 @@
       "kind": "single_oz"
     },
     {
+      "sku": "12442",
+      "name": "ONION GREEN MEXICAN BBQ",
+      "packSize": "42 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "12443",
       "name": "MELON WATER USA SDLS 60'S BKN",
       "packSize": "650",
@@ -19773,22 +19125,6 @@
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
-    },
-    {
-      "sku": "12445",
-      "name": "BEVERAGE BARQS ROOT BEER",
-      "packSize": "2.5 x 2.500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12446",
-      "name": "AVOCADO HASS",
-      "packSize": "32 x 320",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "12448",
@@ -19815,6 +19151,14 @@
       "kind": "ct_only"
     },
     {
+      "sku": "12451",
+      "name": "SEED SESAME",
+      "packSize": "50#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
       "sku": "12452",
       "name": "KNIFE PRODUCE 5",
       "packSize": "1 CT",
@@ -19831,68 +19175,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12455",
-      "name": "CHOCOLATE VALRHONA JIVARA 40%",
-      "packSize": "3/2.2#",
-      "weightLb": 6.6,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "12456",
-      "name": "CHOCOLATE VALRHONA GUANAJA 70%",
-      "packSize": "3/2.2#",
-      "weightLb": 6.6,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "12457",
-      "name": "ORANGE VALENCIA RED",
-      "packSize": "88CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12461",
-      "name": "ORG POTATO FINGERLING",
-      "packSize": "12/1.5#",
-      "weightLb": 18,
-      "weightSource": "derived_from_pack",
-      "kind": "multi_lb"
-    },
-    {
-      "sku": "12464",
-      "name": "WOOD OAK HALF CORD KD",
-      "packSize": "2000 x 20000",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "12465",
       "name": "POTATO FINGERLING MIXED",
       "packSize": "50#",
       "weightLb": 50,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "12467",
-      "name": "FF COLOSSAL CRIPS 1/4  C0034",
-      "packSize": "36 x 4.500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12468",
-      "name": "PLUOT MIDNITE JEWEL 2 LYR",
-      "packSize": "64 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
     },
     {
       "sku": "12469",
@@ -19905,10 +19193,10 @@
     {
       "sku": "12470",
       "name": "ORG TOMATO SLICER NW",
-      "packSize": "15 x 150",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "15#",
+      "weightLb": 15,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "12471",
@@ -19919,108 +19207,12 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12472",
-      "name": "ORG POTATO FRENCH RED",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
-      "sku": "12473",
-      "name": "ORG POTATO YUKON GEM",
-      "packSize": "20#",
-      "weightLb": 20,
-      "weightSource": "derived_from_pack",
-      "kind": "lb_direct"
-    },
-    {
       "sku": "12474",
       "name": "MAYONAISE DUKE'S HEAVY",
-      "packSize": "16 x 10",
+      "packSize": "4/1 GAL",
       "weightLb": null,
       "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12477",
-      "name": "MELON ORANGE FLESH SDLS",
-      "packSize": "650 x 6500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12478",
-      "name": "MELON YELLOW FLESH SDLS",
-      "packSize": "650 x 6500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12479",
-      "name": "SPICE ALLSPICE WHOLE PC1",
-      "packSize": "12 x 120",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12480",
-      "name": "SPICE BAY LEAVES PC5",
-      "packSize": "10 x 100",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12481",
-      "name": "SPICE CELERY SALT PC1",
-      "packSize": "2.25 x 2.250",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12482",
-      "name": "SPICE PEPPERCORNS PINK PC1",
-      "packSize": "10 x 100",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12483",
-      "name": "MELON TROPICAL SUNRISE",
-      "packSize": "650 x 6500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12484",
-      "name": "MELON SEEDLESS TIGER STRIPE",
-      "packSize": "650 x 6500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12485",
-      "name": "SPICE SAGE RUBBED PC5",
-      "packSize": "2.5 x 2.500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12486",
-      "name": "SPICE XANTHAN GUM PC1",
-      "packSize": "1.5 x 1.500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "kind": "volume"
     },
     {
       "sku": "12487",
@@ -20031,17 +19223,9 @@
       "kind": "multi_lb"
     },
     {
-      "sku": "12488",
-      "name": "BEAN DRAGON TONGUE",
-      "packSize": "10 x 100",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "12489",
       "name": "MELON SUGAR BABY BLACK SDLS",
-      "packSize": "650 x 6500",
+      "packSize": "650 x 650",
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
@@ -20050,30 +19234,6 @@
       "sku": "12490",
       "name": "GREENS MUSTARD (FLAT)",
       "packSize": "24 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12491",
-      "name": "NECTARINE YELLOW 2LYR MARYHILL",
-      "packSize": "30/36 CT",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "ct_only"
-    },
-    {
-      "sku": "12492",
-      "name": "SOUP CUP PLASTIC W/LID 32 OZ",
-      "packSize": "250 x 2500",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12493",
-      "name": "AVOCADO HASS RPC 32 SIZE",
-      "packSize": "48 CT",
       "weightLb": null,
       "weightSource": null,
       "kind": "ct_only"
@@ -20129,18 +19289,10 @@
     {
       "sku": "12501",
       "name": "HERB MICRO PEPPER FLOWER MIX",
-      "packSize": "100 x 40",
+      "packSize": "100 CT",
       "weightLb": null,
       "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12502",
-      "name": "MELON PURE SWEETNESS",
-      "packSize": "8 x 350",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "kind": "ct_only"
     },
     {
       "sku": "12503",
@@ -20151,36 +19303,12 @@
       "kind": "multi_oz"
     },
     {
-      "sku": "12504",
-      "name": "SPICE TAJIN CLASICO",
-      "packSize": "144 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12505",
-      "name": "PEPPER ANCHO/PASILLA DRIED",
-      "packSize": "5 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "12506",
       "name": "PEPPER CHILE GUAJILLO DRIED",
       "packSize": "5#",
       "weightLb": 5,
       "weightSource": "derived_from_pack",
       "kind": "lb_direct"
-    },
-    {
-      "sku": "12507",
-      "name": "ORGANIC FIG BLACK MISSION",
-      "packSize": "144 x 10",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "12508",
@@ -20241,10 +19369,10 @@
     {
       "sku": "12515",
       "name": "CEREAL CINNAMON TOAST CRUNCH",
-      "packSize": "9216 x 10",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "96/1 OZ",
+      "weightLb": 6,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "12516",
@@ -20253,22 +19381,6 @@
       "weightLb": 6,
       "weightSource": "derived_from_pack",
       "kind": "multi_oz"
-    },
-    {
-      "sku": "12517",
-      "name": "FRZN FRENCH TOAST STICKS FC",
-      "packSize": "16.25 x 16.250",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12518",
-      "name": "FRZN BREAD ENGLISH MUFFIN WG",
-      "packSize": "36 x 120",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
     },
     {
       "sku": "12519",
@@ -20287,30 +19399,6 @@
       "kind": "ct_only"
     },
     {
-      "sku": "12521",
-      "name": "ORG CARROT JUICE",
-      "packSize": "15 x 150",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12522",
-      "name": "PLUOT DAPPLE DINO EGG 2 LYR",
-      "packSize": "44 x 180",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12523",
-      "name": "PLUOT GREEN FLAVOR QUEEN 2 LYR",
-      "packSize": "72 x 180",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
       "sku": "12524",
       "name": "HERB MICRO SEA BEAN",
       "packSize": "4 OZ",
@@ -20321,66 +19409,674 @@
     {
       "sku": "12525",
       "name": "FRZN FRANK BEEF 7.5  4/1",
-      "packSize": "10 x 100",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "10#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "12526",
       "name": "FRZN BREAD BUN WHOLE WHEAT 4",
-      "packSize": "6 x 60",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "6/20 OZ",
+      "weightLb": 7.5,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "12527",
       "name": "BREAD ROUND WHEAT SLICED",
-      "packSize": "144 x 240",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "12/24 OZ",
+      "weightLb": 18,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "12528",
       "name": "FRZN CHICKEN POPCORN BB",
-      "packSize": "10 x 100",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "10#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
     },
     {
       "sku": "12529",
       "name": "FRZN SAUSAGE  EGG & CHEESE LNK",
-      "packSize": "5184 x 2.250",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "72/2.25OZ",
+      "weightLb": 10.125,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "12530",
       "name": "SYRUP BREAKFAST",
-      "packSize": "10000 x 2.100",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
-    },
-    {
-      "sku": "12531",
-      "name": "DAIRY ZOI PLAIN",
-      "packSize": "16 x 50",
-      "weightLb": null,
-      "weightSource": null,
-      "kind": "other"
+      "packSize": "100/2.1 OZ",
+      "weightLb": 13.125,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
     },
     {
       "sku": "12532",
       "name": "FRZN CORN",
-      "packSize": "144 x 2.500",
+      "packSize": "12/2.5#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "12535",
+      "name": "SPICE ANISE SEED PC1",
+      "packSize": "1.25#",
+      "weightLb": 1.25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12540",
+      "name": "FRZN BEEF GROUND BULK 80/20",
+      "packSize": "4/5#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "12541",
+      "name": "MANDARIN DEKOPON AUSSIE 14#",
+      "packSize": "30/32CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12542",
+      "name": "TORTILLA YELLOW PRE-CUT (4)",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12544",
+      "name": "STAINLESS STEEL SCRUBBER EACH",
+      "packSize": "12CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12546",
+      "name": "DAIRY MILK 1%",
+      "packSize": "50/1 H/P",
       "weightLb": null,
       "weightSource": null,
       "kind": "other"
+    },
+    {
+      "sku": "12547",
+      "name": "DAIRY MILK SKIM CHOCOLATE",
+      "packSize": "50/1 H/P",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "12548",
+      "name": "DAIRY MILK 2%",
+      "packSize": "50/1 H/P",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "12549",
+      "name": "FLOUR WHOLE WHEAT BAG",
+      "packSize": "50#",
+      "weightLb": 50,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12550",
+      "name": "CHOCOLATE CHIPS SEMISWEET",
+      "packSize": "12/12 OZ",
+      "weightLb": 9,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12551",
+      "name": "OAT ROLLED GF",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12552",
+      "name": "FRZN BREAD BUN HOT DOG 8",
+      "packSize": "6/12 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12557",
+      "name": "NUT WALNUT HALVES",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12560",
+      "name": "FRZN TILAPIA 7/9 OZ",
+      "packSize": "10#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12563",
+      "name": "PIZZA BOX BROWN 18",
+      "packSize": "50 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12565",
+      "name": "FRZN ORANGE ZEST",
+      "packSize": "6/1.1#",
+      "weightLb": 6.6,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "12566",
+      "name": "HERB SUNFLOWER SHOOT",
+      "packSize": "1#",
+      "weightLb": 1,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12568",
+      "name": "SQUASH MEX GREY ROUND",
+      "packSize": "35#",
+      "weightLb": 35,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12569",
+      "name": "NATALIES PINEAPPLE JUICE",
+      "packSize": "32 OZ",
+      "weightLb": 2,
+      "weightSource": "derived_from_pack",
+      "kind": "single_oz"
+    },
+    {
+      "sku": "12570",
+      "name": "NATALIES MARGARITA MIX",
+      "packSize": "32 OZ",
+      "weightLb": 2,
+      "weightSource": "derived_from_pack",
+      "kind": "single_oz"
+    },
+    {
+      "sku": "12571",
+      "name": "CHIPS CC SEA SALT & VIN 1.5 OZ",
+      "packSize": "56 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12572",
+      "name": "CHIPS CC ORIG SEA SLT 1.5 OZ",
+      "packSize": "56 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12573",
+      "name": "CHIPS ZAPP VOODOO HEAT 1.5OZ",
+      "packSize": "60 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12574",
+      "name": "CHIPS ZAPP CAJUN CRAWTTR 1.5OZ",
+      "packSize": "60 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12575",
+      "name": "CHIPS DIRTY JALAPENO HEAT 2 OZ",
+      "packSize": "25 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12576",
+      "name": "CHIPS DIRTY MESQUITE BBQ 2 OZ",
+      "packSize": "25 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12577",
+      "name": "CHIPS DIRTY SC & ONION 2 OZ",
+      "packSize": "25 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12578",
+      "name": "CHIPS MAUI ONION 2 OZ",
+      "packSize": "25 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12579",
+      "name": "CEREAL CINNAMON TOAST CRUNCH",
+      "packSize": "60/2 OZ",
+      "weightLb": 7.5,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12580",
+      "name": "SUGAR IN THE RAW",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12581",
+      "name": "KETCHUP BULK BAG",
+      "packSize": "6/114 OZ",
+      "weightLb": 42.75,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12582",
+      "name": "MUSTARD",
+      "packSize": "6/104 OZ",
+      "weightLb": 39,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12583",
+      "name": "PUMPKIN CARVER BIN 30-45CT",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12584",
+      "name": "SQUASH BUTTERCUP BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12585",
+      "name": "SALT SEASONING JOHNNYS",
+      "packSize": "5#",
+      "weightLb": 5,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12586",
+      "name": "ORG DAIKON JAPANESE",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12589",
+      "name": "PEAR GEM (KIYOKAWA)",
+      "packSize": "43#",
+      "weightLb": 43,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12590",
+      "name": "ORG APPLE MACINTOSH",
+      "packSize": "100 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12591",
+      "name": "HERB PETITE AMARANTH CARNIVAL",
+      "packSize": "8 OZ",
+      "weightLb": 0.5,
+      "weightSource": "derived_from_pack",
+      "kind": "single_oz"
+    },
+    {
+      "sku": "12593",
+      "name": "RADICCHIO CHICORY CHEF MIX",
+      "packSize": "10#",
+      "weightLb": 10,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12596",
+      "name": "KIMCHI GREEN CABBAGE NAPA",
+      "packSize": "4-1/2 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "12597",
+      "name": "DAIRY HVY WHIPPING CREAM DG",
+      "packSize": "6-1/2 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "12599",
+      "name": "KIMCHI GREEN CABBAGE NAPA EACH",
+      "packSize": "1/2 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "12601",
+      "name": "DAIRY CREAM CHEESE CUPS",
+      "packSize": "100/1 OZ",
+      "weightLb": 6.25,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12602",
+      "name": "CHEESE CHED MED TILMK CHUNK",
+      "packSize": "12/8 OZ",
+      "weightLb": 6,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12604",
+      "name": "CHIPS TORTILLA YELLOW",
+      "packSize": "6/2#",
+      "weightLb": 12,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "12605",
+      "name": "ONION CRISPY LIGHTLY SALTED",
+      "packSize": "12/3.5 OZ",
+      "weightLb": 2.625,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12606",
+      "name": "POTATO HONEY GOLD PACKER",
+      "packSize": "12/24 OZ",
+      "weightLb": 18,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12608",
+      "name": "POTATO SUNBURTS NIBBLES PACKER",
+      "packSize": "12/16 OZ",
+      "weightLb": 12,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12609",
+      "name": "POTATO HONEY GOLD MESH PACKER",
+      "packSize": "10/3#",
+      "weightLb": 30,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
+    },
+    {
+      "sku": "12610",
+      "name": "ROOT JICAMA WATER",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12611",
+      "name": "BEVERAGE COCA-COLA ZERO BIB",
+      "packSize": "2.5 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "12612",
+      "name": "SALT ROCK BAG",
+      "packSize": "40#",
+      "weightLb": 40,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12613",
+      "name": "POTATO YELLOW NW MESH",
+      "packSize": "12/24 OZ",
+      "weightLb": 18,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12614",
+      "name": "POTATO RED NW MESH",
+      "packSize": "12/24 OZ",
+      "weightLb": 18,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12615",
+      "name": "POTATO PURPLE NW MESH",
+      "packSize": "12/24 OZ",
+      "weightLb": 18,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12616",
+      "name": "POTATO MEDLEY NW MESH",
+      "packSize": "12/24 OZ",
+      "weightLb": 18,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12618",
+      "name": "BEVERAGE SQUIRT MEX",
+      "packSize": "12/12 OZ",
+      "weightLb": 9,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12619",
+      "name": "MUSTARD",
+      "packSize": "104 OZ",
+      "weightLb": 6.5,
+      "weightSource": "derived_from_pack",
+      "kind": "single_oz"
+    },
+    {
+      "sku": "12621",
+      "name": "APPLE AMBROSIA WAXF",
+      "packSize": "163 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12622",
+      "name": "MANDARIN EMERALD",
+      "packSize": "22#",
+      "weightLb": 22,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12623",
+      "name": "ORG SQUASH ASSORTED BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12624",
+      "name": "FRZN PORK BACON 10/12 HC WRGHT",
+      "packSize": "15#",
+      "weightLb": 15,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12625",
+      "name": "DAIRY MILK WHOLE",
+      "packSize": "1 QT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "12626",
+      "name": "DAIRY MILK HEAVY CREAM",
+      "packSize": "28/1 PINT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "other"
+    },
+    {
+      "sku": "12627",
+      "name": "PUMPKIN JACK BE LITTLE MIX",
+      "packSize": "20#",
+      "weightLb": 20,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12628",
+      "name": "TF VA SNAP PEAS",
+      "packSize": "6/16 OZ",
+      "weightLb": 6,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_oz"
+    },
+    {
+      "sku": "12630",
+      "name": "BEVERAGE COCA-COLA CLASSIC BIB",
+      "packSize": "2.5 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "12633",
+      "name": "GRAPEFRUIT PUMMELO NOBEL",
+      "packSize": "10 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12634",
+      "name": "OIL OLIVE EVOO GALLON",
+      "packSize": "6/1 GAL",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "volume"
+    },
+    {
+      "sku": "12635",
+      "name": "CONTAINER BLK HNGD 8X8X3 1CPT",
+      "packSize": "150 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12636",
+      "name": "CONTAINER BLK HNGD 8X8X3 3CPT",
+      "packSize": "150 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12639",
+      "name": "CHEESE CHED MED TILMK CHUNK",
+      "packSize": "12/10 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12640",
+      "name": "CNTR BLACK REC W/LID 32OZ",
+      "packSize": "150 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
+      "sku": "12641",
+      "name": "ORG SQUASH KABOCHA BIN",
+      "packSize": "650#",
+      "weightLb": 650,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12643",
+      "name": "PEPPER CHILE GUAJILLO DRIED",
+      "packSize": "25#",
+      "weightLb": 25,
+      "weightSource": "derived_from_pack",
+      "kind": "lb_direct"
+    },
+    {
+      "sku": "12644",
+      "name": "APPLE HONEYCRISP BAG",
+      "packSize": "9/4#",
+      "weightLb": 36,
+      "weightSource": "derived_from_pack",
+      "kind": "multi_lb"
     },
     {
       "sku": "12927",
@@ -20391,6 +20087,14 @@
       "kind": "lb_direct"
     },
     {
+      "sku": "13228",
+      "name": "PUMPKIN LARGE",
+      "packSize": "1 CT",
+      "weightLb": null,
+      "weightSource": null,
+      "kind": "ct_only"
+    },
+    {
       "sku": "99991",
       "name": "TEST CASE",
       "packSize": "4/5",
@@ -20399,7 +20103,7 @@
       "kind": "other"
     }
   ],
-  "mergedAt": "2026-08-14T17:37:22.870Z",
-  "scrapedWeightCount": 26,
-  "totalWithWeight": 1593
+  "mergedAt": "2026-10-06T23:25:04.278Z",
+  "scrapedWeightCount": 30,
+  "totalWithWeight": 1625
 }
