@@ -10,8 +10,10 @@ import { chromium } from "playwright";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const RVFB_SKUS_PATH = path.join("out", "rvfb-caruso-skus.json");
-const OUT_PATH = path.join("out", "caruso-weights.json");
+// CLI: `node scrape-weights.js [targetsPath] [outPath]`
+// targetsPath points to a JSON file with { ctOnlySkus: ["12345", ...] }.
+const RVFB_SKUS_PATH = process.argv[2] ?? path.join("out", "rvfb-caruso-skus.json");
+const OUT_PATH = process.argv[3] ?? path.join("out", "caruso-weights.json");
 const BASE = "https://carusoproduce.cutanddry.com/catalog/CarusoProduceInc?verifiedVendorId=271724692&categoryId=1";
 
 async function scrapeOne(page, sku) {

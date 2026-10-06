@@ -1,0 +1,62 @@
+{
+  "note": "Hand-entered per-case pound estimates for Caruso SKUs that the catalog scrape can't resolve (delisted/seasonal items with no detail page, or BUSHEL/CT-only pack sizes with no weight on the detail page). Sources: USDA Agricultural Marketing Service standard produce container weights + Caruso catalog pack-size notes. Review and refine as needed.",
+  "updatedAt": "2026-10-06",
+  "items": [
+    {
+      "sku": "01250",
+      "name": "Green Onion BBQ",
+      "pack": "case (bunched)",
+      "weightLb": 10,
+      "source": "USDA fresh-produce reference, bunched green onions (approx. 48 bunches/case)"
+    },
+    {
+      "sku": "01597",
+      "name": "Mango Keitt",
+      "pack": "4 CT",
+      "weightLb": 8,
+      "source": "USDA / industry: Keitt mangoes 1.5–2 lb each, 4-count case"
+    },
+    {
+      "sku": "01970",
+      "name": "Squash Yellow (2-Layer)",
+      "pack": "2-layer carton",
+      "weightLb": 20,
+      "source": "USDA produce container reference, yellow squash 2-layer ~20 lb"
+    },
+    {
+      "sku": "02121",
+      "name": "Orange Valencia CH",
+      "pack": "56 CT",
+      "weightLb": 38,
+      "source": "USDA standard California orange carton, 38 lb"
+    },
+    {
+      "sku": "02940",
+      "name": "Pepper Red Bell XL",
+      "pack": "case",
+      "weightLb": 25,
+      "source": "USDA standard bell pepper 1 1/9 bushel carton, 25 lb"
+    },
+    {
+      "sku": "03098",
+      "name": "Red Plums (2-Layer)",
+      "pack": "2-layer carton",
+      "weightLb": 28,
+      "source": "USDA standard California stone-fruit 2-layer, 25–30 lb"
+    },
+    {
+      "sku": "05413",
+      "name": "Peach White (2-Layer, California)",
+      "pack": "2-layer carton",
+      "weightLb": 22,
+      "source": "USDA standard CA peach 2-layer, 20–25 lb"
+    },
+    {
+      "sku": "11175",
+      "name": "Natalie's Apple Cider",
+      "pack": "case (jugs)",
+      "weightLb": 24,
+      "source": "Estimated: Natalie's Orchid Island 32 oz × 6-pack or similar"
+    }
+  ]
+}

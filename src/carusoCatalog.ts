@@ -8,7 +8,7 @@ export type CarusoCatalogItem = {
   name: string | null;
   packSize: string | null;
   weightLb: number | null;
-  weightSource: "derived_from_pack" | "scraped_detail" | null;
+  weightSource: "derived_from_pack" | "scraped_detail" | "usda_default" | null;
   kind: "lb_direct" | "multi_lb" | "multi_oz" | "single_oz" | "ct_only" | "volume" | "other" | "unknown";
 };
 
@@ -19,20 +19,61 @@ type CatalogFile = {
   items: CarusoCatalogItem[];
 };
 
-const CATALOG_PATH = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "data",
-  "caruso-catalog.json"
-);
+type OverrideItem = {
+  sku: string;
+  name: string | null;
+  pack: string | null;
+  weightLb: number;
+  source: string;
+};
+
+type OverrideFile = {
+  items: OverrideItem[];
+};
+
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
+const CATALOG_PATH = path.join(DATA_DIR, "caruso-catalog.json");
+const OVERRIDES_PATH = path.join(DATA_DIR, "caruso-pack-weight-overrides.json");
 
 let cache: Map<string, CarusoCatalogItem> | null = null;
+
+function loadOverrides(): Map<string, OverrideItem> {
+  const m = new Map<string, OverrideItem>();
+  try {
+    const raw = JSON.parse(readFileSync(OVERRIDES_PATH, "utf8")) as OverrideFile;
+    for (const it of raw.items ?? []) m.set(normalizeSku(it.sku), it);
+  } catch {
+    // overrides file is optional
+  }
+  return m;
+}
 
 function load(): Map<string, CarusoCatalogItem> {
   if (cache) return cache;
   const raw = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as CatalogFile;
-  cache = new Map();
-  for (const it of raw.items) cache.set(normalizeSku(it.sku), it);
+  const m = new Map<string, CarusoCatalogItem>();
+  for (const it of raw.items) m.set(normalizeSku(it.sku), it);
+  // Layer in hand-entered USDA defaults: fill null weights on existing entries,
+  // and synthesize entries for SKUs the Caruso scrape didn't surface at all.
+  const overrides = loadOverrides();
+  for (const [key, ov] of overrides) {
+    const existing = m.get(key);
+    if (existing) {
+      if (existing.weightLb == null) {
+        m.set(key, { ...existing, weightLb: ov.weightLb, weightSource: "usda_default" });
+      }
+    } else {
+      m.set(key, {
+        sku: ov.sku,
+        name: ov.name,
+        packSize: ov.pack,
+        weightLb: ov.weightLb,
+        weightSource: "usda_default",
+        kind: "unknown"
+      });
+    }
+  }
+  cache = m;
   return cache;
 }
 
