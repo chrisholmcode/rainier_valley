@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 .DS_Store
 .claude/settings.local.json
 scripts/caruso-scrape/out/
