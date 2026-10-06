@@ -1324,8 +1324,16 @@ async function handleCoverageRequest(req: IncomingMessage, res: ServerResponse):
   const url = await authRequest(req, res);
   if (!url) return;
 
-  const supplierParam = url.searchParams.get("supplier") ?? "grocery_rescue";
-  const supplier = (COVERAGE_SUPPLIERS as string[]).includes(supplierParam) ? supplierParam : "grocery_rescue";
+  const rawSuppliers = url.searchParams.getAll("supplier");
+  const validSet = new Set(COVERAGE_SUPPLIERS as string[]);
+  const seenSuppliers = new Set<string>();
+  const suppliers: string[] = [];
+  for (const s of rawSuppliers) {
+    if (!validSet.has(s) || seenSuppliers.has(s)) continue;
+    seenSuppliers.add(s);
+    suppliers.push(s);
+  }
+  if (suppliers.length === 0) suppliers.push("grocery_rescue");
 
   const preset = url.searchParams.get("preset");
   const dflt = defaultCoverageRange();
@@ -1345,9 +1353,11 @@ async function handleCoverageRequest(req: IncomingMessage, res: ServerResponse):
   if (from > to) [from, to] = [to, from];
 
   try {
-    const inboundRows = await readDeliveryRows({ supplier, limit: 100000 });
+    const inboundRows = suppliers.length === 1
+      ? await readDeliveryRows({ supplier: suppliers[0], limit: 100000 })
+      : await readDeliveryRows({ limit: 100000 });
     const html = buildCoverageHtml({
-      supplier,
+      suppliers,
       from,
       to,
       inboundRows,

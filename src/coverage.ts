@@ -107,73 +107,119 @@ function formatDateHeader(dateStr: string): { weekday: string; monthDay: string 
 
 interface Cell {
   count: number;
+  pounds: number;
   slipUrl: string | null; // photo_url of one representative slip for the ✓ link
+}
+
+function toNumber(v: string | null | undefined): number {
+  if (v == null || v === "") return 0;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Same rule as src/dashboard.ts inboundPoundsFor: prefer approx_weight, else
+// quantity when unit is lb. Returns 0 (not null) so cell math is simple.
+function rowPounds(r: DeliverySheetRow): number {
+  const aw = toNumber(r.approx_weight);
+  if (aw > 0) return aw;
+  const unit = (r.unit ?? "").trim().toLowerCase();
+  if (unit === "lb" || unit === "lbs" || unit === "pound" || unit === "pounds") {
+    const q = toNumber(r.quantity);
+    if (q > 0) return q;
+  }
+  return 0;
+}
+
+function formatPounds(lbs: number): string {
+  if (lbs <= 0) return "";
+  if (lbs >= 1000) return `${(lbs / 1000).toFixed(1)}k lb`;
+  return `${Math.round(lbs)} lb`;
 }
 
 // Column key for a row. For grocery_rescue, group by donor_org (per-store).
 // For every other supplier, collapse to a single "slip received" column.
+// Multi-supplier views namespace columns by supplier.
 function columnKeyFor(supplier: string, r: DeliverySheetRow): string {
-  if (supplier === "grocery_rescue") {
-    return (r.donor_org ?? "").trim() || "__unknown_donor__";
-  }
-  return "__all__";
+  const sub = supplier === "grocery_rescue"
+    ? ((r.donor_org ?? "").trim() || "__unknown_donor__")
+    : "__all__";
+  return `${supplier}::${sub}`;
 }
 
 export function buildCoverageHtml(params: {
-  supplier: string;
+  suppliers: string[];
   from: string;
   to: string;
   inboundRows: DeliverySheetRow[];
   generatedAt: Date;
 }): string {
-  const { supplier, from, to, inboundRows, generatedAt } = params;
+  const { suppliers, from, to, inboundRows, generatedAt } = params;
+  const supplierSet = new Set(suppliers);
+  const multi = suppliers.length > 1;
 
   const filtered = inboundRows.filter((r) => {
-    if ((r.supplier ?? "") !== supplier) return false;
+    if (!supplierSet.has(r.supplier ?? "")) return false;
     if (!r.delivery_date) return false;
     if (r.delivery_date < from || r.delivery_date > to) return false;
     return true;
   });
 
-  // Discover columns present in the data (for grocery_rescue) so we don't hide
-  // slips filed under an unrecognized donor_org.
-  let columns: Array<{ key: string; label: string }>;
-  if (supplier === "grocery_rescue") {
-    const seen = new Set<string>();
-    for (const r of filtered) seen.add(columnKeyFor(supplier, r));
-    const extras = Array.from(seen)
-      .filter((k) => !RESCUE_DONOR_ORDER.includes(k) && k !== "__unknown_donor__")
-      .sort();
-    const unknown = seen.has("__unknown_donor__") ? ["__unknown_donor__"] : [];
-    columns = [
-      ...RESCUE_DONOR_ORDER.map((k) => ({ key: k, label: RESCUE_DONOR_LABEL[k] ?? k })),
-      ...extras.map((k) => ({ key: k, label: k })),
-      ...unknown.map((k) => ({ key: k, label: "(no donor_org)" }))
-    ];
-  } else {
-    columns = [{ key: "__all__", label: "Slip received" }];
+  // Build columns per selected supplier, preserving the user's selection order.
+  // grocery_rescue still splits by donor_org; others collapse to one column
+  // (labeled by supplier when more than one is selected, else "Slip received").
+  const columns: Array<{ key: string; label: string }> = [];
+  for (const s of suppliers) {
+    if (s === "grocery_rescue") {
+      const seen = new Set<string>();
+      for (const r of filtered) {
+        if ((r.supplier ?? "") !== "grocery_rescue") continue;
+        seen.add((r.donor_org ?? "").trim() || "__unknown_donor__");
+      }
+      const extras = Array.from(seen)
+        .filter((k) => !RESCUE_DONOR_ORDER.includes(k) && k !== "__unknown_donor__")
+        .sort();
+      const hasUnknown = seen.has("__unknown_donor__");
+      const donorKeys = [
+        ...RESCUE_DONOR_ORDER,
+        ...extras,
+        ...(hasUnknown ? ["__unknown_donor__"] : [])
+      ];
+      for (const dk of donorKeys) {
+        const donorLabel = dk === "__unknown_donor__"
+          ? "(no donor_org)"
+          : (RESCUE_DONOR_LABEL[dk] ?? dk);
+        const label = multi ? `Rescue · ${donorLabel}` : donorLabel;
+        columns.push({ key: `grocery_rescue::${dk}`, label });
+      }
+    } else {
+      const label = multi ? (SUPPLIER_LABEL[s] ?? s) : "Slip received";
+      columns.push({ key: `${s}::__all__`, label });
+    }
   }
 
   const grid = new Map<string, Map<string, Cell>>();
   for (const r of filtered) {
     const date = r.delivery_date!;
-    const col = columnKeyFor(supplier, r);
+    const col = columnKeyFor(r.supplier ?? "", r);
     let byCol = grid.get(date);
     if (!byCol) grid.set(date, (byCol = new Map()));
     let cell = byCol.get(col);
-    if (!cell) byCol.set(col, (cell = { count: 0, slipUrl: null }));
+    if (!cell) byCol.set(col, (cell = { count: 0, pounds: 0, slipUrl: null }));
     cell.count += 1;
+    cell.pounds += rowPounds(r);
     if (!cell.slipUrl && r.photo_url) cell.slipUrl = r.photo_url;
   }
 
   const dates = datesInRange(from, to).reverse(); // most recent up top
 
   const totalsByCol = new Map<string, number>();
+  const poundsByCol = new Map<string, number>();
   const slipsByCol = new Map<string, Set<string>>();
   for (const [date, byCol] of grid) {
     void date;
     for (const [col, cell] of byCol) {
       totalsByCol.set(col, (totalsByCol.get(col) ?? 0) + cell.count);
+      poundsByCol.set(col, (poundsByCol.get(col) ?? 0) + cell.pounds);
       if (cell.slipUrl) {
         let s = slipsByCol.get(col);
         if (!s) slipsByCol.set(col, (s = new Set()));
@@ -183,8 +229,12 @@ export function buildCoverageHtml(params: {
   }
 
   const supplierOptions = COVERAGE_SUPPLIERS
-    .map((s) => `<option value="${s}"${s === supplier ? " selected" : ""}>${escapeHtml(SUPPLIER_LABEL[s] ?? s)}</option>`)
+    .map((s) => `<option value="${s}"${supplierSet.has(s) ? " selected" : ""}>${escapeHtml(SUPPLIER_LABEL[s] ?? s)}</option>`)
     .join("");
+
+  const presetSupplierQs = suppliers
+    .map((s) => `supplier=${encodeURIComponent(s)}`)
+    .join("&amp;");
 
   const headerCells = columns
     .map((c) => `<th class="col-donor">${escapeHtml(c.label)}</th>`)
@@ -198,13 +248,14 @@ export function buildCoverageHtml(params: {
       if (!cell || cell.count === 0) {
         return `<td class="cell empty" title="No slip received"><span class="gap">·</span></td>`;
       }
-      const countLabel = cell.count > 1 ? ` <span class="cell-count">×${cell.count}</span>` : "";
-      const check = `<span class="check">✓</span>${countLabel}`;
+      const poundsLabel = cell.pounds > 0 ? ` <span class="cell-pounds">${escapeHtml(formatPounds(cell.pounds))}</span>` : "";
+      const title = `${cell.count} line item${cell.count === 1 ? "" : "s"}${cell.pounds > 0 ? ` · ${Math.round(cell.pounds)} lb` : ""}`;
+      const check = `<span class="check">✓</span>${poundsLabel}`;
       if (cell.slipUrl) {
         const href = `/review/slip?slip=${encodeSlipKey(cell.slipUrl)}`;
-        return `<td class="cell filled"><a href="${href}" title="Open slip">${check}</a></td>`;
+        return `<td class="cell filled" title="${escapeHtml(title)}"><a href="${href}" title="Open slip">${check}</a></td>`;
       }
-      return `<td class="cell filled">${check}</td>`;
+      return `<td class="cell filled" title="${escapeHtml(title)}">${check}</td>`;
     }).join("");
     return `<tr>
       <th class="row-date"><div class="col-weekday">${escapeHtml(weekday)}</div><div class="col-date">${escapeHtml(monthDay)}</div></th>
@@ -215,8 +266,12 @@ export function buildCoverageHtml(params: {
   const totalsRow = columns.map((c) => {
     const total = totalsByCol.get(c.key) ?? 0;
     const slips = slipsByCol.get(c.key)?.size ?? 0;
+    const pounds = poundsByCol.get(c.key) ?? 0;
     if (total === 0) return `<td class="cell empty"><span class="muted">0</span></td>`;
-    return `<td class="cell filled totals"><span class="totals-slips">${slips}</span><span class="totals-rows"> slip${slips === 1 ? "" : "s"}</span></td>`;
+    const poundsPart = pounds > 0
+      ? `<div class="totals-pounds">${escapeHtml(formatPounds(pounds))}</div>`
+      : "";
+    return `<td class="cell filled totals"><span class="totals-slips">${slips}</span><span class="totals-rows"> slip${slips === 1 ? "" : "s"}</span>${poundsPart}</td>`;
   }).join("");
 
   const totalDays = dates.length;
@@ -246,6 +301,8 @@ ${SHARED_CSS}
   padding: 7px 10px; line-height: 1;
 }
 .coverage-toolbar select { padding-right: 24px; }
+.coverage-toolbar select[multiple] { padding: 6px 8px; min-width: 180px; }
+.coverage-toolbar .supplier-hint { font-size: 10px; font-weight: 500; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 2px; }
 .coverage-toolbar .presets { display: flex; gap: 6px; }
 .coverage-card { overflow-x: auto; }
 .coverage-card thead th { text-align: center; }
@@ -261,6 +318,8 @@ ${SHARED_CSS}
 .coverage-card td.cell.empty { background: rgba(0,0,0,0.015); }
 .coverage-card .check { color: #047857; font-weight: 700; font-size: 15px; }
 .coverage-card .cell-count { color: var(--muted); font-size: 11px; font-weight: 600; margin-left: 2px; }
+.coverage-card .cell-pounds { color: var(--muted); font-size: 11px; font-weight: 600; margin-left: 4px; white-space: nowrap; }
+.coverage-card .totals-pounds { color: var(--muted); font-size: 11px; font-weight: 600; margin-top: 2px; }
 .coverage-card .gap { color: #cbd5e1; font-size: 18px; line-height: 1; }
 .coverage-card tfoot td.cell { border-top: 2px solid var(--line); font-weight: 600; }
 .coverage-card .totals-slips { color: var(--ink); font-weight: 700; }
@@ -285,7 +344,8 @@ ${SHARED_CSS}
 
 <form class="coverage-toolbar" method="get" action="/coverage">
   <label>Supplier
-    <select name="supplier">${supplierOptions}</select>
+    <select name="supplier" multiple size="6">${supplierOptions}</select>
+    <span class="supplier-hint">⌘/Ctrl-click to pick more than one</span>
   </label>
   <label>From
     <input type="date" name="from" value="${escapeHtml(from)}">
@@ -295,9 +355,9 @@ ${SHARED_CSS}
   </label>
   <button type="submit" class="btn btn-primary">Update</button>
   <span class="presets">
-    <a class="btn" href="?supplier=${escapeHtml(supplier)}&amp;preset=7d">7d</a>
-    <a class="btn" href="?supplier=${escapeHtml(supplier)}&amp;preset=30d">30d</a>
-    <a class="btn" href="?supplier=${escapeHtml(supplier)}&amp;preset=90d">90d</a>
+    <a class="btn" href="?${presetSupplierQs}&amp;preset=7d">7d</a>
+    <a class="btn" href="?${presetSupplierQs}&amp;preset=30d">30d</a>
+    <a class="btn" href="?${presetSupplierQs}&amp;preset=90d">90d</a>
   </span>
 </form>
 
