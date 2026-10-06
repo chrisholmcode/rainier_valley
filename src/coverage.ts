@@ -322,6 +322,8 @@ ${SHARED_CSS}
 .coverage-card .totals-pounds { color: var(--muted); font-size: 11px; font-weight: 600; margin-top: 2px; }
 .coverage-card .gap { color: #cbd5e1; font-size: 18px; line-height: 1; }
 .coverage-card tfoot td.cell { border-top: 2px solid var(--line); font-weight: 600; }
+.coverage-card thead tr.totals-row th,
+.coverage-card thead tr.totals-row td { border-bottom: 2px solid var(--line); font-weight: 600; }
 .coverage-card .totals-slips { color: var(--ink); font-weight: 700; }
 .coverage-card .totals-rows  { color: var(--muted); font-weight: 500; font-size: 12px; }
 .coverage-summary { display: flex; gap: 20px; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
@@ -373,16 +375,14 @@ ${SHARED_CSS}
         <th class="row-date-h">Date</th>
         ${headerCells}
       </tr>
+      <tr class="totals-row">
+        <th class="row-date">Total</th>
+        ${totalsRow}
+      </tr>
     </thead>
     <tbody>
       ${bodyRows}
     </tbody>
-    <tfoot>
-      <tr>
-        <th class="row-date">Total</th>
-        ${totalsRow}
-      </tr>
-    </tfoot>
   </table>
 </div>
 
