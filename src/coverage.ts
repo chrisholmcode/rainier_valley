@@ -228,8 +228,12 @@ export function buildCoverageHtml(params: {
     }
   }
 
-  const supplierOptions = COVERAGE_SUPPLIERS
-    .map((s) => `<option value="${s}"${supplierSet.has(s) ? " selected" : ""}>${escapeHtml(SUPPLIER_LABEL[s] ?? s)}</option>`)
+  const supplierCheckboxes = COVERAGE_SUPPLIERS
+    .map((s) => {
+      const checked = supplierSet.has(s) ? " checked" : "";
+      const label = escapeHtml(SUPPLIER_LABEL[s] ?? s);
+      return `<label class="supplier-check"><input type="checkbox" name="supplier" value="${s}"${checked}> ${label}</label>`;
+    })
     .join("");
 
   const presetSupplierQs = suppliers
@@ -301,8 +305,23 @@ ${SHARED_CSS}
   padding: 7px 10px; line-height: 1;
 }
 .coverage-toolbar select { padding-right: 24px; }
-.coverage-toolbar select[multiple] { padding: 6px 8px; min-width: 180px; }
-.coverage-toolbar .supplier-hint { font-size: 10px; font-weight: 500; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.coverage-toolbar .supplier-fieldset {
+  margin: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--card);
+}
+.coverage-toolbar .supplier-fieldset legend {
+  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 4px;
+}
+.coverage-toolbar .supplier-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 4px 14px;
+}
+.coverage-toolbar .supplier-check {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 500; color: var(--ink);
+  text-transform: none; letter-spacing: 0;
+  cursor: pointer; user-select: none;
+}
+.coverage-toolbar .supplier-check input { margin: 0; cursor: pointer; }
 .coverage-toolbar .presets { display: flex; gap: 6px; }
 .coverage-card { overflow-x: auto; }
 .coverage-card thead th { text-align: center; }
@@ -345,10 +364,10 @@ ${SHARED_CSS}
 </header>
 
 <form class="coverage-toolbar" method="get" action="/coverage">
-  <label>Supplier
-    <select name="supplier" multiple size="6">${supplierOptions}</select>
-    <span class="supplier-hint">⌘/Ctrl-click to pick more than one</span>
-  </label>
+  <fieldset class="supplier-fieldset">
+    <legend>Supplier</legend>
+    <div class="supplier-grid">${supplierCheckboxes}</div>
+  </fieldset>
   <label>From
     <input type="date" name="from" value="${escapeHtml(from)}">
   </label>
