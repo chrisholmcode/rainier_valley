@@ -8,6 +8,7 @@ Document format: Printed invoice with columns ORDERED | SHIPPED | ITEM CODE | DE
   - Pack is count-only with no weight unit (e.g., `12 CT`, `56 CT`, `48 CT`) => approx_weight = null. Do NOT guess piece weights.
   - Worked example: 10 cases of `BROCCOLI CROWN 20#` → approx_weight = 10 × 20 = 200.
   - Worked example: 20 cases of `BERRIES RASPBERRY PACKER 12/6 OZ` → approx_weight = 20 × 12 × 6 / 16 = 90.
+- invoice_or_order_number: Caruso's prints the invoice number with an internal hyphen separating the prefix from the sequence (e.g., "006-19274"). Strip the hyphen (and any other separators/whitespace) and record the digits as one continuous string. Example: printed "006-19274" => "00619274". Preserve any leading zeros.
 - ITEM CODE => item_code_raw
 - DESCRIPTION => item_name_raw (keep exact, e.g., "BEAN GREEN 28#")
 - Normalize: "BEAN GREEN 28#" => "Green Beans", "BROCCOLI CROWN 20#" => "Broccoli Crowns"
