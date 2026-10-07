@@ -66,6 +66,11 @@ const InboundEmailSchema = z.object({
   from: z.string().min(1),
   subject: z.string().default(""),
   receivedAt: z.string().optional(),
+  // Optional attribution headers for the forwarded-mail case. When the sender
+  // was rewritten by the forwarder (SRS, VERP), these recover the real sender.
+  // Precedence: replyTo > originalSender > SRS-decode(from) > from.
+  replyTo: z.string().optional(),
+  originalSender: z.string().optional(),
   attachments: z.array(InboundAttachmentSchema).min(1)
 });
 
@@ -117,6 +122,65 @@ function extractEmailAddress(from: string): string | null {
   const candidate = (angle ? angle[1] : from).trim().toLowerCase();
   if (!candidate.includes("@") || /\s/.test(candidate)) return null;
   return candidate;
+}
+
+// Decode a Sender Rewriting Scheme envelope address back to the original
+// sender. Handles the plaintext variants:
+//   SRS0=HHH=TT=domain=local@forwarder
+//   SRS1=XXX=hop==HHH=TT=domain=local@forwarder
+//   bounces+SRS=HHH=TT=domain=local@forwarder
+// Returns `local@domain` or null if the SRS portion is opaque (HMAC-sealed,
+// no plaintext domain/local) or the string isn't SRS at all.
+export function decodeSrsAddress(addr: string): string | null {
+  const inner = addr.match(/SRS[01]?=([^@]+)@/i);
+  if (!inner) return null;
+  const parts = inner[1].split("=");
+  if (parts.length < 4) return null;
+  const local = parts[parts.length - 1];
+  const domain = parts[parts.length - 2];
+  if (!local || !domain || !/\./.test(domain)) return null;
+  return `${local}@${domain}`.toLowerCase();
+}
+
+// `bounces+SRS=xxx@domain` with no plaintext sender embedded (just a sealed
+// HMAC hash). We can't recover the original sender, but we can at least label
+// the forwarder.
+export function isOpaqueSrsBounce(addr: string): boolean {
+  if (!/SRS[01]?=/i.test(addr)) return false;
+  return decodeSrsAddress(addr) === null;
+}
+
+// Human-readable placeholder for an opaque SRS bounce. Returns
+// `forwarded-via@<forwarder-domain>` so attribution still identifies the
+// forwarder even when we can't recover the real sender.
+export function labelOpaqueSrsBounce(addr: string): string | null {
+  if (!isOpaqueSrsBounce(addr)) return null;
+  const at = addr.lastIndexOf("@");
+  if (at < 0) return null;
+  const domain = addr.slice(at + 1).toLowerCase();
+  if (!domain || !/\./.test(domain)) return null;
+  return `forwarded-via@${domain}`;
+}
+
+// Resolve the best "who really sent this" address for `uploaded_by`. Honors
+// Reply-To / X-Original-Sender when the forwarder passes them through, then
+// decodes plaintext SRS, then falls back to a forwarder label for opaque SRS,
+// and only uses the raw envelope sender as a last resort.
+export function resolveOriginalSender(body: {
+  from: string;
+  replyTo?: string;
+  originalSender?: string;
+}): string {
+  const candidates = [body.replyTo, body.originalSender]
+    .map((s) => (s ? extractEmailAddress(s) : null))
+    .filter((s): s is string => !!s);
+  if (candidates[0]) return candidates[0];
+  const envelope = extractEmailAddress(body.from) ?? body.from;
+  const srs = decodeSrsAddress(envelope);
+  if (srs) return srs;
+  const label = labelOpaqueSrsBounce(envelope);
+  if (label) return label;
+  return envelope;
 }
 
 // Allowlist patterns: exact address, `@domain.com`, or `*@domain.com`. All
@@ -289,12 +353,13 @@ export async function handleInboundEmailRequest(req: IncomingMessage, res: Serve
     await ensureCorrectionsLogHeader();
     await ensureExtractionTracesHeader();
 
+    const attribution = resolveOriginalSender(body);
     const results: AttachmentOutcome[] = [];
     for (const attachment of body.attachments) {
       const started = Date.now();
-      const outcome = await processAttachment({ attachment, from: body.from });
+      const outcome = await processAttachment({ attachment, from: attribution });
       const durMs = Date.now() - started;
-      console.log(`[email-intake] file=${attachment.filename} result=${outcome.result} rows=${outcome.rowsAdded} supplier=${outcome.supplier ?? "?"} dur=${durMs}ms`);
+      console.log(`[email-intake] file=${attachment.filename} result=${outcome.result} rows=${outcome.rowsAdded} supplier=${outcome.supplier ?? "?"} attribution=${attribution} dur=${durMs}ms`);
       results.push(outcome);
     }
     return results;

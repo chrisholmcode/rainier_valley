@@ -1,7 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { isSenderAllowed, verifyHmac, normalizeMime } from "../../src/email-intake.js";
+import {
+  isSenderAllowed,
+  verifyHmac,
+  normalizeMime,
+  decodeSrsAddress,
+  labelOpaqueSrsBounce,
+  resolveOriginalSender
+} from "../../src/email-intake.js";
 
 describe("isSenderAllowed", () => {
   const allowlist = "billing@rvfb.org,@charlies-produce.com,*@carusos.com";
@@ -103,5 +110,75 @@ describe("normalizeMime", () => {
     assert.equal(normalizeMime("text/plain", "note.txt"), null);
     assert.equal(normalizeMime("", "attachment"), null);
     assert.equal(normalizeMime("", ""), null);
+  });
+});
+
+describe("decodeSrsAddress", () => {
+  it("decodes plaintext SRS0/SRS1/bounces+SRS envelopes to local@domain", () => {
+    assert.equal(
+      decodeSrsAddress("SRS0=HHH=TT=charliesproduce.com=orders@forwarder.com"),
+      "orders@charliesproduce.com"
+    );
+    assert.equal(
+      decodeSrsAddress("SRS1=XXX=hop==HHH=TT=carusos.com=ap@relay.net"),
+      "ap@carusos.com"
+    );
+    assert.equal(
+      decodeSrsAddress("bounces+SRS=HHH=TT=charlies-produce.com=ap@gmail.com"),
+      "ap@charlies-produce.com"
+    );
+  });
+
+  it("returns null for opaque SRS bounces with no plaintext sender", () => {
+    assert.equal(decodeSrsAddress("bounces+SRS=vAN5T=H5@rvfb.org"), null);
+    assert.equal(decodeSrsAddress("plain-address@example.com"), null);
+  });
+});
+
+describe("labelOpaqueSrsBounce", () => {
+  it("labels opaque SRS envelopes with the forwarder domain", () => {
+    assert.equal(labelOpaqueSrsBounce("bounces+SRS=vAN5T=H5@rvfb.org"), "forwarded-via@rvfb.org");
+  });
+  it("returns null for addresses that aren't SRS at all", () => {
+    assert.equal(labelOpaqueSrsBounce("ap@charlies.com"), null);
+  });
+});
+
+describe("resolveOriginalSender", () => {
+  it("prefers Reply-To over everything else", () => {
+    assert.equal(
+      resolveOriginalSender({
+        from: "bounces+SRS=vAN5T=H5@rvfb.org",
+        replyTo: "ap@charlies-produce.com"
+      }),
+      "ap@charlies-produce.com"
+    );
+  });
+  it("falls back to X-Original-Sender when Reply-To is missing", () => {
+    assert.equal(
+      resolveOriginalSender({
+        from: "bounces+SRS=vAN5T=H5@rvfb.org",
+        originalSender: "AP <ap@carusos.com>"
+      }),
+      "ap@carusos.com"
+    );
+  });
+  it("decodes plaintext SRS from the envelope sender", () => {
+    assert.equal(
+      resolveOriginalSender({ from: "SRS0=HHH=TT=charliesproduce.com=orders@fwd.net" }),
+      "orders@charliesproduce.com"
+    );
+  });
+  it("labels opaque SRS envelopes with forwarded-via@<domain>", () => {
+    assert.equal(
+      resolveOriginalSender({ from: "bounces+SRS=vAN5T=H5@rvfb.org" }),
+      "forwarded-via@rvfb.org"
+    );
+  });
+  it("passes through plain addresses untouched", () => {
+    assert.equal(
+      resolveOriginalSender({ from: "AP <ap@charlies-produce.com>" }),
+      "ap@charlies-produce.com"
+    );
   });
 });
