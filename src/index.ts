@@ -64,6 +64,7 @@ import {
   handleBulkUploadOneRequest,
   tryServeUploadedPhoto
 } from "./bulk-upload.js";
+import { peekUploadedPhotoMime } from "./photo-store.js";
 import {
   handleGroceryRescueUploadPageRequest,
   handleGroceryRescueUploadPreviewRequest,
@@ -1506,13 +1507,17 @@ async function handleSlipDetailRequest(req: IncomingMessage, res: ServerResponse
       console.warn("[review] readSuppliers failed:", (e as Error).message);
       return [];
     });
+    const photoMime = slip.photo_url
+      ? await peekUploadedPhotoMime(slip.photo_url).catch(() => null)
+      : null;
     const html = buildSlipDetailHtml({
       slip,
       rows: slipRows,
       token: env.DASHBOARD_TOKEN ?? "",
       supplierPrompt: getInvoiceSupplierPrompt(slip.supplier ?? "unknown"),
       systemPrompt: getInvoiceSystemPrompt(),
-      dynamicSuppliers
+      dynamicSuppliers,
+      photoMime
     });
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
     res.end(html);
