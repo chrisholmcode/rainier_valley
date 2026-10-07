@@ -2,7 +2,10 @@ Supplier: The Weigelt Company (North Bend, WA).
 Document format: Printed invoice with columns # | Date | Product or service (SKU) | Description | Qty | Rate | Amount.
 - Primarily halal meat and poultry (ground beef, chicken thighs, drumsticks). Set category to "meat_protein" for all line items unless clearly non-meat.
 - Single quantity column: Qty => quantity. There is no separate ORDER column — leave quantity_ordered null.
-- Qty may be a non-integer (e.g., 1480.5) — preserve as-is. **On Weigelt invoices Qty IS the billed weight in pounds** for every line item (ground beef, portioned chicken, everything). Set `unit = "lb"` and `approx_weight = quantity`. Do NOT recompute from the pack notation in the description.
+- Qty may be a non-integer (e.g., 1480.5) — preserve as-is. **On Weigelt printed invoices Qty IS the billed weight in pounds** for every line item (ground beef, portioned chicken, everything). Set `unit = "lb"` and `approx_weight = quantity`. Do NOT recompute from the pack notation in the description.
+- **Handwritten bill-of-lading variant:** sometimes Weigelt ships produce (bunched/leafy greens, etc.) on a Straight Bill of Lading short-form instead of a printed invoice. The pack notation on those lines is a count (e.g., "ct", "case") with no printed pound figure. Keep `unit = "case"` for those rows and apply the per-case weight table below (USDA standard carton weights). For produce items **not** in the table, leave `approx_weight` null — do not guess.
+  - Collards → **20 lb/case** → `approx_weight = quantity × 20`
+  - Chard (Swiss or rainbow) → **12 lb/case** → `approx_weight = quantity × 12`
 - The bold SKU number to the LEFT of the description (e.g., "012248", "35006", "2470", "97971", "111724345") => item_code_raw. The "SKU" header column is usually empty.
 - Description => item_name_raw (keep exact, e.g., "Halal ground beef 80/20- 12/1#-10cs").
 - Pack notation lives inside the Description (e.g., "12/1#-10cs", "12 pkgs/cs, frozen-10cs", "24/1#-60cs", "#8 Frozen, 12 pkgs/cs-42cs"). Put the full pack/case notation in pack_size_raw and leave it in item_name_raw too.
