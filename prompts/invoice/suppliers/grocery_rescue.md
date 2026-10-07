@@ -63,6 +63,9 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
 
 ### Running-tally rule for the Pounds column
 
+> **Row-boundary caution — read FIRST, before the digit-boundary caution.**
+> The tally patterns below apply ONLY to numbers written **inside a single row's Pounds cell**. Before applying them, anchor each number to its row by reading left-to-right along that row's gridline. Numbers that are simply **stacked vertically down the Pounds column almost always belong to different category rows** (one weight per row) — they are NOT a running tally or stacked weighing. **Do NOT sum, merge, or move a value from one row into an adjacent row, and do NOT leave a row blank because its value was consumed by a neighboring row.** Each predefined row gets exactly the weight written on its own line, or null if its own cell is empty. Only treat multiple numbers as a within-cell tally (patterns 4 and 5) when they are unmistakably in the SAME row's cell.
+>
 > **Digit-boundary caution — read BEFORE applying any pattern below.**
 > Each tally entry is a single integer. Before classifying the pattern, explicitly list every discrete number you see in the cell — separated by spaces, line breaks, or crossouts. Treat a contiguous run of digits (no space or line break between them) as ONE number. **Do NOT split a multi-digit number such as "117" into "1" and "17", and do NOT merge two separate numbers such as "1" and "17" into "117".** If you're unsure whether a gap between digits is a word-space or handwriting variation, report both interpretations in `quantity_raw`, lower confidence to 0.6, and pick the reading that produces the most plausible weight (typically the larger value for grocery rescue quantities).
 
