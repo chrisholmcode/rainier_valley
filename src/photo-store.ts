@@ -61,6 +61,24 @@ async function r2Put(hash: string, mimeType: string, bytes: Buffer): Promise<voi
   }));
 }
 
+async function r2HeadMime(hash: string): Promise<string | null> {
+  if (!r2Client) return null;
+  try {
+    // GET with Range: bytes=0-0 is cheaper than a full fetch and still returns
+    // the ContentType header. Avoids a separate HEAD import.
+    const resp = await r2Client.send(new GetObjectCommand({
+      Bucket: env.R2_BUCKET!,
+      Key: hash,
+      Range: "bytes=0-0"
+    }));
+    return resp.ContentType ?? null;
+  } catch (err) {
+    const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (e.name === "NoSuchKey" || e.$metadata?.httpStatusCode === 404) return null;
+    throw err;
+  }
+}
+
 async function r2Get(hash: string): Promise<{ mimeType: string; bytes: Buffer } | null> {
   if (!r2Client) return null;
   try {
@@ -106,6 +124,24 @@ export async function storePhoto(hash: string, mimeType: string, bytes: Buffer):
     }
   }
   memStore.set(hash, { mimeType, bytes, expiresAt: Date.now() + IN_MEMORY_TTL_MS });
+}
+
+// Peek the stored MIME type for an uploaded-photo URL without transferring
+// the body. Returns null if the URL isn't ours or the object isn't there.
+// Used by the review UI to decide between <img> and <iframe> rendering.
+export async function peekUploadedPhotoMime(photoUrl: string): Promise<string | null> {
+  const hash = hashFromUrl(photoUrl);
+  if (!hash) return null;
+  if (r2Configured) {
+    try {
+      const mime = await r2HeadMime(hash);
+      if (mime) return mime;
+    } catch (err) {
+      console.warn(`[photo-store] R2 head failed for ${hash}: ${(err as Error).message}`);
+    }
+  }
+  const p = memStore.get(hash);
+  return p?.mimeType ?? null;
 }
 
 // Returns true if the URL matches our upload host — regardless of whether we

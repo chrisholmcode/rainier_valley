@@ -651,8 +651,9 @@ export function buildSlipDetailHtml(params: {
   supplierPrompt: string | null;
   systemPrompt: string | null;
   dynamicSuppliers: SupplierRow[];
+  photoMime?: string | null;
 }): string {
-  const { slip, rows, supplierPrompt, systemPrompt, dynamicSuppliers } = params;
+  const { slip, rows, supplierPrompt, systemPrompt, dynamicSuppliers, photoMime } = params;
   const slipMetaRowIndex = rows[0]?.rowIndex ?? 0;
 
   // Dedupe by key against the seed list; keep dynamic suppliers alphabetical
@@ -778,17 +779,24 @@ export function buildSlipDetailHtml(params: {
 
   const slipKeyEnc = encodeSlipKey(slip.slipKey);
   const proxyUrl = `/review/photo?slip=${slipKeyEnc}`;
-  const isPdf = (slip.photo_url ?? "").toLowerCase().includes(".pdf");
+  const photoUrlLower = (slip.photo_url ?? "").toLowerCase();
+  const isUploadHost = photoUrlLower.startsWith("https://loadslip.upload/");
+  const isPdf = photoUrlLower.includes(".pdf")
+    || (photoMime ?? "").toLowerCase() === "application/pdf";
   const hasFetchablePhoto = !!slip.photo_url && /^https?:\/\//.test(slip.photo_url);
   const isWorkbookSynth = (slip.photo_url ?? "").startsWith("xlsx-upload://");
+  const sourceLabel = isUploadHost ? "Stored upload (R2)" : "Slack source";
+  const proxyNote = isUploadHost
+    ? "Proxied through the bot from the uploaded-photo store."
+    : "Proxied through the bot using the Slack token.";
   const photoBlock = hasFetchablePhoto
     ? `${isPdf
         ? `<iframe src="${escapeHtml(proxyUrl)}" title="slip photo"></iframe>`
         : `<img src="${escapeHtml(proxyUrl)}" alt="slip photo" onerror="this.style.display='none'">`}
        <p class="muted" style="font-size:12px; margin-top:8px;">
-         Proxied through the bot using the Slack token.
+         ${escapeHtml(proxyNote)}
          <a href="${escapeHtml(proxyUrl)}" target="_blank" rel="noopener">Open in new tab</a>
-         · <a href="${escapeHtml(slip.photo_url!)}" target="_blank" rel="noopener">Slack source</a>
+         · <a href="${escapeHtml(slip.photo_url!)}" target="_blank" rel="noopener">${escapeHtml(sourceLabel)}</a>
        </p>`
     : isWorkbookSynth
       ? `<p class="muted">No photo — this slip was imported from the RVFB Grocery Rescue workbook.</p>`
