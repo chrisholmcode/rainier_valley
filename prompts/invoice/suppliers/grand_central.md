@@ -7,7 +7,8 @@ Document format: Printed invoice with the "Grand Central Bakery" header.
 - Quantity => quantity (single column — no separate ORDER/SHIP split, leave quantity_ordered null).
 - Unit Price => unit_cost. Ext. Price => line_total.
 - Unit is single loaves / units, not cases. Set unit = "ea".
-- approx_weight: count-only inventory (no weight unit in the description). Leave approx_weight null — do not guess loaf weights.
+- approx_weight: count-only inventory on the invoice. For **known SKUs**, use the per-unit weight below and set `approx_weight = quantity × per_unit_lb`. For any SKU not in the table, leave `approx_weight` null — do not guess.
+  - `COMMUNI` → Community Loaf Goldendale Whole Wheat → **1.5 lb/ea** (standard Grand Central 24 oz loaf)
 - All items are bread products. Set category = "shelf_stable".
 - delivery_date and invoice_date: Grand Central invoices carry a single **Date** field in the upper-right header block. Convert MM/DD/YY to YYYY-MM-DD and populate BOTH `invoice_date` and `delivery_date` with that value.
 - invoice_or_order_number: Use the **Invoice** value in the upper-right header (e.g., "1159427").
