@@ -29,6 +29,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Header says "northwest HARVEST" with "Warehouse Posted Shipment" subtitle
 - Location: Auburn warehouse
 - Columns: Item No. | Quantity | Description | Unit of Measure Code | Class Code | Weight
+- document_type = "warehouse_posted_shipment" (matches the "Warehouse Posted Shipment" subtitle). Do NOT use "manifest" — that label is reserved for the Food Lifeline suppliers below.
 - Weight column is TOTAL weight. Class Code = storage (AMBIENT/CHILL). Filter out Grand Totals row.
 - If only a pallet label (no line items), add warning to source_warnings.
 
