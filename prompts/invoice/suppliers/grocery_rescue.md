@@ -47,6 +47,12 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - category = per the table above.
 - **Rows with a non-empty Pounds cell:**
   > ⚠️ **All three of `approx_weight`, `quantity`, and `quantity_raw` are REQUIRED and must be non-null on any row where any numeral is legible in the Pounds cell.** These are the three most-corrected fields in production. If you can read even one number, extract it — never leave them blank. `quantity` must always equal `approx_weight` on rescue forms.
+  >
+  > **Bright-line rule — no blanks, no sentinels, zero is real (applies to `quantity_raw`, `quantity`, AND `approx_weight`):**
+  > - **Never emit placeholder/sentinel values** — not `-1`, `-`, `N/A`, nor a made-up `0`. These fields are a transcription of ink on the form: if you can see a number, transcribe/parse it; if the cell is genuinely empty, follow the blank-cell rule below (null). Never a negative or invented number.
+  > - **A written `0` is a REAL value, not an empty cell.** If the Pounds cell legibly contains `0` (or `0 lb`), set `quantity_raw = "0"`, `approx_weight = 0`, `quantity = 0`. Only the complete absence of ink counts as blank.
+  > - **Faint / small single numbers still count.** A short, lightly-written, or hard-to-see-but-legible number (e.g., "12", "56", "61", "75") is a non-empty cell — transcribe it. Do not treat legible-but-faint digits as "no writing."
+  > - **When a legible cell is hard to read, emit your best-guess positive integer, lower `confidence` to ≤ 0.6, and add a `source_warning` — never blank and never `-1`.**
   - approx_weight = the final/accepted pounds, parsed per the **Running-tally rule** below. **NEVER leave `approx_weight` blank when any numeral is legible.** If the number is hard to read, extract your best guess, lower `confidence` to ≤ 0.6, and add a `source_warning`. Only set `approx_weight = null` when the cell contains **absolutely no writing**.
   - quantity = **REQUIRED — always set equal to `approx_weight` whenever `approx_weight` is non-null.** The Pounds cell is both the weight and the billed quantity. Example: Pounds cell reads "17" → `approx_weight = 17`, `quantity = 17`.
   - quantity_raw = **REQUIRED — never leave blank for a non-empty cell.** Copy every visible digit/number from the Pounds cell exactly as written, preserving all numbers including crossed-out ones and earlier tally values (e.g., a cell showing "70 79" → `quantity_raw = "70 79"`; a clean single value "24" → `quantity_raw = "24"`). Even a lone clean number must be emitted here.
