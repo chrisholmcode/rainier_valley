@@ -40,6 +40,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   | Prepared/Perishable | produce | |
   | Produce | produce | |
 - **Always emit one line item per predefined row — all 10, every time, in the order above.** This gives the reviewer a pre-populated skeleton to correct if the extractor missed a value, so they never have to manually add a row. Never skip a row.
+  - ⚠️ **Anchor each Pounds value to its OWN physical row — do not shift values up or down the skeleton.** Emitting all 10 rows is about completeness, NOT about mapping handwritten numbers to rows by position/order. For each number in the Pounds column, trace horizontally across to its row label and assign it to THAT row only; leave every other row's `approx_weight` null. When only some rows have writing, blank rows stay blank — never "slide" a written value onto an adjacent row just because the skeleton expects a value there. If you cannot confidently tell which row label a Pounds number sits next to (poor alignment, number drifts between two rows), assign it to your best-aligned row, set confidence ≤ 0.6, and add a `source_warning` naming the two candidate rows — do NOT guess silently and do NOT duplicate the value onto both rows.
 - Common fields for every row:
   - item_name_raw = the row label verbatim (e.g., "Bakery", "Dairy/Juice/Alt. Dairy").
   - item_name_normalized = a clean version (e.g., "Bakery", "Dairy / Juice / Alt. Dairy").
