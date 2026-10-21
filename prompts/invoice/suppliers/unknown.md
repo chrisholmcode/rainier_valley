@@ -74,3 +74,4 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - No fuel surcharge / energy charge — leave fees[] empty unless one is explicitly visible.
 
 If you cannot identify the supplier, set supplier to "unknown" and extract conservatively.
+- is_donation: Do NOT leave this blank and do NOT default to false. Read the document for donation signals. Set is_donation = true if the slip shows any of: a "Donation" / "Donated" / "Charitable contribution" label or line, a $0.00 / "No charge" total with goods delivered, a "Tax receipt" / "501(c)(3)" / EIN acknowledgement, or a recognizable food-bank/rescue donor context. Set is_donation = false only when the document clearly shows a normal commercial sale (nonzero amount due, payment terms, "Invoice total" to be paid). If the document genuinely gives no indication either way, set is_donation = null.
