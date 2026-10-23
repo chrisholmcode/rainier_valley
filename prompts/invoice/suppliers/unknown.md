@@ -74,3 +74,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - No fuel surcharge / energy charge — leave fees[] empty unless one is explicitly visible.
 
 If you cannot identify the supplier, set supplier to "unknown" and extract conservatively.
+- is_donation: do NOT default to false and do NOT leave blank. Decide from document-level signals:
+  * true if the document shows donation/charity framing — e.g. "donation", "donated", "charitable contribution", "no charge", "gift in kind", a donor/agency/food-bank relationship, or all line totals and grand total are $0 (or blank) with goods clearly transferred.
+  * false if it is a normal commercial sale with nonzero prices/amounts owed and no donation language.
+  * Only leave null if there is genuinely no signal either way.
