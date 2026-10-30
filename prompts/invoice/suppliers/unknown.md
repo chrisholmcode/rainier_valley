@@ -26,7 +26,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - is_donation: read the Customer suffix — "- Donation" => true, "- Purchased" => false, otherwise null.
 
 **Northwest Harvest** (set supplier: "nw_harvest")
-- Header says "northwest HARVEST" with "Warehouse Posted Shipment" subtitle
+- Header says "northwest HARVEST" with "Warehouse Posted Shipment" subtitle. document_type = "warehouse_posted_shipment" (NOT "manifest")
 - Location: Auburn warehouse
 - Columns: Item No. | Quantity | Description | Unit of Measure Code | Class Code | Weight
 - Weight column is TOTAL weight. Class Code = storage (AMBIENT/CHILL). Filter out Grand Totals row.
