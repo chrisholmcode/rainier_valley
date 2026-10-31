@@ -74,6 +74,8 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
+6. **Numbers that straddle a row boundary / loose intermediate values** => Each Pounds number belongs to exactly ONE row — the row whose cell physically contains it. When a tally spans several handwritten numbers (e.g., "43 56 61" written vertically near a row divider), do NOT spread those numbers across adjacent rows and do NOT emit the earlier/intermediate values (43, 56) as separate rows' `approx_weight`. They are all tally steps for a SINGLE row; resolve that one row to the last/final value (per patterns 2–5) and leave the neighboring rows blank (`approx_weight = null`). If you genuinely cannot tell which row a number belongs to, assign it to the single most plausible row, leave the other row blank, lower confidence to ≤ 0.6, and add a source_warning `"pounds value row attribution unclear near <row labels> — please verify"`. Never duplicate or split one cell's tally across two rows.
+
 If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
 ### Totals and fees on grocery rescue forms
