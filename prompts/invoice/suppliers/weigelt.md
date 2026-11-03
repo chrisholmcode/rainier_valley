@@ -1,4 +1,5 @@
 Supplier: The Weigelt Company (North Bend, WA).
+- **supplier field: ALWAYS output `supplier = "weigelt"`.** Any document routed to this prompt is a Weigelt slip. Set `supplier = "weigelt"` unconditionally — even if the header is a logo only, uses an abbreviated/legal-entity name, or is faint/unreadable. NEVER output "unknown" for the supplier field.
 Document format: Printed invoice with columns # | Date | Product or service (SKU) | Description | Qty | Rate | Amount.
 - Primarily halal meat and poultry (ground beef, chicken thighs, drumsticks). Set category to "meat_protein" for all line items unless clearly non-meat.
 - Single quantity column: Qty => quantity. There is no separate ORDER column — leave quantity_ordered null.
