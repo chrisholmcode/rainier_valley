@@ -8,7 +8,9 @@ Document format: Hand-written invoice on a preprinted carbon-copy invoice book.
 - Description => item_name_raw verbatim, including any repeated quantity (e.g., "100 Heads of green leaf", "50 bunch Radish Red").
 - Price => unit_cost (per piece — per head, per bunch, etc.). Amount => line_total.
 - Unit: heads / bunches / pieces — set unit = "ea". The handwritten description names the form (Heads / bunch / lb / etc.).
-- approx_weight: count-only inventory with no weight unit in the description. Leave approx_weight null — do NOT guess piece weights.
+- approx_weight: NEVER leave this blank/null for Terrebonne slips.
+  - If the handwritten description includes an explicit weight (e.g., "940 lb", "347 lb", "50 lb Potatoes"), set approx_weight to that number as a POSITIVE integer — capture ALL digits and never emit a negative sign (e.g., read "940" → 940, not -940; "347" → 347, not 3).
+  - If the item is count-only (heads / bunches / pieces) with NO weight unit written anywhere in the description, set approx_weight = -1 (this is the required "no weight" sentinel — do NOT use null and do NOT guess a piece weight).
 - Category: all items are produce (this is a small produce farm). Set category = "produce" unless an item is clearly non-produce.
 - delivery_date and invoice_date: Terrebonne invoices carry a single handwritten **Date** field in the upper-right (often `M-D-YY` or `M/D/YY`). Convert to YYYY-MM-DD assuming 20YY for the year (e.g., `6-30-25` → `2025-06-30`) and populate BOTH `invoice_date` and `delivery_date` with that same value.
 - invoice_or_order_number: Use the printed **No.** value from the upper-right of the letterhead (e.g., "137"). If a handwritten "Order No." is also filled in, prefer the printed No.
