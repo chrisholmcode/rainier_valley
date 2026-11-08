@@ -49,7 +49,8 @@ const extractionSchema = z.object({
   totals: z.object({
     subtotal: z.number().nullable(),
     tax: z.number().nullable(),
-    grand_total: z.number().nullable()
+    grand_total: z.number().nullable(),
+    total_weight_lb: z.number().nullable()
   }),
   source_warnings: z.array(z.string())
 });
@@ -139,9 +140,10 @@ const EXTRACTION_INPUT_SCHEMA = {
       properties: {
         subtotal: { type: ["number", "null"] },
         tax: { type: ["number", "null"] },
-        grand_total: { type: ["number", "null"] }
+        grand_total: { type: ["number", "null"] },
+        total_weight_lb: { type: ["number", "null"], description: "Printed TOTAL WEIGHT footer in pounds, when the document prints one (common on Charlie's). Null when the document does not print a total weight." }
       },
-      required: ["subtotal", "tax", "grand_total"]
+      required: ["subtotal", "tax", "grand_total", "total_weight_lb"]
     },
     source_warnings: { type: "array", items: { type: "string" } }
   },

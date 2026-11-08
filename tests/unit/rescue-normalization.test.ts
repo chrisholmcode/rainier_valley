@@ -22,7 +22,7 @@ function extraction(overrides: Partial<ExtractionResult> = {}): ExtractionResult
     is_donation: true,
     line_items: [],
     fees: [],
-    totals: { subtotal: null, tax: null, grand_total: null },
+    totals: { subtotal: null, tax: null, grand_total: null, total_weight_lb: null },
     source_warnings: [],
     ...overrides
   };

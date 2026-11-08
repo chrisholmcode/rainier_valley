@@ -12,7 +12,7 @@ function synth(supplier: ExtractionResult["supplier"], items: Array<Partial<Extr
     donor_org: null,
     is_donation: false,
     fees: [],
-    totals: { subtotal: null, tax: null, grand_total: null },
+    totals: { subtotal: null, tax: null, grand_total: null, total_weight_lb: null },
     source_warnings: [],
     line_items: items.map((it) => ({
       item_code_raw: it.item_code_raw,

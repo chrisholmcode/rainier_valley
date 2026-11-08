@@ -100,6 +100,7 @@ import {
 } from "./extraction.js";
 import { runAssistantLoop } from "./assistant.js";
 import { reconcileWithCarusoCatalog } from "./carusoCatalog.js";
+import { reconcileCharliesTotalWeight } from "./charliesTotalWeight.js";
 import { preflightImageBuffer, ImagePreflightError } from "./image-preflight.js";
 import type { ExtractionResult, EodExtractionResult, Supplier, ThreadHistory, PendingAssistantCorrection, ProgramType } from "./types.js";
 
@@ -627,6 +628,10 @@ app.event("message", async ({ event, client, logger }) => {
       const carusoRec = reconcileWithCarusoCatalog(extraction);
       if (carusoRec.hits > 0) {
         console.log(`caruso catalog reconcile file=${file.name} hits=${carusoRec.hits} overwrites=${carusoRec.overwrites}`);
+      }
+      const charliesRec = reconcileCharliesTotalWeight(extraction);
+      if (charliesRec.action !== "noop" && charliesRec.action !== "already_matches") {
+        console.log(`charlies total-weight reconcile file=${file.name} action=${charliesRec.action} printed=${charliesRec.printedTotalLb} sum=${charliesRec.sumApproxLb} sum×qty=${charliesRec.sumApproxTimesQtyLb} rewrites=${charliesRec.rewrites}`);
       }
 
       // Persist the raw thinking + extracted JSON so we can review traces long

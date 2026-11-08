@@ -13,26 +13,32 @@
  *
  * Usage:
  *   GOOGLE_WORKSHEET_NAME="Inbound Delivery Log" \
- *     npx tsx --env-file=.env src/backfill-summary-recompute.ts [--apply] [--supplier=<name>] [--limit=N]
+ *     npx tsx --env-file=.env src/backfill-summary-recompute.ts [--apply] [--supplier=<name>] [--from=YYYY-MM-DD] [--to=YYYY-MM-DD] [--limit=N]
  *
  *   --apply     required to actually write. Without it, prints a dry-run plan.
  *   --supplier  restrict to one supplier slug (e.g. "carusos").
+ *   --from/--to restrict to slips whose delivery_date falls in the window (inclusive).
+ *               A slip is included if ANY of its delivery rows has a date in-window.
  *   --limit     cap the number of groups processed (dry-run always processes all).
  */
 import { readDeliveryRows, recomputeSummaryForSlip } from "./sheets.js";
 import type { DeliverySheetRow } from "./types.js";
 
-function parseArgs(): { apply: boolean; supplier?: string; limit?: number } {
+function parseArgs(): { apply: boolean; supplier?: string; from?: string; to?: string; limit?: number } {
   const args = process.argv.slice(2);
   let apply = false;
   let supplier: string | undefined;
+  let from: string | undefined;
+  let to: string | undefined;
   let limit: number | undefined;
   for (const a of args) {
     if (a === "--apply") apply = true;
     else if (a.startsWith("--supplier=")) supplier = a.slice("--supplier=".length);
+    else if (a.startsWith("--from=")) from = a.slice("--from=".length);
+    else if (a.startsWith("--to=")) to = a.slice("--to=".length);
     else if (a.startsWith("--limit=")) limit = parseInt(a.slice("--limit=".length), 10);
   }
-  return { apply, supplier, limit };
+  return { apply, supplier, from, to, limit };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -63,8 +69,9 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
 }
 
 async function main(): Promise<void> {
-  const { apply, supplier: supplierFilter, limit } = parseArgs();
-  console.log(`# backfill-summary-recompute · mode=${apply ? "APPLY" : "DRY-RUN"}${supplierFilter ? ` · supplier=${supplierFilter}` : ""}`);
+  const { apply, supplier: supplierFilter, from, to, limit } = parseArgs();
+  const windowStr = from || to ? ` · window=${from ?? "(open)"}→${to ?? "(open)"}` : "";
+  console.log(`# backfill-summary-recompute · mode=${apply ? "APPLY" : "DRY-RUN"}${supplierFilter ? ` · supplier=${supplierFilter}` : ""}${windowStr}`);
 
   const deliveryRows = await readDeliveryRows({ limit: 20000 });
   console.log(`Read ${deliveryRows.length} delivery rows.`);
@@ -84,6 +91,24 @@ async function main(): Promise<void> {
     groups.get(key)!.push(r);
   }
   console.log(`Grouped into ${groups.size} distinct (supplier, invoice) slips. Skipped ${skippedNoKey} rows with empty supplier or invoice.`);
+
+  if (from || to) {
+    let dropped = 0;
+    for (const [key, rows] of Array.from(groups.entries())) {
+      const inWindow = rows.some((r) => {
+        const d = (r.delivery_date ?? "").trim();
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+        return true;
+      });
+      if (!inWindow) {
+        groups.delete(key);
+        dropped += 1;
+      }
+    }
+    console.log(`Window filter dropped ${dropped} slip(s); ${groups.size} remain.`);
+  }
 
   const entries = Array.from(groups.entries());
   const toProcess = limit ? entries.slice(0, limit) : entries;

@@ -492,7 +492,7 @@ function buildRescueExtraction(row: ParsedRescueRow): ExtractionResult {
     is_donation: true,
     line_items: lineItems,
     fees: [],
-    totals: { subtotal: null, tax: null, grand_total: null },
+    totals: { subtotal: null, tax: null, grand_total: null, total_weight_lb: null },
     source_warnings: row.warnings.slice()
   };
 }
