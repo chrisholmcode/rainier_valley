@@ -23,6 +23,7 @@ import {
 } from "./extraction.js";
 import { preflightImageBuffer, ImagePreflightError } from "./image-preflight.js";
 import { reconcileWithCarusoCatalog } from "./carusoCatalog.js";
+import { reconcileCharliesTotalWeight } from "./charliesTotalWeight.js";
 import {
   appendExtractionRows,
   appendSummaryRow,
@@ -138,6 +139,10 @@ export async function processInvoiceFile(params: {
   const carusoRec = reconcileWithCarusoCatalog(extraction);
   if (carusoRec.hits > 0) {
     console.log(`caruso catalog reconcile web-upload file=${input.filename} hits=${carusoRec.hits} overwrites=${carusoRec.overwrites}`);
+  }
+  const charliesRec = reconcileCharliesTotalWeight(extraction);
+  if (charliesRec.action !== "noop" && charliesRec.action !== "already_matches") {
+    console.log(`charlies total-weight reconcile web-upload file=${input.filename} action=${charliesRec.action} printed=${charliesRec.printedTotalLb} sum=${charliesRec.sumApproxLb} sum×qty=${charliesRec.sumApproxTimesQtyLb} rewrites=${charliesRec.rewrites}`);
   }
 
   appendExtractionTrace({

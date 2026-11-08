@@ -1,7 +1,28 @@
 {
   "note": "Hand-entered per-case pound estimates for Caruso SKUs that the catalog scrape can't resolve (delisted/seasonal items with no detail page, or BUSHEL/CT-only pack sizes with no weight on the detail page). Sources: USDA Agricultural Marketing Service standard produce container weights + Caruso catalog pack-size notes. Review and refine as needed.",
-  "updatedAt": "2026-10-06",
+  "updatedAt": "2026-11-08",
   "items": [
+    {
+      "sku": "00229",
+      "name": "Apple Granny Smith US#1",
+      "pack": "tray carton",
+      "weightLb": 40,
+      "source": "USDA standard WA/CA apple tray-pack carton, 40 lb (matches Caruso 00228 Granny Smith USXF on invoice 624447: 8 cases = 320 lb)"
+    },
+    {
+      "sku": "00706",
+      "name": "Cauliflower 16 CT",
+      "pack": "16 CT wirebound crate",
+      "weightLb": 25,
+      "source": "USDA standard cauliflower 16-ct wirebound crate, ~25 lb (16 heads × ~1.5 lb)"
+    },
+    {
+      "sku": "00970",
+      "name": "Eggplant Large",
+      "pack": "bushel",
+      "weightLb": 33,
+      "source": "USDA produce container reference, bushel eggplant = 33 lb"
+    },
     {
       "sku": "01250",
       "name": "Green Onion BBQ",
@@ -24,11 +45,32 @@
       "source": "USDA produce container reference, yellow squash 2-layer ~20 lb"
     },
     {
+      "sku": "02082",
+      "name": "Orange Navel CH 72 CT",
+      "pack": "72 CT",
+      "weightLb": 38,
+      "source": "USDA standard California orange 4/5-bushel carton, 38 lb (same as sku 02121 Valencia CH)"
+    },
+    {
+      "sku": "02114",
+      "name": "Orange Navel FCY (California)",
+      "pack": "carton",
+      "weightLb": 38,
+      "source": "USDA standard California orange 4/5-bushel carton, 38 lb"
+    },
+    {
       "sku": "02121",
       "name": "Orange Valencia CH",
       "pack": "56 CT",
       "weightLb": 38,
       "source": "USDA standard California orange carton, 38 lb"
+    },
+    {
+      "sku": "02809",
+      "name": "Pear Comice FCY 70 CT",
+      "pack": "70 CT western pear box",
+      "weightLb": 44,
+      "source": "USDA standard western-pear box (Comice/Bartlett/Anjou), 44 lb"
     },
     {
       "sku": "02940",

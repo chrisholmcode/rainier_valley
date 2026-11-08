@@ -18,5 +18,6 @@ Document format: Customer invoice with columns ORDER | SHIP | ITEM# | PACK SIZE 
 - Origin codes may appear: MX (Mexico), UCA, etc. - put in notes.
 - delivery_date and invoice_date: Charlie's invoices carry a single date, labeled **INVOICE DATE** (or "INVOICED") in the upper-right header row, typically next to ACCOUNT# and INVOICE#. Format is usually MM/DD/YY — convert to YYYY-MM-DD and populate BOTH `invoice_date` and `delivery_date` with that same value. Do NOT leave either null when this field is visible.
 - invoice_or_order_number: Use the **INVOICE#** column value in the upper-right header row (between ACCOUNT# and INVOICE DATE). Typically a 7-digit number like "7172545". Do NOT leave null when visible.
+- **totals.total_weight_lb**: Charlie's invoices print a **TOTAL WEIGHT** value in the footer next to TOTAL CASES (e.g., "TOTAL CASES 45  TOTAL WEIGHT 1640.00"). Capture that number in pounds into `totals.total_weight_lb`. It is the ground-truth reconciliation for `Σ (APPROX.WT × ship quantity)` across non-fee lines — a downstream reconciler uses it to detect per-case/per-line confusion. Null only if the footer value is not legible.
 - Filter out: Energy charge (put in fees[] array)
 - CHECK marks (/) in SHIP column indicate verification.

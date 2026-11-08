@@ -231,7 +231,7 @@ async function main(): Promise<void> {
       is_donation: null,
       line_items: lineItems,
       fees,
-      totals: { subtotal: null, tax: null, grand_total: null },
+      totals: { subtotal: null, tax: null, grand_total: null, total_weight_lb: null },
       source_warnings: []
     };
 

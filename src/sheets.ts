@@ -1695,7 +1695,7 @@ export async function recomputeSummaryForSlip(slipRows: DeliverySheetRow[]): Pro
 
   const lineItems = slipRows.filter((r) => !isFeeFlag(r.is_fee)).map(rowToLineItemForSummary);
   const fees = slipRows.filter((r) => isFeeFlag(r.is_fee)).map(rowToFeeItemForSummary);
-  const totals: ExtractionResult["totals"] = { subtotal: null, tax: null, grand_total: null };
+  const totals: ExtractionResult["totals"] = { subtotal: null, tax: null, grand_total: null, total_weight_lb: null };
   const extraction: ExtractionResult = {
     document_type: (first.document_type as ExtractionResult["document_type"]) ?? "unknown",
     supplier: (first.supplier as ExtractionResult["supplier"]) ?? "unknown",

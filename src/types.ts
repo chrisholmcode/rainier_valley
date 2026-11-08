@@ -187,6 +187,7 @@ export interface ExtractionResult {
     subtotal: number | null;
     tax: number | null;
     grand_total: number | null;
+    total_weight_lb: number | null;
   };
   source_warnings: string[];
 }
