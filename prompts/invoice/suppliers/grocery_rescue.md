@@ -74,7 +74,11 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+If you cannot resolve which pattern applies, do NOT guess a fresh value on each pass — commit to a single DETERMINISTIC reading so repeated extractions of the same slip agree:
+1. List every candidate number you can see, verbatim, in `quantity_raw` (e.g. `quantity_raw = "70 14 147"`).
+2. Set `approx_weight` = `quantity` = the **largest fully-legible integer that is NOT crossed out** and that is a single contiguous digit-run (never merge separate numbers like "1" and "47" into "147", never split "147" into "14", never take a crossed-out tally, and never leave it blank when any numeral is legible).
+3. Set confidence ≤ 0.6 and add source_warning `"Pounds cell ambiguous: candidate readings <list>; emitted <chosen> deterministically — please verify quantity against slip"`.
+Applying the SAME tie-break every time prevents the quantity field from oscillating between readings (e.g. 70 / blank / 14 / 147 / 0) across re-runs and keeps the correction stable for reviewers.
 
 ### Totals and fees on grocery rescue forms
 
