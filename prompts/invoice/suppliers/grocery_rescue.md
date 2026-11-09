@@ -74,7 +74,7 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+If you cannot resolve which pattern applies, prefer the LAST legibly-written value (consistent with pattern 5) — even if it is smaller than earlier entries or is 0. A late/final adjustment or a zeroed-out count is common and valid; never override a legible final small number or 0 with a larger earlier tally entry. Do NOT fall back to "largest value" when choosing the FINAL answer across distinct tally entries — the "pick the larger value" guidance in the digit-boundary caution applies ONLY to disambiguating two readings of the SAME contiguous digit-run (e.g. "1"+"17" vs "117"), never to choosing between separate numbers. Record all entries verbatim in quantity_raw, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
 
 ### Totals and fees on grocery rescue forms
 
