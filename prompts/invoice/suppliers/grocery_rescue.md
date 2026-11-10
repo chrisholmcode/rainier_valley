@@ -74,7 +74,9 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+**Pattern priority:** when a descending or non-monotonic sequence is present (pattern 5), the LAST number always wins over any larger earlier entry. Do NOT fall back to "largest clean number" for pattern-5 cells. Example: a cell showing a run like "70 … 14" resolves to approx_weight = 14 (the last value), NOT 70.
+
+  If you genuinely cannot resolve which pattern applies (no circle, no crossouts, no identifiable sequence), set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity. This "largest clean number" fallback applies ONLY to truly unclassifiable cells — never to pattern-5 running tallies.
 
 ### Totals and fees on grocery rescue forms
 
