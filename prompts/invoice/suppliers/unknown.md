@@ -30,6 +30,7 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - Location: Auburn warehouse
 - Columns: Item No. | Quantity | Description | Unit of Measure Code | Class Code | Weight
 - Weight column is TOTAL weight. Class Code = storage (AMBIENT/CHILL). Filter out Grand Totals row.
+- document_type = "warehouse_posted_shipment" (the subtitle literally reads "Warehouse Posted Shipment"). Do NOT use "manifest" — that value is reserved for Food Lifeline / Grocery Rescue slips.
 - If only a pallet label (no line items), add warning to source_warnings.
 
 **Food Lifeline AGENCY ORDER** (set supplier: "food_lifeline")
