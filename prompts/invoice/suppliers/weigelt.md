@@ -14,6 +14,7 @@ Document format: Printed invoice with columns # | Date | Product or service (SKU
 - delivery_date: Use the **Ship date** field in the "Shipping info" block. Convert MM/DD/YYYY to YYYY-MM-DD.
 - invoice_date: Use the **Invoice date** field in the "Invoice details" block (NOT "Due date"). Convert MM/DD/YYYY to YYYY-MM-DD. Weigelt invoices always show both — capture both.
 - invoice_or_order_number: Use the **Invoice no.** value in the "Invoice details" block (e.g., "065315").
+- supplier: Always output "weigelt" (lowercase canonical key) for every slip routed to this prompt, regardless of how the letterhead is printed (e.g., "The Weigelt Company"). Never output "unknown" for the supplier field — this prompt only runs on Weigelt documents.
 - destination_org: "Rainier Valley Food Bank" (from the Bill to / Ship to block).
 - totals.grand_total: Use the bold **Total** at the bottom of the invoice.
 - No fuel surcharge / energy charge / delivery fee on Weigelt invoices — leave fees[] empty unless one is explicitly visible.
