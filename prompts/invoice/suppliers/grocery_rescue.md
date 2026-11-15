@@ -52,6 +52,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - quantity_raw = **REQUIRED — never leave blank for a non-empty cell.** Copy every visible digit/number from the Pounds cell exactly as written, preserving all numbers including crossed-out ones and earlier tally values (e.g., a cell showing "70 79" → `quantity_raw = "70 79"`; a clean single value "24" → `quantity_raw = "24"`). Even a lone clean number must be emitted here.
   - notes = brief description (e.g., "running tally 151→123→108→40, taking 40 as last value" or "two weighings summed: 144+27=171").
   - confidence = lower (0.6–0.8) when the cell has crossed-out / overwritten numbers, higher (0.9+) when it's a single clean number.
+- **Rows where the Pounds cell reports zero, or is voided (no surviving accepted number):**
+  - A **written zero** ("0", "-0-", a lone "0" digit, or a dash/strike clearly meaning "none taken this pickup") is a *filled* cell reporting zero pounds — NOT an empty cell. Treat it as a non-empty cell with value 0: approx_weight = 0, quantity = 0, quantity_raw = the glyph(s) verbatim (e.g. "0"), notes = "zero pounds reported on form", confidence = 0.9.
+  - A **voided** cell — the whole running tally is crossed out / struck through and no clean final number survives — has no accepted weight: approx_weight = null, quantity = null, quantity_raw = null, notes = "cell voided — no accepted weight". **Do NOT resurrect an earlier crossed-out or overwritten number as the weight; a crossed-out number is NOT an accepted value, only the surviving final figure counts.**
+  - **Only classify a cell as "empty"/blank when it is truly blank with no writing at all. A legible "0" means 0, never null.**
 - **Rows with an empty Pounds cell (blank, no writing):**
   - approx_weight = null, quantity = null, quantity_raw = null.
   - notes = "no value on form".
