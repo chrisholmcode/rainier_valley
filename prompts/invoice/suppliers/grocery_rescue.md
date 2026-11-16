@@ -56,6 +56,7 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - approx_weight = null, quantity = null, quantity_raw = null.
   - notes = "no value on form".
   - confidence = 0.95 (blank is unambiguous; do not drag the slip into review queue for a legitimately empty row).
+  - **A handwritten "0" (or "0 lb", "zero", or a dash meaning none) is NOT a blank cell — it is a real value of zero.** In that case set `approx_weight = 0`, `quantity = 0`, `quantity_raw = "0"` (copied verbatim), not null. Only treat a cell as empty when it contains *absolutely no mark*. When in doubt whether a faint mark is a "0" versus noise, prefer reading it as `0` over null. This "written 0 extracted as 0" case is the single most-corrected pattern on this supplier — do not collapse it into the blank branch.
 - **Rows with hatched/struck-through row label (category not accepted this pickup):**
   - approx_weight = null, quantity = null, quantity_raw = null.
   - notes = "row hatched out — category not accepted this pickup".
