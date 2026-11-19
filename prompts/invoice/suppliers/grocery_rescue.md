@@ -53,9 +53,10 @@ Supplier: Grocery Rescue. Food Lifeline brokers grocery-store rescue pickups (QF
   - notes = brief description (e.g., "running tally 151→123→108→40, taking 40 as last value" or "two weighings summed: 144+27=171").
   - confidence = lower (0.6–0.8) when the cell has crossed-out / overwritten numbers, higher (0.9+) when it's a single clean number.
 - **Rows with an empty Pounds cell (blank, no writing):**
-  - approx_weight = null, quantity = null, quantity_raw = null.
+  - approx_weight = null, **quantity = 0** (reviewer convention on grocery_rescue: an empty Pounds cell means zero pounds received for that category, NOT a missing value — always emit the numeral 0, never leave quantity blank), quantity_raw = null.
   - notes = "no value on form".
   - confidence = 0.95 (blank is unambiguous; do not drag the slip into review queue for a legitimately empty row).
+  - **Stray-mark guard:** if the cell contains only a stray tick, dot, or partial mark you cannot confidently read as an actual weight, treat the cell as empty — set quantity = 0, do NOT extract the mark as a number.
 - **Rows with hatched/struck-through row label (category not accepted this pickup):**
   - approx_weight = null, quantity = null, quantity_raw = null.
   - notes = "row hatched out — category not accepted this pickup".
