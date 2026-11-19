@@ -74,7 +74,9 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+6. **Final value is zero or the cell is voided** (e.g., a clean "0"; a running tally where the last/net value is "0"; every number crossed out with nothing clean remaining; a line through the whole Pounds cell; "—" or a struck-to-nothing count) => the accepted weight is ZERO, not an earlier tally number. Set `approx_weight = 0`, `quantity = 0`, `quantity_raw` = the digits exactly as written (e.g., "0" or "60 0"), notes = "final/net value is 0 — earlier numeral(s) are crossed out or superseded". **Do NOT reach back and report a prior, larger, or crossed-out number as the weight when the final accepted value is 0.** If you cannot tell whether the cell nets to 0 or to a positive number, emit your best reading, lower confidence to ≤ 0.6, and add a source_warning noting the ambiguity.
+
+If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity. **Exception: do not apply this "largest clean number" fallback when the final/net reading is 0 per pattern 6 — a voided cell must resolve to 0, never to the largest earlier numeral.**
 
 ### Totals and fees on grocery rescue forms
 
