@@ -74,3 +74,5 @@ AUTO-DETECT SUPPLIER from the document. Look for these identifying features:
 - No fuel surcharge / energy charge — leave fees[] empty unless one is explicitly visible.
 
 If you cannot identify the supplier, set supplier to "unknown" and extract conservatively.
+
+- is_donation: ALWAYS output a lowercase JSON boolean (`true` or `false`) — never leave it blank and never write `TRUE`/`FALSE` in uppercase. Infer it from the document: if the slip shows any donation/charitable cues (words like "Donation", "Donated", "Charitable", "No charge", zero/$0 totals on a food-bank manifest, a "- Donation" customer suffix, or a food-rescue/food-bank layout), set `true`. Only set `false` when the document is clearly a priced commercial purchase (nonzero line prices and an amount due) with no donation cues.
