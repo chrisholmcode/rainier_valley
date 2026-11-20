@@ -7,6 +7,10 @@ Document format: Hand-written invoice on a preprinted carbon-copy invoice book.
 - Quantity column => quantity (integer count). Single column — no separate ORDER/SHIP split; leave quantity_ordered null.
 - Description => item_name_raw verbatim, including any repeated quantity (e.g., "100 Heads of green leaf", "50 bunch Radish Red").
 - Price => unit_cost (per piece — per head, per bunch, etc.). Amount => line_total.
+  - The **PRICE** and **AMOUNT** columns are adjacent and both handwritten — do NOT swap them. PRICE is the per-unit figure (left of AMOUNT); AMOUNT is the total for the line (right-most). Read the PRICE column header position, not just whichever number is clearest.
+  - Sanity-check: AMOUNT should ≈ quantity × unit_cost. If what you read as unit_cost times the quantity does not match AMOUNT (e.g. you have them reversed), re-read and correct the assignment before emitting.
+  - Handwritten prices often include cents (e.g. `1.50`, `.75`, `1 50` with the cents written small/raised). Capture the full value including decimals — do not drop the cents or round to a whole number.
+  - If the PRICE cell is blank (no handwritten price), set unit_cost = null. Do NOT copy the AMOUNT value, the quantity, or any other number into unit_cost, and do NOT guess a price.
 - Unit: heads / bunches / pieces — set unit = "ea". The handwritten description names the form (Heads / bunch / lb / etc.).
 - approx_weight: count-only inventory with no weight unit in the description. Leave approx_weight null — do NOT guess piece weights.
 - Category: all items are produce (this is a small produce farm). Set category = "produce" unless an item is clearly non-produce.
