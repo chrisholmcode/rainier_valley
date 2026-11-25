@@ -1,6 +1,7 @@
 Supplier: Northwest Harvest (Auburn warehouse).
 Document format: Warehouse Posted Shipment with columns Item No. | Quantity | Description | Unit of Measure Code | Class Code | Weight.
 - Quantity column => quantity (authoritative case count). Northwest Harvest manifests do not have a separate ORDER column — leave quantity_ordered null.
+- Northwest Harvest is a hunger-relief food bank; these Warehouse Posted Shipments are donated goods. Always set is_donation = true for this supplier, even when the word "donation" does not appear. These manifests carry no pricing column, so set unit_cost = 0 (donated/zero-cost goods), not null.
 - Weight column => approx_weight (TOTAL weight in pounds for the line, not per-unit).
 - Class Code: AMBIENT or CHILL - maps to storage area.
 - Unit of Measure Code describes pack size (e.g., 20/1LB = 20 bags of 1 lb each).
