@@ -7,6 +7,7 @@ Document format: Hand-written invoice on a preprinted carbon-copy invoice book.
 - Quantity column => quantity (integer count). Single column — no separate ORDER/SHIP split; leave quantity_ordered null.
 - Description => item_name_raw verbatim, including any repeated quantity (e.g., "100 Heads of green leaf", "50 bunch Radish Red").
 - Price => unit_cost (per piece — per head, per bunch, etc.). Amount => line_total.
+- CROSS-CHECK line_total: handwriting on these carbon-copy slips is easy to misread by a digit (dropped/added/transposed zeros). line_total should equal quantity × unit_cost. After reading the handwritten Amount, compute quantity × unit_cost and compare. If they disagree by roughly a factor of 10 or by a single digit (e.g., you read 160 but quantity × unit_cost ≈ 1600), re-read the Amount cell — the handwritten value is almost certainly the one consistent with quantity × unit_cost. Only keep an Amount that contradicts quantity × unit_cost if the digits are unambiguously legible, and in that case add a note to source_warnings.
 - Unit: heads / bunches / pieces — set unit = "ea". The handwritten description names the form (Heads / bunch / lb / etc.).
 - approx_weight: count-only inventory with no weight unit in the description. Leave approx_weight null — do NOT guess piece weights.
 - Category: all items are produce (this is a small produce farm). Set category = "produce" unless an item is clearly non-produce.
