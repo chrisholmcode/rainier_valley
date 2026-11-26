@@ -73,8 +73,12 @@ The Pounds cell is often hand-filled while counting; you'll see one of these pat
 3. **Earlier numbers crossed out, final number clean** (e.g., "32~~13~~" or "13" crossed out, "32" not) => approx_weight = the non-crossed final number.
 4. **Stacked weighings without crossouts** (e.g., "144" on top, "27" below) => the staff weighed separate pallets/bins; approx_weight = sum (144 + 27 = 171). Note "summed across weighings" in line notes.
 5. **Sequence with descending or non-monotonic numbers and no clear circle** (e.g., "151 123 108 40") => these are typically running adjustments while counting; approx_weight = the LAST number written (40 in this case). Note "running tally; taking last value" in line notes and lower confidence to 0.6.
+6. **Final value is zero, or cell fully crossed out:** `0` is a valid, common final outcome on these slips — a row counted then voided, or a tally adjusted DOWN to zero. Treat these cases literally; do NOT substitute an earlier, larger number.
+   - If the LAST value written in a running tally is "0" (e.g., "60 0", "7 0"), take that final 0: `approx_weight = 0`, `quantity = 0`, `quantity_raw` = the verbatim digits (e.g., `"60 0"`).
+   - If EVERY number in the cell is struck through / crossed out with nothing left standing, the count was voided: `approx_weight = 0`, `quantity = 0`, `quantity_raw` = the verbatim crossed-out digits, notes = "all values crossed out — counted then voided, final = 0".
+   - A legibly written "0" is a real quantity and is **distinct from an empty cell**. Only a cell with *absolutely no writing* (or a struck-out row label) resolves to null/"no value on form". Never blank a field that shows a legible 0 — emit `0`.
 
-If you cannot resolve which pattern applies, set approx_weight to the largest clean number visible, set confidence ≤ 0.6, and add a source_warning explaining the ambiguity.
+If you cannot resolve which pattern applies, take the LAST legibly-written number in the cell (which may be 0) as approx_weight — do NOT default to the largest number — set confidence ≤ 0.6, and add a source_warning explaining the ambiguity. (Pattern 4 stacked-weighing cells still take precedence and are summed, not reduced to the last value.)
 
 ### Totals and fees on grocery rescue forms
 
